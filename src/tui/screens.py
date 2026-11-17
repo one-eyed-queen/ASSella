@@ -14,6 +14,7 @@ are ever added or removed.
 
 from __future__ import annotations
 
+import os
 import logging
 import random
 from collections import deque
@@ -557,67 +558,148 @@ class GameScreen(Screen):
 # ── fingerprint task + report ───────────────────────────────────────────────
 
 class FingerprintTaskScreen(Screen):
-    BINDINGS = [("escape", "back", "back")]
+    """Scan base-game depots (manifest-only), then fingerprint the .exes you pick.
+
+    Phase 1 lists what the game ships — nothing is downloaded. Phase 2
+    fingerprints exactly the files you tick and nothing else.
+    """
+
+    BINDINGS = [
+        ("escape", "back", "back"),
+        ("a", "toggle_all", "toggle all"),
+        ("f", "fingerprint_selected", "fingerprint selected"),
+    ]
 
     def __init__(self, appid: int, name: str) -> None:
         super().__init__()
         self.appid = int(appid)
         self.app_name = name
+        self._scan: Optional[engine.ScanResult] = None
+        self._entries: List[Dict[str, Any]] = []
+        self._cancelled = False
 
     def compose(self) -> ComposeResult:
         yield AppHeader(f"Fingerprinting App {self.appid} — {self.app_name}", id="hdr")
-        yield Static("Downloading the .exe files to a temp folder…", id="scan-status")
+        yield Static(
+            "Manifest-only scan — this lists the game's .exe files without downloading game content.",
+            id="app-subtitle",
+        )
+        yield Static("Scanning Windows base-game depots…", id="scan-status")
+        yield SelectionList(id="exe-list")
+        with Horizontal(id="button-row"):
+            yield Button("Fingerprint selected", id="btn-fingerprint", variant="primary", disabled=True)
         yield Static("", id="scan-detail", markup=False)
-        yield FooterHelp("esc cancel")
+        yield FooterHelp("f fingerprint selected · space tick/untick · a toggle all · esc back")
 
     def on_mount(self) -> None:
-        self._cancelled = False
-        self.run_worker(self._run, thread=True, group="fingerprint")
+        self.run_worker(self._scan_worker, thread=True, group="fingerprint", exclusive=True)
 
     def action_back(self) -> None:
         self._cancelled = True
         self.app.pop_screen()
 
-    @work(thread=True, exclusive=True, group="fingerprint")
-    def _run(self) -> None:
-        import tempfile
+    def action_toggle_all(self) -> None:
+        self.query_one("#exe-list", SelectionList).toggle_all()
 
-        appid = str(self.appid)
-        self.app.job.start(f"fingerprinting App {appid}")
+    def action_fingerprint_selected(self) -> None:
+        self._start_selected()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-fingerprint":
+            self._start_selected()
+
+    def _set_status(self, text: str, error: bool = False) -> None:
+        status = self.query_one("#scan-status", Static)
+        status.update(text)
+        status.set_class(error, "-error")
+
+    def _detail(self, text: str, error: bool = False) -> None:
+        detail = self.query_one("#scan-detail", Static)
+        detail.update(text)
+        detail.set_class(error, "-error")
+
+    @staticmethod
+    def _fmt_size(size: Any) -> str:
+        try:
+            value = int(size)
+        except (TypeError, ValueError):
+            return "?"
+        if value >= 1024 * 1024:
+            return f"{value / (1024 * 1024):.1f} MB"
+        if value >= 1024:
+            return f"{value / 1024:.0f} KB"
+        return f"{value} B"
+
+    @work(thread=True, exclusive=True, group="fingerprint")
+    def _scan_worker(self) -> None:
+        self.app.job.start(f"scanning App {self.appid}")
 
         def _progress(message, step=0, total=1):
             if self._cancelled:
                 return
-            self.app.call_from_thread(self.query_one("#scan-detail", Static).update, str(message)[:140])
+            self.app.call_from_thread(
+                self._set_status, f"{message} ({step + 1}/{total})"
+            )
 
         scan_error = ""
         try:
-            scan = engine.scan_app(appid, progress=_progress)
+            scan = engine.scan_app(str(self.appid), progress=_progress)
         except Exception as exc:
             logger.warning("[Fingerprint] scan failed: %s", exc)
             scan = None
             scan_error = str(exc)
 
+        self.app.job.done()
         if self._cancelled:
             return
+        self.app.call_from_thread(self._scan_finished, scan, scan_error)
 
-        if scan is None or not scan.entries:
-            if scan is not None:
-                errors = list(scan.errors) or ["No executables found."]
-            else:
-                errors = [f"Scan failed: {scan_error}"] if scan_error else ["Scan failed."]
-            self.app.job.done()
-            self.app.call_from_thread(self._failed, errors)
+    def _scan_finished(self, scan: Optional[engine.ScanResult], scan_error: str) -> None:
+        self._scan = scan
+        self._entries = list(scan.entries) if scan else []
+        selection = self.query_one("#exe-list", SelectionList)
+        selection.clear_options()
+        if scan is None:
+            self._set_status("Scan failed — see the details below.", error=True)
+            self._detail(f"Scan failed: {scan_error or 'unknown error'}", error=True)
             return
-
-        temp_dir = tempfile.mkdtemp(prefix=f"exe-fingerprinter-{appid}-")
-        progress = lambda msg: self.app.call_from_thread(
-            self.query_one("#scan-status", Static).update, str(msg)[:140]
+        if not self._entries:
+            detail = "\n\n".join(scan.errors) or "No executables were found in the base game's Windows depots."
+            self._set_status("Nothing to fingerprint.", error=True)
+            self._detail(detail, error=True)
+            return
+        # Pre-select everything, but the actual fingerprint only starts on an explicit action.
+        selection.add_options(
+            [
+                (f"{entry.get('path', '?')}   ·   {self._fmt_size(entry.get('size'))}   ·   depot {entry.get('depot_id')}", index)
+                for index, entry in enumerate(self._entries)
+            ]
         )
-        count, errors = engine.download_selected(scan, scan.entries, destination=temp_dir, progress=progress)
-        engine.cleanup_keys(scan)
+        selection.select_all()
+        self._set_status(f"{len(self._entries)} executable(s) — untick the ones you don't want, then press F.")
+        self._detail("The fingerprint analyses only the files you confirm; it downloads them to a temp folder, which is deleted on exit.")
+        self.query_one("#btn-fingerprint", Button).disabled = False
+
+    @work(thread=True, exclusive=True, group="fingerprint")
+    def _fingerprint_worker(self, picked: List[Dict[str, Any]]) -> None:
+        import tempfile
+
+        self.app.job.start(f"fingerprinting {len(picked)} file(s) of App {self.appid}")
+        temp_dir = tempfile.mkdtemp(prefix=f"exe-fingerprinter-{self.appid}-")
+
+        def _progress(message):
+            if self._cancelled:
+                return
+            self.app.call_from_thread(self._set_status, str(message)[:140])
+
+        count, errors = engine.download_selected(
+            self._scan, picked, destination=temp_dir, progress=_progress
+        )
+        engine.cleanup_keys(self._scan)
         if self._cancelled:
             return
+        if errors:
+            self.app.call_from_thread(self._detail, "\n\n".join(errors), error=True)
 
         from core.fingerprint import fingerprint_file
 
@@ -626,23 +708,31 @@ class FingerprintTaskScreen(Screen):
             if not path.is_file() or path.suffix.lower() != ".exe":
                 continue
             try:
-                reports.append(fingerprint_file(str(path), source=f"steam appid {appid}"))
+                reports.append(fingerprint_file(str(path), source=f"steam appid {self.appid}"))
             except Exception as exc:
                 logger.warning("[Fingerprint] analysis failed for %s: %s", path, exc)
         self.app.job.done()
-        self.app.call_from_thread(self._done, reports, temp_dir, errors)
+        self.app.call_from_thread(self._fingerprinted, reports, temp_dir, errors)
 
-    def _failed(self, errors: List[str]) -> None:
-        status = self.query_one("#scan-status", Static)
-        status.update("Fingerprint failed:")
-        status.add_class("-error")
-        detail = self.query_one("#scan-detail", Static)
-        detail.update("\n\n".join(errors))
-        detail.add_class("-error")
+    def _start_selected(self) -> None:
+        if self._scan is None or not self._entries:
+            self._set_status("Nothing scanned yet — give it a moment.")
+            return
+        selection = self.query_one("#exe-list", SelectionList)
+        picked = [self._entries[i] for i in selection.selected]
+        if not picked:
+            self._set_status("No executables selected — tick at least one.", error=True)
+            return
+        self._set_status(f"Downloading {len(picked)} file(s) to a temp folder…")
+        self.query_one("#btn-fingerprint", Button).disabled = True
+        self._fingerprint_worker(picked)
 
-    def _done(self, reports: List[Dict[str, Any]], temp_dir: str, errors: List[str]) -> None:
+    def _fingerprinted(self, reports: List[Dict[str, Any]], temp_dir: str, errors: List[str]) -> None:
         if not reports:
-            self._failed(errors or ["No executables were downloaded to analyze."])
+            detail = "\n\n".join(errors) if errors else "No executables were downloaded to analyze."
+            self._set_status("Fingerprint failed.", error=True)
+            self._detail(detail, error=True)
+            self.query_one("#btn-fingerprint", Button).disabled = False
             return
         self.app.pop_screen()
         # One report screen per executable: Copy / Export work per file.
@@ -726,10 +816,150 @@ class FingerprintScreen(Screen):
         self._set_status(f"Wrote {out}")
 
 
+class ProcessPickerScreen(Screen):
+    """Pick a running process and fingerprint the binary image it loaded."""
+
+    BINDINGS = [("escape", "back", "back")]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._processes: List[Dict[str, Any]] = []
+        self._filtered: List[Dict[str, Any]] = []
+
+    def compose(self) -> ComposeResult:
+        yield AppHeader("fingerprint a running process", id="hdr")
+        yield Static(
+            "Fingerprints the on-disk image of the selected process and records PID, PPID,\n"
+            "start time, user, RSS, command line (secrets redacted) and mapped modules.",
+            id="app-subtitle",
+        )
+        yield Input(placeholder="filter by name or pid…", id="proc-filter")
+        yield DataTable(id="proc-table", zebra_stripes=True)
+        yield Static("Loading processes…", id="scan-status")
+        yield FooterHelp("enter fingerprint first match · click a row · esc back")
+
+    def on_mount(self) -> None:
+        table = self.query_one("#proc-table", DataTable)
+        table.cursor_type = "row"
+        table.add_columns("name", "pid", "ppid", "rss", "image")
+        self.run_worker(self._load_worker, thread=True, group="proc-load", exclusive=True)
+
+    def action_back(self) -> None:
+        self.app.pop_screen()
+
+    @work(thread=True, exclusive=True, group="proc-load")
+    def _load_worker(self) -> None:
+        from core import process_info
+
+        try:
+            processes = process_info.list_processes()
+            error = ""
+        except Exception as exc:
+            processes, error = [], str(exc)
+        self.app.call_from_thread(self._loaded, processes, error)
+
+    def _loaded(self, processes: List[Dict[str, Any]], error: str) -> None:
+        self._processes = processes
+        self._populate(str(self.query_one("#proc-filter", Input).value))
+        status = self.query_one("#scan-status", Static)
+        if error:
+            status.update(f"Could not read the process list: {error}")
+            status.add_class("-error")
+        else:
+            status.update(f"{len(processes)} process(es) — filter to narrow it down, Enter to fingerprint.")
+
+    def _populate(self, needle: str) -> None:
+        needle = needle.strip().lower()
+        table = self.query_one("#proc-table", DataTable)
+        table.clear()
+
+        def matches(proc) -> bool:
+            if not needle:
+                return True
+            return needle in str(proc.get("name", "")).lower() or needle in str(proc.get("pid"))
+
+        self._filtered = [proc for proc in self._processes if matches(proc)]
+        for proc in self._filtered:
+            rss = proc.get("rss_kb")
+            table.add_row(
+                str(proc.get("name") or "?")[:28],
+                str(proc.get("pid")),
+                str(proc.get("ppid") if proc.get("ppid") is not None else "—"),
+                f"{rss / 1024:.1f} MB" if rss else "—",
+                str(proc.get("exe") or "?")[-72:],
+                key=str(proc.get("pid")),
+            )
+        table.move_cursor(row=0)
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id == "proc-filter":
+            self._populate(event.value)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "proc-filter" and self._filtered:
+            self._analyze(int(self._filtered[0]["pid"]))
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        try:
+            pid_int = int(str(event.row_key.value))
+        except (TypeError, ValueError):
+            return
+        self._analyze(pid_int)
+
+    def _analyze(self, pid: int) -> None:
+        self._set_busy(True)
+        self._analyze_worker(pid)
+
+    def _set_busy(self, busy: bool) -> None:
+        self.query_one("#proc-table", DataTable).disabled = busy
+        self.query_one("#proc-filter", Input).disabled = busy
+        self.query_one("#scan-status", Static).update("Fingerprinting…" if busy else "")
+
+    @work(thread=True, exclusive=True, group="proc-analyze")
+    def _analyze_worker(self, pid: int) -> None:
+        from core import process_info
+        from core.fingerprint import fingerprint_file
+
+        description = process_info.describe_process(pid)
+        exe = description.get("exe")
+        error = description.get("error") or description.get("exe_error")
+        if not exe:
+            detail = error or "permission denied, or the process exited"
+            self.app.call_from_thread(self._failed, f"Process {pid}: image path unavailable — {detail}")
+            return
+        if not os.path.exists(exe):
+            self.app.call_from_thread(self._failed, f"Image of process {pid} no longer exists at {exe}")
+            return
+        try:
+            report = fingerprint_file(exe, source=f"process {pid} on {report_source()}", process=description)
+        except Exception as exc:
+            logger.warning("[ProcessFingerprint] analysis failed for pid %d: %s", pid, exc)
+            self.app.call_from_thread(self._failed, f"Analysis failed: {exc}")
+            return
+        self.app.call_from_thread(self._done, report, Path(exe).parent)
+
+    def _done(self, report: Dict[str, Any], work_dir: Path) -> None:
+        self._set_busy(False)
+        self.app.pop_screen()
+        self.app.push_screen(FingerprintScreen(report=report, work_dir=str(work_dir)))
+
+    def _failed(self, message: str) -> None:
+        self._set_busy(False)
+        status = self.query_one("#scan-status", Static)
+        status.update(message)
+        status.add_class("-error")
+
+
+def report_source() -> str:
+    import platform
+
+    return platform.node() or "this machine"
+
+
 class ExternalFingerprintScreen(Screen):
     """Pick any .exe and fingerprint it — no game depots involved."""
 
-    BINDINGS = [("escape", "back", "back"), ("p", "pick", "pick")]
+    BINDINGS = [("escape", "back", "back"), ("p", "pick", "pick"), ("r", "process", "running process")]
 
     def compose(self) -> ComposeResult:
         yield AppHeader("external fingerprint", id="hdr")
@@ -738,10 +968,11 @@ class ExternalFingerprintScreen(Screen):
             "CodeView GUID, strings, disassembly: copy the TOML or export it.",
             id="app-subtitle",
         )
-        yield Static("Press P (or the button) to pick an .exe.", id="scan-status")
+        yield Static("Press P to pick an .exe, or R to fingerprint a running process.", id="scan-status")
         with Horizontal(id="button-row"):
             yield Button("Pick .exe…", id="btn-pick", variant="primary")
-        yield FooterHelp("esc back · p pick a file")
+            yield Button("Fingerprint running process…", id="btn-process")
+        yield FooterHelp("esc back · p pick a file · r running process")
 
     def action_back(self) -> None:
         self.app.pop_screen()
@@ -749,12 +980,17 @@ class ExternalFingerprintScreen(Screen):
     def action_pick(self) -> None:
         self._start_picking()
 
+    def action_process(self) -> None:
+        self.app.push_screen(ProcessPickerScreen())
+
     def on_mount(self) -> None:
         self.query_one("#btn-pick", Button).focus()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-pick":
             self._start_picking()
+        elif event.button.id == "btn-process":
+            self.action_process()
 
     def _start_picking(self) -> None:
         self.query_one("#scan-status", Static).update("Opening the file picker…")

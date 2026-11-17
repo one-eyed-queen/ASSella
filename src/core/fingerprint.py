@@ -36,6 +36,39 @@ _ARCH = {
     0xAA64: "arm64",
 }
 
+_FILE_CHARACTERISTICS = (
+    (0x0002, "executable"),
+    (0x0020, "large-address-aware"),
+    (0x0080, "bytes-reversed-lo"),
+    (0x0100, "32bit-machine"),
+    (0x0200, "debug-stripped"),
+    (0x1000, "system"),
+    (0x2000, "dll"),
+    (0x4000, "up-system-only"),
+)
+
+_DLL_CHARACTERISTICS = (
+    (0x0020, "high-entropy-va"),
+    (0x0040, "dynamic-base-aslr"),
+    (0x0080, "force-integrity"),
+    (0x0100, "nx-compat-dep"),
+    (0x0200, "no-isolation"),
+    (0x0400, "no-seh"),
+    (0x0800, "do-not-bind"),
+    (0x1000, "appcontainer"),
+    (0x2000, "wdm-driver"),
+    (0x4000, "guard-cf-cfg"),
+    (0x8000, "terminal-server-aware"),
+)
+
+_RESOURCE_TYPES = {
+    1: "CURSOR", 2: "BITMAP", 3: "ICON", 4: "MENU", 5: "DIALOG", 6: "STRING",
+    7: "FONTDIR", 8: "FONT", 9: "ACCELERATOR", 10: "RCDATA", 11: "MESSAGETABLE",
+    12: "GROUP_CURSOR", 13: "GROUP_FONT", 14: "GROUP_ICON", 16: "VERSION",
+    17: "DLGINCLUDE", 19: "PLUGPLAY", 20: "VXD", 21: "ANICURSOR", 22: "ANIICON",
+    23: "HTML", 24: "MANIFEST",
+}
+
 _SUBSYSTEM = {
     1: "native",
     2: "windows-gui",
@@ -71,6 +104,8 @@ def _hashes(path: Path, chunk_size: int = 1 << 16) -> Dict[str, str]:
     md5 = hashlib.md5()
     sha1 = hashlib.sha1()
     sha256 = hashlib.sha256()
+    sha512 = hashlib.sha512()
+    blake2b = hashlib.blake2b(digest_size=32)
     with path.open("rb") as handle:
         while True:
             chunk = handle.read(chunk_size)
@@ -79,7 +114,15 @@ def _hashes(path: Path, chunk_size: int = 1 << 16) -> Dict[str, str]:
             md5.update(chunk)
             sha1.update(chunk)
             sha256.update(chunk)
-    return {"md5": md5.hexdigest(), "sha1": sha1.hexdigest(), "sha256": sha256.hexdigest()}
+            sha512.update(chunk)
+            blake2b.update(chunk)
+    return {
+        "md5": md5.hexdigest(),
+        "sha1": sha1.hexdigest(),
+        "sha256": sha256.hexdigest(),
+        "sha512": sha512.hexdigest(),
+        "blake2b256": blake2b.hexdigest(),
+    }
 
 
 def _shannon_entropy(data: bytes) -> float:
@@ -100,6 +143,119 @@ def _shannon_entropy(data: bytes) -> float:
 
 def _section_flags(characteristics: int) -> List[str]:
     return [name for bit, name in _SECTION_FLAG_NAMES if characteristics & bit]
+
+
+def _flag_names(value: int, table) -> List[str]:
+    return [name for bit, name in table if value & bit]
+
+
+def _file_ts(path: Path) -> Dict[str, Any]:
+    """Filesystem metadata: timestamps, identity, ownership."""
+    try:
+        st = path.stat()
+    except OSError as exc:
+        return {"error": str(exc)}
+
+    def _iso(ts: float) -> Optional[str]:
+        try:
+            from datetime import datetime, timezone
+
+            return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        except (OverflowError, OSError, ValueError):
+            return None
+
+    birth = getattr(st, "st_birthtime", None)
+    try:
+        import pwd
+
+        owner = pwd.getpwuid(st.st_uid).pw_name
+    except Exception:
+        owner = str(st.st_uid)
+    try:
+        import grp
+
+        group = grp.getgrgid(st.st_gid).gr_name
+    except Exception:
+        group = str(st.st_gid)
+    out: Dict[str, Any] = {
+        "size_bytes": st.st_size,
+        "modified": _iso(st.st_mtime),
+        "changed": _iso(st.st_ctime),
+        "accessed": _iso(st.st_atime),
+        "created": _iso(birth) if birth is not None else None,
+        "inode": st.st_ino,
+        "hard_links": st.st_nlink,
+        "uid": st.st_uid,
+        "gid": st.st_gid,
+        "owner": owner,
+        "group": group,
+        "mode": oct(st.st_mode & 0o7777),
+    }
+    return out
+
+
+def _pe_checksum(data: bytes, checksum_offset: int, checksum_valid_range: Optional[int] = None) -> int:
+    """The PE header checksum over ``data`` with the field zeroed."""
+    end = checksum_valid_range if checksum_valid_range is not None else len(data)
+    buf = bytearray(data[:end])
+    if 0 <= checksum_offset and checksum_offset + 4 <= len(buf):
+        buf[checksum_offset: checksum_offset + 4] = b"\x00\x00\x00\x00"
+    if len(buf) % 2:
+        buf += b"\x00"
+    total = 0
+    for i in range(0, len(buf), 2):
+        total += int.from_bytes(buf[i: i + 2], "little")
+        total = (total & 0xFFFF) + (total >> 16)
+    total = (total & 0xFFFF) + (total >> 16)
+    return (total + len(buf)) & 0xFFFFFFFF
+
+
+def _timedatestamp_note(stamp: int) -> Dict[str, Any]:
+    try:
+        from datetime import datetime, timezone
+
+        moment = datetime.fromtimestamp(stamp, tz=timezone.utc)
+        iso = moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+    except (OverflowError, OSError, ValueError):
+        return {"timedatestamp_raw": stamp, "timedatestamp": None, "timedatestamp_note": "out of range"}
+    out: Dict[str, Any] = {"timedatestamp_raw": stamp, "timedatestamp": iso}
+    from datetime import datetime as _dt, timezone as _tz
+
+    if stamp == 0:
+        out["timedatestamp_note"] = "zero — reproducible-build or scrubbed binary"
+    elif moment > _dt.now(_tz.utc):
+        out["timedatestamp_note"] = "in the future — the build clock was wrong at link time"
+    elif moment.year < 1996:
+        out["timedatestamp_note"] = "implausibly old for a PE — likely scrubbed or synthetic"
+    return out
+
+
+def _resources(pe) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    try:
+        root = getattr(pe, "DIRECTORY_ENTRY_RESOURCE", None)
+        for entry in getattr(root, "entries", []) or []:
+            rtype = entry.id
+            if isinstance(rtype, int):
+                type_name = _RESOURCE_TYPES.get(rtype, f"RT_{rtype}")
+            else:
+                type_name = str(rtype)
+            level2 = getattr(getattr(entry, "directory", None), "entries", []) or []
+            langs = 0
+            for name_entry in level2:
+                level3 = getattr(getattr(name_entry, "directory", None), "entries", []) or []
+                langs += len(level3)
+            out.append(
+                {
+                    "type": type_name,
+                    "type_id": rtype if isinstance(rtype, int) else None,
+                    "entries": len(level2),
+                    "languages": langs,
+                }
+            )
+    except Exception as exc:
+        logger.debug("[Fingerprint] resources unreadable: %s", exc)
+    return out
 
 
 def _version_info(pe) -> Dict[str, str]:
@@ -154,44 +310,7 @@ def _debug_info(pe) -> Dict[str, Any]:
     return out
 
 
-def _signature_info(pe, path: Path) -> Dict[str, Any]:
-    out: Dict[str, Any] = {"present": False}
-    try:
-        directory = pe.OPTIONAL_HEADER.DATA_DIRECTORY[4]
-        size = directory.Size
-        if size:
-            out["present"] = True
-            out["cert_table_size"] = size
-            out["cert_table_offset"] = directory.VirtualAddress
-            with path.open("rb") as handle:
-                handle.seek(directory.VirtualAddress)
-                blob = handle.read(min(size, 512 * 1024))
-            subject = _find_certificate_subject(blob)
-            if subject:
-                out["signer_subject"] = subject
-            out["size_bytes"] = len(blob)
-            try:
-                if pe.verify_signature():
-                    out["verified"] = True
-            except Exception:
-                out["verified"] = False
-    except Exception as exc:
-        logger.debug("[Fingerprint] signature check failed: %s", exc)
-    return out
 
-
-_CERT_SUBJECT_RE = re.compile(rb"CN=([\w\.\- &,]{2,80})")
-
-
-def _find_certificate_subject(blob: bytes) -> Optional[str]:
-    # naive but effective: the signing cert's CN attribute is plaintext inside the ASN.1
-    match = _CERT_SUBJECT_RE.search(blob)
-    if not match:
-        return None
-    try:
-        return match.group(1).decode("utf-8", "ignore").strip() or None
-    except Exception:
-        return None
 
 
 def _interesting_strings(path: Path, limit: int = 48) -> List[str]:
@@ -260,10 +379,18 @@ def _disasm(pe, limit: int = 24) -> List[Dict[str, str]]:
 
 # ── public API ─────────────────────────────────────────────────────────────
 
-def fingerprint_file(path: str | os.PathLike, source: str = "local file") -> Dict[str, Any]:
+def fingerprint_file(path: str | os.PathLike, source: str = "local file", process: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     path = Path(path)
     size = path.stat().st_size
     hashes = _hashes(path)
+    fs_info = _file_ts(path)
+
+    try:
+        with path.open("rb") as handle:
+            probe = handle.read(16 * 1024 * 1024)
+        overall_entropy = _shannon_entropy(probe)
+    except OSError:
+        overall_entropy = None
 
     report: Dict[str, Any] = {
         "file": {
@@ -273,9 +400,12 @@ def fingerprint_file(path: str | os.PathLike, source: str = "local file") -> Dic
             **hashes,
             "magic": "MZ",
         },
+        "fs": fs_info,
         "source": source,
         "meta": {"tool": TOOL, "tool_version": TOOL_VERSION},
     }
+    if process:
+        report["process"] = process
 
     try:
         import pefile
@@ -284,10 +414,10 @@ def fingerprint_file(path: str | os.PathLike, source: str = "local file") -> Dic
         try:
             pe.parse_data_directories(
                 directories=[
-                    pefile.DIRECTORY_ENTRY_RESOURCE,
-                    pefile.DIRECTORY_ENTRY_DEBUG,
-                    pefile.DIRECTORY_ENTRY_IMPORT,
-                    pefile.DIRECTORY_ENTRY_EXPORT,
+                    pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"],
+                    pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_DEBUG"],
+                    pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_IMPORT"],
+                    pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"],
                 ]
             )
         except Exception:
@@ -299,6 +429,40 @@ def fingerprint_file(path: str | os.PathLike, source: str = "local file") -> Dic
 
     fh = pe.FILE_HEADER
     oh = pe.OPTIONAL_HEADER
+
+    # Checksum: verify the PE header checksum. The algorithm excludes the
+    # certificate table, so truncate there when one exists (same rule
+    # Authenticode uses). Files over 512 MB are skipped rather than slurped.
+    checksum_info: Dict[str, Any] = {"checksum_stored": f"0x{oh.CheckSum:x}"}
+    try:
+        if size <= 512 * 1024 * 1024:
+            raw = path.read_bytes()
+            cert_dir = None
+            try:
+                cert_dir = oh.DATA_DIRECTORY[4]
+            except Exception:
+                pass
+            cert_offset = int(cert_dir.VirtualAddress) if cert_dir and cert_dir.Size else None
+            e_lfanew = pe.DOS_HEADER.e_lfanew
+            oh_start = e_lfanew + 4 + 20
+            checksum_offset = oh_start + 64
+            computed = _pe_checksum(raw, checksum_offset, cert_offset)
+            stored = int(oh.CheckSum or 0)
+            checksum_info["checksum_computed"] = f"0x{computed:x}"
+            if stored == 0:
+                checksum_info["checksum_valid"] = "absent (linker wrote 0 — common for .NET assemblies)"
+            else:
+                checksum_info["checksum_valid"] = "valid" if stored == computed else "mismatch (file modified after link, e.g. signed)"
+        else:
+            checksum_info["checksum_valid"] = "skipped (file too large)"
+    except Exception as exc:
+        logger.debug("[Fingerprint] checksum computation failed: %s", exc)
+        checksum_info["checksum_valid"] = "uncomputable"
+
+    resources = _resources(pe)
+    file_chars = _flag_names(fh.Characteristics, _FILE_CHARACTERISTICS)
+    dll_chars = _flag_names(oh.DllCharacteristics, _DLL_CHARACTERISTICS)
+    stamp_info = _timedatestamp_note(int(getattr(fh, "TimeDateStamp", 0) or 0))
 
     sections = []
     for section in pe.sections:
@@ -347,9 +511,15 @@ def fingerprint_file(path: str | os.PathLike, source: str = "local file") -> Dic
         "size_of_image": oh.SizeOfImage,
         "size_of_headers": oh.SizeOfHeaders,
         "size_of_code": oh.SizeOfCode,
-        "checksum": f"0x{oh.CheckSum:x}" if getattr(oh, "CheckSum", None) is not None else None,
+        **checksum_info,
         "linker_version": f"{oh.MajorLinkerVersion}.{oh.MinorLinkerVersion}",
         "dll_characteristics": oh.DllCharacteristics,
+        "dll_characteristic_names": dll_chars,
+        "file_characteristics": fh.Characteristics,
+        "file_characteristic_names": file_chars,
+        "entropy": overall_entropy,
+        "resources": resources,
+        **stamp_info,
         "sections": sections,
         "imported_dlls": imports,
         "imported_function_count": import_functions,
@@ -369,7 +539,13 @@ def fingerprint_file(path: str | os.PathLike, source: str = "local file") -> Dic
 
     report["version"] = _version_info(pe)
     report["debug"] = _debug_info(pe)
-    report["signature"] = _signature_info(pe, path)
+    try:
+        from core.authenticode import analyze as _authenticode_analyze
+
+        report["signature"] = _authenticode_analyze(pe, path)
+    except Exception as exc:
+        logger.debug("[Fingerprint] authenticode analysis failed: %s", exc)
+        report["signature"] = {"present": False, "error": str(exc)}
     report["strings"] = _interesting_strings(path)
     report["disasm"] = _disasm(pe)
     report["meta"]["generated"] = _iso_now()
@@ -401,9 +577,17 @@ def _toml_key(key: str) -> str:
 def _toml_value(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, int) and not isinstance(value, bool):
+    if isinstance(value, int):
         return str(value)
+    if isinstance(value, float):
+        return repr(value)
     return _toml_str(value)
+
+
+def _toml_array(values: Any) -> str:
+    if not values:
+        return "[]"
+    return "[ " + ", ".join(_toml_value(v) for v in values) + " ]"
 
 
 def fingerprint_to_toml(report: Dict[str, Any]) -> str:
@@ -417,6 +601,11 @@ def fingerprint_to_toml(report: Dict[str, Any]) -> str:
             return
         lines.append(f"{_toml_key(key)} = {_toml_value(value)}")
 
+    def array_kv(key: str, values: Any):
+        if values is None:
+            return
+        lines.append(f"{_toml_key(key)} = {_toml_array(values)}")
+
     section("meta")
     kv("tool", report.get("meta", {}).get("tool", TOOL))
     kv("tool_version", report.get("meta", {}).get("tool_version", TOOL_VERSION))
@@ -427,8 +616,26 @@ def fingerprint_to_toml(report: Dict[str, Any]) -> str:
 
     file_info = report.get("file", {})
     section("file")
-    for key in ("name", "path", "size_bytes", "md5", "sha1", "sha256", "magic"):
+    for key in ("name", "path", "size_bytes", "md5", "sha1", "sha256", "sha512", "blake2b256", "magic"):
         kv(key, file_info.get(key))
+
+    fs = report.get("fs") or {}
+    if fs:
+        section("fs")
+        for key in ("size_bytes", "modified", "changed", "accessed", "created",
+                    "inode", "hard_links", "uid", "gid", "owner", "group", "mode"):
+            kv(key, fs.get(key))
+
+    process = report.get("process") or {}
+    if process:
+        section("process")
+        for key in ("pid", "ppid", "name", "state", "started_at", "exe", "cwd",
+                    "user", "uid", "gid", "threads", "rss_kb", "vms_kb",
+                    "utime_seconds", "stime_seconds", "argv_redacted",
+                    "exe_error", "modules_error", "error"):
+            kv(key, process.get(key))
+        array_kv("argv", process.get("argv"))
+        array_kv("modules", process.get("modules"))
 
     pe = report.get("pe")
     if pe:
@@ -443,23 +650,37 @@ def fingerprint_to_toml(report: Dict[str, Any]) -> str:
             "size_of_image",
             "size_of_headers",
             "size_of_code",
-            "checksum",
+            "checksum_stored",
+            "checksum_computed",
+            "checksum_valid",
             "linker_version",
             "dll_characteristics",
+            "file_characteristics",
+            "entropy",
             "imported_function_count",
             "exported_function_count",
             "is_dotnet",
             "overlay_offset",
+            "timedatestamp_raw",
+            "timedatestamp",
+            "timedatestamp_note",
         ):
             kv(key, pe.get(key))
-        kv("imported_dlls", "; ".join(pe.get("imported_dlls") or []))
-        kv("exported_functions", "; ".join(pe.get("exported_functions") or []))
+        array_kv("file_characteristic_names", pe.get("file_characteristic_names"))
+        array_kv("dll_characteristic_names", pe.get("dll_characteristic_names"))
+        array_kv("imported_dlls", pe.get("imported_dlls"))
+        array_kv("exported_functions", pe.get("exported_functions"))
         for index, section_entry in enumerate(pe.get("sections") or []):
-            section(f"pe.sections.{index}")
+            lines.append("[[pe.sections]]")
             for key in ("name", "virtual_size", "raw_size", "entropy"):
                 kv(key, section_entry.get(key))
-            flags = section_entry.get("flags") or []
-            lines.append(f"flags = [ {', '.join(_toml_str(f) for f in flags)} ]")
+            lines.append(f"flags = {_toml_array(section_entry.get('flags') or [])}")
+        for resource in pe.get("resources") or []:
+            lines.append("[[pe.resources]]")
+            kv("type", resource.get("type"))
+            kv("type_id", resource.get("type_id"))
+            kv("entries", resource.get("entries"))
+            kv("languages", resource.get("languages"))
 
     version = report.get("version") or {}
     if version:
@@ -477,25 +698,32 @@ def fingerprint_to_toml(report: Dict[str, Any]) -> str:
     if signature:
         section("signature")
         for key, value in signature.items():
+            if key in ("certificates", "integrity"):
+                continue
             kv(key, value)
+        integrity = signature.get("integrity") or {}
+        if integrity:
+            section("signature.integrity")
+            for key, value in integrity.items():
+                kv(key, value)
+        for certificate in signature.get("certificates") or []:
+            lines.append("[[signature.certificates]]")
+            for key, value in certificate.items():
+                kv(key, value)
 
     disasm = report.get("disasm") or []
-    if disasm:
-        section("disasm")
-        for index, insn in enumerate(disasm):
-            lines.append(f"# {index}")
-            section(f"disasm.{index}")
-            for key, value in insn.items():
-                kv(key, value)
+    for insn in disasm:
+        lines.append("[[disasm]]")
+        for key, value in insn.items():
+            kv(key, value)
 
     strings = report.get("strings") or []
     if strings:
         section("strings")
-        lines.append(
-            "interesting = [\n"
-            + "\n".join(f"  {_toml_str(s)}," for s in strings)
-            + "\n]"
-        )
+        lines.append("interesting = [")
+        for s in strings:
+            lines.append(f"  {_toml_str(s)},")
+        lines.append("]")
 
     return "\n".join(lines) + "\n"
 
@@ -515,6 +743,36 @@ def fingerprint_to_text(report: Dict[str, Any]) -> List[str]:
     kv("md5", file_info.get("md5"))
     kv("sha1", file_info.get("sha1"))
     kv("sha256", file_info.get("sha256"))
+    kv("sha512", file_info.get("sha512"))
+
+    fs = report.get("fs") or {}
+    if fs:
+        out.append("── filesystem ──")
+        kv("modified", fs.get("modified"))
+        kv("created", fs.get("created"))
+        kv("changed", fs.get("changed"))
+        kv("owner", f"{fs.get('owner')}:{fs.get('group')}")
+        kv("mode", fs.get("mode"))
+        kv("inode", fs.get("inode"))
+
+    process = report.get("process") or {}
+    if process:
+        out.append("── process ──")
+        kv("pid", process.get("pid"))
+        kv("ppid", process.get("ppid"))
+        kv("name", process.get("name"))
+        kv("state", process.get("state"))
+        kv("started", process.get("started_at"))
+        kv("user", process.get("user"))
+        kv("exe", process.get("exe") or process.get("exe_error"))
+        kv("cwd", process.get("cwd"))
+        kv("threads", process.get("threads"))
+        kv("rss", f"{process.get('rss_kb')} KB" if process.get("rss_kb") else None)
+        if process.get("argv"):
+            marker = "  (redacted)" if process.get("argv_redacted") else ""
+            out.append(f"  argv: {' '.join(process['argv'])}{marker}")
+        if process.get("modules"):
+            kv("modules", f"{len(process['modules'])} mapped files (see TOML)")
 
     if report.get("error"):
         out.append(f"error: {report['error']}")
@@ -529,14 +787,22 @@ def fingerprint_to_text(report: Dict[str, Any]) -> List[str]:
     kv("image base", pe.get("image_base"))
     kv("sections", pe.get("number_of_sections"))
     kv("size of image", f"{pe.get('size_of_image', 0):,}")
-    kv("checksum", pe.get("checksum"))
+    kv("checksum", pe.get("checksum_stored"))
+    kv("checksum valid", pe.get("checksum_valid"))
+    kv("timedatestamp", f"{pe.get('timedatestamp')} ({pe.get('timedatestamp_note') or 'ok'})" if pe.get("timedatestamp") else None)
     kv("linker", pe.get("linker_version"))
+    kv("dll characteristics", ", ".join(pe.get("dll_characteristic_names") or []))
+    kv("file characteristics", ", ".join(pe.get("file_characteristic_names") or []))
+    kv("entropy", pe.get("entropy"))
     kv(".NET", pe.get("is_dotnet"))
     kv("overlay", f"0x{pe['overlay_offset']:x}" if pe.get("overlay_offset") else None)
     if pe.get("imported_dlls"):
         out.append(f"  dlls: {', '.join(pe['imported_dlls'])}")
     kv("imported functions", pe.get("imported_function_count"))
     kv("exported functions", pe.get("exported_function_count"))
+    resources = pe.get("resources") or []
+    if resources:
+        out.append("  resources: " + ", ".join(f"{r.get('type')}×{r.get('entries')}" for r in resources))
     for index, section_entry in enumerate(pe.get("sections") or []):
         flags = ", ".join(section_entry.get("flags") or [])
         out.append(
@@ -563,7 +829,21 @@ def fingerprint_to_text(report: Dict[str, Any]) -> List[str]:
         kv("present", signature.get("present"))
         kv("cert table", f"{signature.get('cert_table_size')} bytes" if signature.get("cert_table_size") else None)
         kv("signer", signature.get("signer_subject"))
-        kv("verified", signature.get("verified"))
+        kv("fingerprint", signature.get("signer_fingerprint_sha256"))
+        kv("chain verified", signature.get("chain_verified"))
+        kv("chain detail", signature.get("chain_detail"))
+        integrity = signature.get("integrity") or {}
+        if integrity:
+            kv("integrity", (
+                f"algorithm {integrity.get('algorithm')} — signed byte range intact"
+                if integrity.get("verified")
+                else "no computed digest found in the signature (modified after signing, or an unexpected algorithm)"
+            ))
+        for certificate in signature.get("certificates") or []:
+            out.append(
+                f"  cert: {certificate.get('subject', '?')} — issuer {certificate.get('issuer', '?')} "
+                f"— notAfter {certificate.get('not_after', '?')}"
+            )
 
     disasm = report.get("disasm") or []
     if disasm:

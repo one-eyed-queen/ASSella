@@ -1190,11 +1190,16 @@ HomeScreen ToastHolder {
     color: $error;
 }
 
-#exe-list {
+#exe-list, #proc-table {
     height: 1fr;
     margin: 0 2;
     border: solid #3d4f80;
     background: transparent;
+}
+
+#proc-filter {
+    margin: 1 2 0 2;
+    width: 1fr;
 }
 
 #button-row {

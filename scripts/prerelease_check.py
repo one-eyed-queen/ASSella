@@ -54,6 +54,11 @@ def main() -> int:
                env={"QT_QPA_PLATFORM": "offscreen"})
     record("manifest_dump (29 checks)", proc.returncode == 0)
 
+    # 2b. authenticode analysis
+    print("-- 2b. authenticode analysis")
+    proc = run([sys.executable, "scripts/test_authenticode.py"])
+    record("authenticode (synthetic signed PE)", proc.returncode == 0, "skips when openssl is absent")
+
     # 3. Qt-free runtime
     print("-- 3. Qt-free runtime")
     proc = subprocess.run(
