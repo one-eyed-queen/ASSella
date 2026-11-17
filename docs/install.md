@@ -5,6 +5,12 @@
 ```bash
 git clone https://github.com/one-eyed-queen/paws-fingerprinter.git
 cd paws-fingerprinter
+./install.sh
+```
+
+That puts `fingerprint` (and `fp`) on your PATH and adds an app-menu entry. Windows: `powershell -ExecutionPolicy Bypass -File install.ps1`. Or do it by hand:
+
+```bash
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt

@@ -45,9 +45,29 @@ TOML output is valid TOML and parses with `tomllib` / `toml`. Copy it to the cli
 
 ## Install
 
-### From source
+### From source (Linux/macOS)
 
-Requirements: **Python 3.10+** (3.13 recommended), **pip**, a terminal, openssl (for certificate chain checks).
+One command installs the app and puts `fingerprint` (plus `fp`) on your PATH:
+
+```bash
+git clone https://github.com/one-eyed-queen/paws-fingerprinter.git
+cd paws-fingerprinter
+./install.sh
+```
+
+It creates a private venv in `~/.local/share/paws-fingerprinter/venv`, links `~/.local/bin/fingerprint`, adds an app-menu entry ("EXE Fingerprinter", search `fingerprint`) and icons. Requirements: **Python 3.10+**, **openssl** for certificate chain checks. `./uninstall.sh` removes it. Running `./install.sh` again updates.
+
+Windows:
+
+```powershell
+git clone https://github.com/one-eyed-queen/paws-fingerprinter.git
+cd paws-fingerprinter
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+Same idea: venv in `%LOCALAPPDATA%\paws-fingerprinter`, `fingerprint` shim on your user PATH, **EXE Fingerprinter** in the Start Menu (search `fingerprint`). `install.ps1 -Desktop` adds a desktop shortcut; `install.ps1 -Uninstall` removes everything. Best in Windows Terminal; cmd and the old console work too.
+
+### Manual install
 
 ```bash
 git clone https://github.com/one-eyed-queen/paws-fingerprinter.git
