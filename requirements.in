@@ -3,44 +3,9 @@
 # Regenerate with:
 #   uv pip compile requirements.in -o requirements.txt --python-version 3.13
 #
-# Do not hand-edit: `requirements.txt` is generated and the header records the
-# uv version used. Edit `requirements.in` and recompile instead.
-#
-# Git dependencies are pinned to exact commits so a build can never change
-# underneath us ("worked yesterday, broken today, no code change").
-git+https://github.com/solsticegamestudios/steam.git@1373e885f26bb636225443787f54d4082283e5f3
-
-# NOTE: `steam` itself declares vdf via git+...@v4.0. uv rejects declaring the
-# same package from a different URL, so we pin the upstream ref here (v4.0 is a
-# moving tag) and let steam's own requirement resolve. `uv pip compile` records
-# the resolved commit in the lock, which is what actually pins the build.
-git+https://github.com/solsticegamestudios/vdf.git@v4.0
-
-beautifulsoup4==4.15.0
-cachetools==5.5.2
-capstone==5.0.9
-configobj==5.0.9
-cryptography==50.0.2
-curl-cffi==0.17.0
-gevent==25.9.1
-gevent-eventemitter==2.1
-protobuf==5.29.5
-psutil==7.2.2
-pycryptodome==3.23.0
-pyyaml==6.0.3
-pysocks==1.7.1
-pyqt6==6.11.0
-zstandard==0.25.0
-
-# rich powers the CLI depot/DLC selection menus, progress bars, and terminal formatting.
-# `managers/cli_manager.py` imports `ui/text_menus.py` at module level.
+# Only what the .exe downloader needs: the terminal UI, HTTP clients and the
+# sixel fallback. Everything else was removed with the library/update flows.
 rich>=13.7.0
-
-# wsproto is required by steam.client for Steam WebSocket protocol support
-wsproto==1.3.2
-
-# Removed as unused - verified no imports anywhere outside src/deps/ vendored
-# sample scripts (see docs/DEPENDENCIES.md):
-#   numpy, Pillow, tinytag, just-playback,
-#   pycryptodomex  (duplicate fork of pycryptodome, which is kept)
-# Re-add here and recompile if code ever needs one. Do not edit requirements.txt.
+requests>=2.31.0
+urllib3>=1.26.0
+Pillow>=10.0.0

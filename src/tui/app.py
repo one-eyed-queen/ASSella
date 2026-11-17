@@ -1060,8 +1060,32 @@ class FingerprinterTUI:
 
 def _api_batch(argv: List[str]) -> Optional[int]:
     """Non-interactive ``--api --appid …`` path for scripts and CI."""
-    if "--api" not in argv or "--download" not in argv:
+    if "--api" not in argv or "--appid" not in argv:
         return None
+    if "--download" not in argv:
+        # Fingerprint-only, no download: still fully headless.
+        appid = None
+        for index, arg in enumerate(argv):
+            if arg == "--appid" and index + 1 < len(argv):
+                appid = argv[index + 1]
+            elif arg.startswith("--appid="):
+                appid = arg.split("=", 1)[1]
+        if not appid or not str(appid).isdigit():
+            return None
+        console = Console()
+        console.print(f"[bold]Fingerprinting AppID {appid}[/bold]")
+        scan = engine.scan_app(str(appid))
+        if not scan.entries:
+            console.print("[yellow]No executables found.[/yellow]")
+            for error in scan.errors:
+                console.print(f"[red]{escape(error)}[/red]")
+            engine.cleanup_keys(scan)
+            return 2
+        console.print(f"Found [bold]{len(scan.entries)}[/bold] executable(s):")
+        for entry in scan.entries:
+            console.print(f"  {entry['depot_id']:>10}  {escape(entry['path'])}")
+        engine.cleanup_keys(scan)
+        return 0
     appid = None
     for index, arg in enumerate(argv):
         if arg == "--appid" and index + 1 < len(argv):
@@ -1106,8 +1130,7 @@ def run_tui(argv: Optional[List[str]] = None) -> int:
             "[bold]EXE-fingerprinter TUI[/bold] needs an interactive terminal.\n\n"
             "  [cyan]--tui[/cyan]                      search / fingerprint / download\n"
             "  [cyan]--api --appid ID[/cyan]           fingerprint only (two choices)\n"
-            "  [cyan]--api --appid ID --download[/cyan] fingerprint and download every .exe\n\n"
-            "Use [cyan]--cli[/cyan] for the line-based interface."
+            "  [cyan]--api --appid ID --download[/cyan] fingerprint and download every .exe"
         )
         return 1
     try:

@@ -2,11 +2,10 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'EXE-fingerprinter',
-  description: 'Fast, modern Steam game and DLC management for SteamOS and Linux.',
+  description: 'Fingerprint a Steam game and download just its .exe files.',
   base: '/',
   cleanUrls: true,
   ignoreDeadLinks: true,
-  srcExclude: ['**/DEPENDENCIES.md', '**/OPTIONAL_COMPONENTS.md', '**/THEMES.md'],
   head: [
     ['link', { rel: 'icon', type: 'image/png', href: '/logo.png' }]
   ],
@@ -14,80 +13,17 @@ export default defineConfig({
     logo: '/logo.png',
     siteTitle: 'EXE-fingerprinter',
     nav: [
-      { text: 'Installation Guide', link: '/install' },
-      { text: 'ARM64 (Preview)', link: '/arm64' },
-      { text: 'Uran', link: '/uran' },
-      { text: 'Epsilon', link: '/epsilon' },
-      {
-        text: 'Documentation',
-        items: [
-          { text: 'Command Line Interface (CLI)', link: '/cli' },
-          { text: 'Online Multiplayer', link: '/online-multiplayer' },
-          { text: 'Themes', link: '/themes' },
-          { text: 'Dependencies', link: '/dependencies' },
-          { text: 'Optional Components', link: '/optional-components' },
-          { text: 'Game Mode Boot Loop Fix (TTY)', link: '/recovery-tty' }
-        ]
-      },
+      { text: 'Installation', link: '/install' },
+      { text: 'How it works', link: '/downloading' },
       { text: 'Releases', link: 'https://github.com/niwia/ASSella/releases' }
     ],
     sidebar: [
       {
         text: 'EXE-fingerprinter',
         items: [
-          { text: 'Installation Guide', link: '/install' },
-          {
-            text: 'Downloading Games',
-            link: '/downloading',
-            items: [
-              { text: 'Bring Your Own .lua', link: '/guides/import-lua' }
-            ]
-          },
-          { text: 'Library', link: '/library' },
-          { text: 'Game Details', link: '/game-details' },
-          {
-            text: 'AT0-M',
-            link: '/at0m',
-            items: [
-              { text: 'Plugins', link: '/plugins' }
-            ]
-          },
-          {
-            text: 'Guides',
-            collapsed: false,
-            items: [
-              { text: 'DLC-Only Mode', link: '/guides/dlc-only' },
-              { text: 'Downgrade a Game', link: '/guides/downgrade' },
-              { text: 'Pin a Build', link: '/guides/pin-build' },
-              { text: 'Uninstall a Game', link: '/guides/uninstall' },
-              { text: 'Launcher Bypass', link: '/guides/launcher-bypass' }
-            ]
-          },
-          { text: 'Why EXE-fingerprinter?', link: '/compare' }
-        ]
-      },
-      {
-        text: 'ARM64',
-        items: [{ text: 'ARM64 & Armada OS (Preview)', link: '/arm64' }]
-      },
-      {
-        text: 'Uran',
-        items: [{ text: 'Uran (Decky Plugin)', link: '/uran' }]
-      },
-      {
-        text: 'Epsilon',
-        items: [{ text: 'Epsilon (Browser Bridge)', link: '/epsilon' }]
-      },
-      {
-        text: 'Documentation',
-        collapsed: true,
-        items: [
-          { text: 'Command Line Interface (CLI)', link: '/cli' },
-          { text: 'Online Multiplayer Guide', link: '/online-multiplayer' },
-          { text: 'Themes Guide', link: '/themes' },
-          { text: 'Dependencies', link: '/dependencies' },
-          { text: 'Optional Components', link: '/optional-components' },
-          { text: 'Game Mode Boot Loop Fix (TTY)', link: '/recovery-tty' }
+          { text: 'Installation', link: '/install' },
+          { text: 'How it works', link: '/downloading' },
+          { text: 'Changes', link: '/changelogs/3.0.0' }
         ]
       }
     ],
@@ -98,8 +34,8 @@ export default defineConfig({
       provider: 'local'
     },
     footer: {
-      message: 'EXE-fingerprinter is a personal passion project, built on top of the Lain project. It was developed over several months by a swarm of AI agents, and tested by a small group of human volunteers.',
-      copyright: 'AI agents involved: Google Gemini (3.8, 3.5, 2.5) · Anthropic Claude (Sonnet 5.5, 4.6) · DeepSeek 4.1 · Kimi 2.5 · MiniMax M3.1 · GLM 5.3 · Codex GPT 6 Luna'
+      message: 'EXE-fingerprinter — a TUI that downloads only the .exe files of Steam games.',
+      copyright: 'GPL-3.0'
     }
   }
 })

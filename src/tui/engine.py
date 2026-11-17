@@ -2,7 +2,7 @@
 
 Nothing here imports widgets, so it also backs the ``--api`` mode. The heavy
 lifting (keys, manifest files, manifest-only dumps) is shared with the desktop
-app through :mod:`ui.dialogs.depot_selection.manifest_dump`, which keeps the
+app through :mod:`core.manifest_dump`, which keeps the
 two interfaces honest about which depots and files they see.
 """
 
@@ -91,7 +91,7 @@ def collect_depots(app_id: str) -> tuple[str, List[DepotPlan]]:
 
 def ensure_bundle(app_id: str, progress: Optional[Progress] = None) -> Optional[str]:
     """Make sure a Hubcap bundle exists locally; fetch it when missing."""
-    from ui.dialogs.depot_selection.manifest_dump import ManifestDumpError, find_manifest_bundle
+    from core.manifest_dump import ManifestDumpError, find_manifest_bundle
 
     try:
         return str(find_manifest_bundle(app_id))
@@ -138,7 +138,7 @@ def scan_app(
     cancel: Optional[threading.Event] = None,
 ) -> ScanResult:
     """Scan every Windows base-game depot for ``.exe`` files."""
-    from ui.dialogs.depot_selection.manifest_dump import prepare_manifest_dump
+    from core.manifest_dump import prepare_manifest_dump
 
     result = ScanResult(app_id=str(app_id))
     result.key_dir = _private_key_dir()
@@ -231,10 +231,9 @@ def scan_app(
 def default_destination(app_id: str, base: Optional[str] = None) -> str:
     if base:
         return os.path.abspath(os.path.expanduser(base))
-    downloads = Path.home() / "Downloads"
-    if not downloads.exists():
-        downloads = Path.home()
-    return str(downloads / "EXE-fingerprinter" / str(app_id))
+    from utils.helpers import get_exe_pawprint_dir
+
+    return str(get_exe_pawprint_dir(app_id))
 
 
 def download_selected(

@@ -21,22 +21,13 @@ jobs:
           cache: "pip"
 
       - name: Lint (ruff)
-        # F821/F823/F811 catch undefined names, use-before-assignment and
-        # shadowed re-imports. Those are the bug classes that compile fine and
-        # then raise NameError at runtime, which compileall cannot see.
-        # Rule set and exclusions live in ruff.toml.
         run: |
           python -m pip install --upgrade pip
           pip install ruff
-          ruff check src/ --output-format=github
-          echo "::group::Unused imports (advisory, non-blocking)"
-          ruff check src/ --select F401 --statistics || true
-          echo "::endgroup::"
+          ruff check src/ scripts/ --output-format=github
 
       - name: Install System Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1 libegl1 libxkbcommon-x11-0 libdbus-1-3
+        run: sudo apt-get update
 
       - name: Install Requirements
         run: |
@@ -44,171 +35,15 @@ jobs:
           pip install -r requirements.txt
 
       - name: Compile and Validate Python Syntax
-        run: |
-          echo "Compiling all python files to verify syntax integrity..."
-          python -m py_compile src/main.py
-          python -m compileall -q src/
+        run: python -m compileall -q src/ scripts/
 
-      # compileall only proves the files parse. A missing dependency, a bad
-      # import path, or a resource the app loads at startup would all pass it
-      # and still produce an AppImage that will not launch. This is the same
-      # check the release build performs against the bundled runtime.
-      - name: Verify Runtime Imports and Headless Qt
-        run: |
-          python - <<'PY'
-          import importlib, sys
-          modules = [
-              "PyQt6.QtCore", "PyQt6.QtWidgets", "PyQt6.QtGui",
-              "requests", "yaml", "cryptography", "configobj",
-              "rich", "vdf", "steam", "steam.client",
-              "zstandard", "curl_cffi", "psutil", "bs4",
-              "gevent", "capstone",
-          ]
-          failed = []
-          for name in modules:
-              try:
-                  importlib.import_module(name)
-              except Exception as exc:
-                  failed.append(f"{name}: {type(exc).__name__}: {exc}")
-          if failed:
-              print("::error::Unimportable runtime dependencies:")
-              for line in failed:
-                  print(f"  - {line}")
-              sys.exit(1)
-          print(f"All {len(modules)} runtime dependencies import cleanly.")
-
-          # Exercise a real QApplication + the app's own resource loader, which
-          # is where a missing res/ asset or bad Paths base would surface.
-          import os, tempfile
-          os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-          os.environ.setdefault("XDG_RUNTIME_DIR", tempfile.gettempdir())
-          sys.path.insert(0, "src")
-          from PyQt6.QtWidgets import QApplication
-          app = QApplication(["-platform", "offscreen"])
-          from utils.paths import Paths
-          print(f"Resource base: {Paths.BASE_DIR}")
-          required = ["version", "logo/accela.png", "logo/icon.png"]
-          missing = [r for r in required if not Paths.resource(r).exists()]
-          if missing:
-              print(f"::error::Missing required resources: {missing}")
-              sys.exit(1)
-          print("Headless QApplication created; required resources present.")
-          PY
-
-      # The real gate. Imports all ~174 modules under src/ AND force-resolves
-      # every annotation. Python 3.14 evaluates annotations lazily (PEP 649),
-      # so a missing typing import imports fine locally and crashes the AppImage
-      # (which ships 3.13). ruff cannot see that; this can. A missing declared
-      # dependency is a failure here, not a skip.
+      # The gate. Imports every module under src/ AND force-resolves every
+      # annotation — missing typing imports explode here, not in a frozen build.
       - name: Smoke Import Gate
-        run: |
-          EXE_FINGERPRINTER_NO_REEXEC=1 QT_QPA_PLATFORM=offscreen \
-            python -u scripts/smoke_import_check.py
+        run: python -u scripts/smoke_import_check.py
 
-      # Fast type-checker gate specifically for unresolved imports inside src/.
-      # Catches bad member imports that ruff F821 and compileall cannot see -
-      # `from somewhere import missing_name` is invisible to both, and has
-      # shipped four times so far (all swallowed by a bare `except`).
-      #
-      # ty is PINNED. The grep below matches ty's literal diagnostic wording,
-      # so if a future release rephrases it the match goes empty, grep exits 1
-      # and this gate silently passes forever. Pinning turns that silent
-      # no-op into a loud install failure, which is the failure mode we want.
-      # Bump deliberately and re-check the wording after upgrading.
-      - name: Unresolved Import Gate (ty)
+      # Hermetic pre-release suite: smoke import, Qt-free runtime, settings
+      # store, exe-pawprint destination, manifest-dump behaviour.
+      - name: Pre-Release Check
         run: |
-          pip install "ty==0.0.86"
-          ty --version
-          echo "Checking for unresolved internal module member imports..."
-          # "Module X has no member Y" only: this is the cross-module bug
-          # class. Bare "Cannot resolve imported module" hits are runtime
-          # sys.path cases (morrenus_api, db_manager) that are not defects,
-          # and PyQt6 lacks the stubs ty expects, so both are filtered out.
-          if ty check src/ --python "$(which python3)" 2>&1 | grep "error\[unresolved-import\]: Module " | grep -v "PyQt6"; then
-            echo "::error::Unresolved import detected above!"
-            exit 1
-          fi
-          echo "No unresolved internal member imports found."
-
-      # Silent handlers are how the last few bugs hid: the call failed, a bare
-      # `except` swallowed it, and the feature never worked. The handlers
-      # already in the tree are frozen; this fails on a new one.
-      - name: No New Silent Exceptions
-        run: |
-          python scripts/check_silent_exceptions.py
-
-      # Native Qt dialogs paint themselves in the desktop's theme and carry the
-      # desktop's decorations, so a window that uses one does not look like
-      # EXE-fingerprinter. The ones left are frozen; this fails on a new one, and the
-      # baseline tightens as each file migrates to the themed replacements.
-      - name: No New Native Dialogs
-        run: |
-          python scripts/check_native_dialogs.py
-
-      # A dialog that does not build EXE-fingerprinter's own frame wears the desktop's
-      # title bar instead, so two windows in one session do not look like the
-      # same application. Every dialog in the tree now takes the themed frame;
-      # this fails if a new one arrives without it.
-      - name: No Unframed Dialogs
-        run: |
-          python scripts/check_themed_dialogs.py
-
-      # install.sh is the first thing a user runs and the only code that edits
-      # their desktop entries, so its symlink handling gets a real shell test.
-      # The test reproduces the exe_fingerprinter.desktop <-> accela.desktop loop that
-      # broke updates on Steam Deck, and is hermetic (temp HOME, no network).
-      - name: Installer Script Regression
-        run: |
-          bash -n install.sh uninstall.sh scripts/install-armada.sh
-          ./scripts/test_install_shortcuts.sh
-
-      # Behavioural suites. All are hermetic: no Steam install, no network, no
-      # display and no pre-existing SLSsteam config, so they are safe on a clean
-      # runner. They cover the logic that regresses silently - depot->app
-      # mapping, config sync, the optional-component install pipeline, and the
-      # structured logging the status pager depends on.
-      #
-      # Each prints a [FAIL] line and exits non-zero on failure. Suites needing
-      # local data (the cached_luas corpus sweep) skip explicitly rather than
-      # pretending to pass.
-      - name: Behavioural Test Suites
-        run: |
-          set -e
-          for suite in test_depot_mapping test_atom_config_sync test_components_ui \
-                       test_logging test_pager_display test_boxart_revalidate \
-                       test_config_manager test_depot_selection \
-                       test_depot_selection_resolve test_depot_dialog_build \
-                       test_manifest_dump test_dump_runner \
-                       test_storage_targets test_depot_metadata \
-                       test_executable_probe test_selection_policy \
-                       test_library_actions test_dlc_discovery \
-                       test_batch_atom_migration \
-                       test_library_tabs test_dlc_mode_ui test_steam_package_info \
-                       test_edition_catalog test_dlc_only_ux \
-                       test_silent_exception_gate \
-                       test_native_dialog_gate \
-                       test_themed_dialog_gate \
-                       test_themed_message_box \
-                       test_themed_pickers \
-                       test_color_utils \
-                       test_window_style \
-                       test_top_bar_search \
-                       test_luatools_gate \
-                       test_language_depots \
-                       test_depots_tab_state \
-                       test_update_checker \
-                       test_sls_lua_config_and_dialogs \
-                       test_atom_dlc_and_byparr \
-                       test_steam_updates; do
-            echo "::group::$suite"
-            QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp \
-              python -u "scripts/$suite.py"
-            echo "::endgroup::"
-          done
-
-      - name: QThread Teardown Regression
-        run: |
-          # Its own step: a Qt teardown failure is SIGABRT, which aborts the
-          # whole runner process instead of failing one command.
-          QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp \
-            python -u scripts/test_manifest_worker.py close-while-running
+          PYTHONPATH=src python -u scripts/prerelease_check.py

@@ -1,14 +1,10 @@
 """Colour palettes for the EXE-fingerprinter TUI.
 
-The GUI and the TUI share one look: a near-black canvas, a soft blue accent,
-and muted greys. Three variants are available:
-
-* ``ocean``   — the default GUI palette,
-* ``rice``    — warmer and higher contrast for rice-style desktops,
-* ``minimal`` — greyscale, for terminals with limited colour.
-
-``colour_blind`` swaps red/green signalling for a blue/orange pair that stays
-distinguishable with deuteranopia and protanopia.
+* ``rice``    — warmer and higher contrast, the default on an interactive terminal,
+* ``minimal`` — greyscale, for terminals with limited colour,
+* auto picks rice (or minimal when NO_COLOR/TERM=dumb), and ``colour_blind``
+  swaps red/green signalling for a blue/orange pair that stays distinguishable
+  with deuteranopia and protanopia.
 """
 
 from __future__ import annotations
@@ -32,21 +28,6 @@ class Theme:
     error: str
     selection: str
 
-
-OCEAN = Theme(
-    name="ocean",
-    background="#111318",
-    panel="#171a21",
-    border="#2a2f3a",
-    text="#e6edf3",
-    muted="#8b949e",
-    accent="#a1c9fd",
-    accent_alt="#c8a8ff",
-    success="#7ee787",
-    warning="#f2cc60",
-    error="#ff7b72",
-    selection="#243044",
-)
 
 RICE = Theme(
     name="rice",
@@ -115,17 +96,17 @@ def resolve_theme(name: str | None = None) -> Theme:
     """Pick a palette from a name, the settings, or the environment.
 
     ``auto`` (and ``None``) chooses minimal when the terminal asks for no
-    colour, otherwise ocean.
+    colour, otherwise rice.
     """
     requested = (name or _setting("tui_theme", "auto") or "auto").strip().lower()
     if requested in ("ocean", "default", ""):
-        requested = "ocean"
+        requested = "rice"
 
     if requested == "auto":
         if os.environ.get("NO_COLOR") or os.environ.get("TERM", "").lower() == "dumb":
             requested = "minimal"
         else:
-            requested = "ocean"
+            requested = "rice"
 
     if colour_blind_enabled():
         base = COLOUR_BLIND
@@ -134,4 +115,4 @@ def resolve_theme(name: str | None = None) -> Theme:
             base = Theme(**{**COLOUR_BLIND.__dict__, "name": "colour-blind-minimal"})
         return base
 
-    return {"ocean": OCEAN, "rice": RICE, "minimal": MINIMAL}.get(requested, OCEAN)
+    return {"rice": RICE, "minimal": MINIMAL}.get(requested, RICE)

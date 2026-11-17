@@ -57,7 +57,7 @@ def wrote_keys(temp_root, depot_id="1234"):
 
 
 def main() -> int:
-    from ui.dialogs.depot_selection import manifest_dump as md
+    from core import manifest_dump as md
 
     # ------------------------------------------------------ bundle lookup
     print("=== the newest Accela bundle wins ===")
@@ -245,7 +245,7 @@ def main() -> int:
     print("\n=== manifest_dump stays Qt-free and importable on its own ===")
     # Loaded by path on purpose: importing it through the package would drag in
     # the dialog's Qt imports through __init__.py and prove nothing.
-    module_path = SRC_DIR / "ui" / "dialogs" / "depot_selection" / "manifest_dump.py"
+    module_path = SRC_DIR / "core" / "manifest_dump.py"
     probe = (
         "import importlib.util, sys; "
         f"sys.path.insert(0, r'{SRC_DIR}'); "

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **The tool is now a TUI-only, .exe-only downloader.** The Qt desktop window and everything that served it was removed: library views, game details, plugins (SpaceBunny/Styx/Lobster), SLSsteam/ACCELA integration, Goldberg/GSE, Steamless, SLScheevo, achievements, the Workshop, DLC-only mode, the update checker, `config.yaml` management, MRC, tickets, and all PyQt6 dialogs.
+
+### Added
+- Pawws-style TUI (`--tui`, or just `python3 src/main.py`) with sixel graphics where the terminal supports them; rice/minimal auto-switch; colour-blind mode; SFW assets only.
+- Non-interactive API mode: `python3 src/main.py --api --appid 620 [--download]` fingerprints a game and (optionally) downloads only its `.exe`s. Interactive API mode never adds/removes games; two choices: download, or the existing flow.
+- **Private API** (`exe-fingerprinter.vercel.app`): username + password sign-in, HWID lock on first device, expiry dates, admin account creation via the Touka Kirishima panel. The public Hubcap remains supported; the Hubcap key never leaves the server side.
+- Downloads go to `%APPDATA%/exe-pawprint/<appid>` (Linux/macOS equivalents under `~/.local/share/exe-pawprint` / `~/Library/Application Support/exe-pawprint`).
+
+### Changed
+- Depot-key resolution order: local key database → your private API (served from your depot-key repo, see `EXEFP_KEYS_URL`) → Hubcap. Manifest GIDs come from the steamcmd public API.
+- Settings storage moved from QSettings INI (`~/.config/Tachibana Labs/ACCELA.conf`) to JSON (`%APPDATA%/EXE-fingerprinter/settings.json` on Windows, `~/.config/EXE-fingerprinter/settings.json` on Linux); a one-time migration preserves the old values.
+- Search merged across Steam Store, SteamDB, Hubcap and the API, exact AppID match first.
+- App data root is now `~/.local/share/EXE-fingerprinter` (was `ACCELA`); the folder is renamed in place on first run.
+
+
 ### Changed
 - **Project renamed to Executable Downloader.** Every user-facing name, the window title, desktop entry, AppImage, installer and the AppImage self-updater now identify as "Executable Downloader" (`ExecutableDownloader.AppImage`, `exe_downloader.desktop`, `X-Executable Downloader-Token`). Historical changelog entries are intentionally left untouched. Internal code identifiers moved with the product name (`exe_downloader`, `get_exe_downloader_proxy_token()`); GitHub/Pages URLs to the original ASSella repo/docs were deliberately kept so existing links keep working. The Hubcap Wirecutter protocol constants (`ASSella_Hubcap_Bypass_v261`, `ASSella_Worker_Token_Salt_v261`) remain unchanged, as do `ACCELA` data paths, `accela_fetch_*` manifest bundles, the `X-Assella-Token` header and the `ACCELA.AppImage` compatibility symlink — all are protocol/compat identifiers, not branding.
 - AppImage build workflow now derives the embedded `gh-releases-zsync` update string from `github.repository_owner` / `github.event.repository.name` instead of a hard-coded upstream name.

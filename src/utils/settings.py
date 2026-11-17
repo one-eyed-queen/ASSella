@@ -1,202 +1,233 @@
+"""Application settings — Qt-free.
+
+Storage is a JSON object in the user's config dir:
+
+    %APPDATA%\\EXE-fingerprinter\\settings.json   (Windows)
+    ~/.config/EXE-fingerprinter/settings.json (Linux)
+    ~/Library/Application Support/EXE-fingerprinter/settings.json (macOS)
+
+A one-time migration imports the legacy QSettings INI file
+(``~/.config/ACCELA/Tachibana Labs/ACCELA.conf``) if it exists, so users do not
+lose their depot keys, Hubcap keys and preferences on upgrade. Nothing from
+the old file that the tool no longer understands is kept silently — it is
+merged key-by-key.
+"""
+
+import json
 import logging
 import os
+import sys
 import threading
 from pathlib import Path
 from typing import Any, Tuple
-from PyQt6.QtCore import QSettings
 
 logger = logging.getLogger(__name__)
 
-APP_NAME = "ACCELA"
 ORG_NAME = "Tachibana Labs"
+APP_NAME = "ACCELA"          # legacy QSettings location
+LEGACY_APP = "ACCELA"
+NEW_APP = "EXE-fingerprinter"
 
 _settings_local = threading.local()
+_migration_attempted = False
 
 
-class RobustQSettings(QSettings):
-    """Subclass of QSettings that robustly handles boolean values stored as string literals on Linux."""
+def _config_dir() -> Path:
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA")
+        root = Path(base) if base else Path.home() / "AppData" / "Roaming"
+    elif sys.platform == "darwin":
+        root = Path.home() / "Library" / "Application Support"
+    else:
+        root = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
+    return root / NEW_APP
+
+
+def _settings_path() -> Path:
+    return _config_dir() / "settings.json"
+
+
+def _legacy_ini() -> Path:
+    if sys.platform == "win32":
+        return Path(os.environ.get("APPDATA", "")) / ORG_NAME / "ACCELA.ini"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Preferences" / f"{ORG_NAME}.ACCELA.plist"
+    return Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config")) / ORG_NAME / "ACCELA.conf"
+
+
+def _parse_qsettings_ini(path: Path) -> dict[str, Any]:
+    """Best-effort read of a Qt QSettings INI into a flat key/value dict."""
+    data: dict[str, Any] = {}
+    section = ""
+    try:
+        raw = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return data
+    for raw_line in raw.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        if not stripped or stripped.startswith((";", "#", "@")):
+            # Qt stores lists/blobs as @Variant(...); skip them, keep scalars.
+            continue
+        if stripped.startswith("[") and stripped.endswith("]"):
+            section = stripped[1:-1]
+            # Qt writes top-level settings under a default "General" group;
+            # the app reads them unprefixed, so strip that group on load.
+            if section.lower() == "general":
+                section = ""
+            continue
+        if "=" not in stripped:
+            continue
+        key, _, value = stripped.partition("=")
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
+        if value.startswith('"') and value.endswith('"') and len(value) >= 2:
+            value = value[1:-1].replace("\\\\", "\\").replace('\\"', '"')
+        full = f"{section}/{key}" if section else key
+        low = value.lower()
+        if low in ("true", "yes", "on"):
+            parsed: Any = True
+        elif low in ("false", "no", "off"):
+            parsed = False
+        else:
+            try:
+                parsed = int(value)
+            except ValueError:
+                try:
+                    parsed = float(value)
+                except ValueError:
+                    parsed = value
+        data[full] = parsed
+    return data
+
+
+def _to_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
+class Settings:
+    """Small stand-in for the old QSettings facade (value/setValue/remove/sync)."""
+
+    def __init__(self, path: Path | None = None) -> None:
+        self.path = path or _settings_path()
+        self._data: dict[str, Any] = {}
+        self._dirty = False
+        self._load()
+
+    def _load(self) -> None:
+        data: dict[str, Any] = {}
+        if self.path.exists():
+            try:
+                raw = json.loads(self.path.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    data = raw
+            except (ValueError, OSError) as exc:
+                logger.warning(f"Settings file {self.path} unreadable ({exc}); starting fresh")
+        # Undo the old "General/" prefix on keys migrated before the fix.
+        stripped_data: dict[str, Any] = {}
+        for key, value in data.items():
+            low = key.lower()
+            if low.startswith("general/"):
+                stripped_data[key.split("/", 1)[1]] = value
+            else:
+                stripped_data[key] = value
+
+        legacy = _legacy_ini()
+        global _migration_attempted
+        if legacy.exists() and not _migration_attempted:
+            _migration_attempted = True
+            try:
+                merged = _parse_qsettings_ini(legacy)
+                added = 0
+                for key, value in merged.items():
+                    if key not in stripped_data:
+                        stripped_data[key] = value
+                        added += 1
+                if added:
+                    logger.info(f"Imported {added} legacy settings from {legacy}")
+                    self._data = stripped_data
+                    self.sync()
+            except Exception as exc:
+                logger.debug(f"Legacy settings migration skipped: {exc}")
+        self._data = stripped_data
 
     def value(self, key: str, defaultValue: Any = None, type: Any = None) -> Any:
+        val = self._data.get(key, defaultValue)
+        if val is None:
+            return defaultValue
         if type is bool or (type is None and isinstance(defaultValue, bool)):
-            val = super().value(key, defaultValue)
             if val is None:
+                return bool(defaultValue) if defaultValue is not None else False
+            return _to_bool(val)
+        if type in (int, float, str):
+            try:
+                return type(val)
+            except (TypeError, ValueError):
                 return defaultValue
-            if isinstance(val, str):
-                return val.lower() in ("true", "1", "yes")
-            return bool(val)
+        return val
 
-        if type is not None:
-            return super().value(key, defaultValue, type)
-        return super().value(key, defaultValue)
+    def setValue(self, key: str, value: Any) -> None:
+        self._data[key] = value
+        self._dirty = True
+
+    def setValueQuick(self, key: str, value: Any) -> None:
+        self.setValue(key, value)
+        self.sync()
+
+    def remove(self, key: str) -> None:
+        if key in self._data:
+            del self._data[key]
+            self._dirty = True
+        # Also drop any literal "key/*" children, matching QSettings(group) removal.
+        prefix = key.rstrip("/") + "/"
+        for k in list(self._data):
+            if k.startswith(prefix):
+                del self._data[k]
+                self._dirty = True
+
+    def contains(self, key: str) -> bool:
+        return key in self._data
+
+    def allKeys(self) -> list[str]:
+        return list(self._data)
+
+    def sync(self) -> None:
+        if not self._dirty:
+            return
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.path.with_suffix(self.path.suffix + ".tmp")
+            tmp.write_text(json.dumps(self._data, indent=2, sort_keys=True), encoding="utf-8")
+            os.replace(tmp, self.path)
+            try:
+                os.chmod(self.path, 0o600)
+            except OSError:
+                pass
+            self._dirty = False
+        except OSError as exc:
+            logger.warning(f"Could not save settings to {self.path}: {exc}")
+
+    def fileName(self) -> str:
+        return str(self.path)
 
 
-def get_settings() -> QSettings:
-    """Get the application settings object.
-
-    Returns a thread-local cached instance so that background threads each get
-    their own QSettings object (QSettings is not safe to share across threads).
-    This avoids creating a new object on every call while still being thread-safe.
-    """
+def get_settings() -> Settings:
+    """Return the thread-local settings object (cached)."""
     if not hasattr(_settings_local, "instance"):
-        _settings_local.instance = RobustQSettings(ORG_NAME, APP_NAME)
-        # First run preset overrides for EXE-fingerprinter
-        if _settings_local.instance.value("exe_fingerprinter_initialized") is None:
-            _settings_local.instance.setValue("exe_fingerprinter_initialized", True)
-            _settings_local.instance.setValue("accent_color", "#a1c9fd")
-            _settings_local.instance.setValue("background_color", "#111318")
-            _settings_local.instance.setValue("material_preset", "ocean")
-            _settings_local.instance.setValue("user_accent_color", "#a1c9fd")
-            _settings_local.instance.setValue("user_background_color", "#111318")
-            _settings_local.instance.setValue("workshop_steam_enabled", True)
-            _settings_local.instance.setValue("workshop_max_downloads", 4)
-            _settings_local.instance.setValue("use_lancache", True)
-            _settings_local.instance.setValue("prompt_steam_restart", False)
-            _settings_local.instance.setValue("sls_config_management", True)
-            _settings_local.instance.setValue("font", "Open Sans")
-            _settings_local.instance.setValue("font-size", 10)
-            _settings_local.instance.setValue("font-style", "Normal")
-            _settings_local.instance.sync()
-
-        # Sanitize legacy font settings (e.g. old Accela Trixie Cyrillic typewriter font)
-        try:
-            saved_font = _settings_local.instance.value("font", "", type=str)
-            if saved_font.lower() in ("trixiecyrg-plain", "trixiecyrg-plain regular", "trixie"):
-                _settings_local.instance.setValue("font", "Open Sans")
-                _settings_local.instance.sync()
-            saved_font_file = _settings_local.instance.value("font-file", "", type=str)
-            if "trixie" in saved_font_file.lower():
-                _settings_local.instance.setValue("font-file", "")
-                _settings_local.instance.sync()
-        except Exception:
-            pass
-
-        # Sanitize default_download_directory (e.g. if transient /tmp was left behind)
-        try:
-            from utils.paths import is_valid_download_directory
-            cur_dl = _settings_local.instance.value("default_download_directory", "", type=str)
-            if cur_dl and not is_valid_download_directory(cur_dl):
-                _settings_local.instance.setValue("default_download_directory", "")
-                _settings_local.instance.sync()
-        except Exception:
-            pass
-
-        # Tighten permissions on the settings file. It can hold the Hubcap API
-        # key and (historically) an encrypted Steam password, and QSettings
-        # creates it 0644.
-        try:
-            path = getattr(_settings_local.instance, "fileName", lambda: "")()
-            if path:
-                p = Path(path)
-                if p.exists() and (p.stat().st_mode & 0o077):
-                    os.chmod(p, 0o600)
-                    logger.info(f"Restricted settings file permissions to 0600: {p}")
-        except Exception:
-            pass
-
-        # Halloween theme seasonal auto-activation (Oct 26 - Nov 5, one-time only)
-        try:
-            check_and_apply_halloween_theme(_settings_local.instance)
-        except Exception:
-            pass
-
-        # Christmas theme seasonal auto-activation (Dec 20 - Dec 26, one-time per year)
-        try:
-            check_and_apply_christmas_theme(_settings_local.instance)
-        except Exception as e:
-            logger.debug(f"Christmas theme auto-activation skipped: {e}")
-
-        # Migrate default download plugin to spacebunny.lua starting this version
-        try:
-            if not _settings_local.instance.value("spacebunny_default_migrated_v28", False, type=bool):
-                cur_plugin = _settings_local.instance.value("selected_download_plugin", "")
-                if not cur_plugin or cur_plugin in ("download.lua", "spacebunny1.5.lua"):
-                    _settings_local.instance.setValue("selected_download_plugin", "spacebunny.lua")
-                _settings_local.instance.setValue("spacebunny_default_migrated_v28", True)
-                _settings_local.instance.sync()
-        except Exception:
-            pass
-
+        instance = Settings()
+        if instance.value("exe_fingerprinter_initialized") is None:
+            instance.setValue("exe_fingerprinter_initialized", True)
+            instance.sync()
+        _settings_local.instance = instance
     return _settings_local.instance
 
 
-def preserve_branch_selection(settings: Any, appid: Any) -> Tuple[str, str]:
-    """Keep the branch the user already selected for a game.
-
-    ``core.morrenus_api.get_selected_branch`` documents the invariant that a
-    game installed on a beta branch must never be silently refreshed from the
-    public branch, so an existing value is never overwritten. Only a game that
-    never had a branch selection at all gets the "public" default.
-
-    Returns the effective ``(selected_branch, installed_branch)`` pair for the
-    caller's in-memory game data: a missing side falls back to the other one
-    for display, but nothing is written except the "public" default.
-    """
-    appid_str = str(appid)
-    selected = str(settings.value(f"selected_branch/{appid_str}", "", type=str) or "").strip()
-    installed = str(settings.value(f"installed_branch/{appid_str}", "", type=str) or "").strip()
-    if not selected and not installed:
-        settings.setValue(f"selected_branch/{appid_str}", "public")
-        settings.setValue(f"installed_branch/{appid_str}", "public")
-        return "public", "public"
-    return selected or installed, installed or selected
-
-
-def check_and_apply_halloween_theme(settings: QSettings) -> bool:
-    """Auto-activates Halloween theme once if launched between Oct 26 and Nov 5.
-    
-    The switch 'halloween_auto_applied' is persistently flipped to True so it never activates
-    automatically again, even if the user changes or keeps the theme.
-    """
-    try:
-        from datetime import date
-        today = date.today()
-        # Active window: October 26 through November 5 (inclusive)
-        in_halloween_window = (today.month == 10 and today.day >= 26) or (today.month == 11 and today.day <= 5)
-        if in_halloween_window:
-            already_applied = settings.value("halloween_auto_applied", False, type=bool)
-            if not already_applied:
-                settings.setValue("halloween_auto_applied", True)
-                settings.setValue("material_preset", "halloween")
-                settings.setValue("accent_color", "#ffb77d")
-                settings.setValue("background_color", "#141211")
-                settings.setValue("user_accent_color", "#ffb77d")
-                settings.setValue("user_background_color", "#141211")
-                settings.sync()
-                return True
-    except Exception as e:
-        logger.debug(f"Failed to check/apply Halloween theme: {e}")
-    return False
-
-
-def check_and_apply_christmas_theme(settings: QSettings) -> bool:
-    """Auto-activates Christmas theme once per year if launched between Dec 20 and Dec 26.
-
-    The key 'christmas_auto_applied_year' stores the year it was triggered. If the user
-    manually changes their theme afterwards, it never reverts back for that year.
-    """
-    try:
-        from datetime import date
-        today = date.today()
-        # Active window: December 20 through December 26 (inclusive)
-        in_christmas_window = (today.month == 12 and 20 <= today.day <= 26)
-        if in_christmas_window:
-            applied_year = settings.value("christmas_auto_applied_year", 0, type=int)
-            if applied_year != today.year:
-                settings.setValue("christmas_auto_applied_year", today.year)
-                settings.setValue("material_preset", "christmas")
-                settings.setValue("accent_color", "#FF334B")
-                settings.setValue("background_color", "#0b0e14")
-                settings.setValue("user_accent_color", "#FF334B")
-                settings.setValue("user_background_color", "#0b0e14")
-                settings.sync()
-                return True
-    except Exception as e:
-        logger.debug(f"Failed to check/apply Christmas theme: {e}")
-    return False
-
-
 def is_canary_welcome_needed() -> bool:
-    """True if the Canary Welcome Slideshow should be shown (first Canary launch / onboarding)."""
-    s = get_settings()
-    return not s.value("canary_welcome_seen", False, type=bool)
-
+    """Legacy helper kept for source compatibility; the TUI has no onboarding slideshow."""
+    return False

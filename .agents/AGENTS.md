@@ -1,101 +1,30 @@
-# AGENTS.md — Guidelines for EXE-fingerprinter Agentic Development & Releases
+# AGENTS.md — EXE-fingerprinter agent rules
 
-This file defines essential guidelines, build rules, versioning conventions, and release procedures for automated coding agents working in the EXE-fingerprinter repository.
+EXE-fingerprinter is a **terminal-only, .exe-only** Steam downloader. Everything that used to be a library manager (Qt GUI, SLSsteam/ACCELA integration, Goldberg, Steamless, SLScheevo, plugins, library views, update checker) was deleted. If you are about to add any of that back, stop.
 
----
+## Core rules
 
-## 1. Core Principles
+- **No GUI, no Qt.** The only interface is the TUI (`src/tui/`). Nothing in `src/` may import PyQt6/PySide6.
+- **.exe only.** The tool downloads Windows executables for the base game (DLC skipped). Do not add "install the game" flows, library views, update checkers or repair/verify flows.
+- **Depot keys, best to best:** local key database (`core/depot_key_manager.py`) → the user's private API (`core/exe_fingerprinter_api.py`) → Hubcap (`core/morrenus_api.py`). Manifest GIDs always come from the steamcmd public API (PICS fallback).
+- **Hubcap key stays server-side.** The app never calls your private database directly; the API serves keys. The app ships with no hardcoded Hubcap key.
+- **Settings** live in a JSON store (`~/.config/EXE-fingerprinter/settings.json`); legacy QSettings INI is migrated once at startup. Never store secrets in the repo.
+- **Downloads** go to `<data root>/exe-pawprint/<appid>` — the app **never** writes Steam's ACF/manifest/`config.yaml` files and never triggers downloads for whole games. It only fetches `.exe` files by file list.
+- **SFW assets only.** No game options, no theme marketplaces, no image downloads beyond the app logo.
+- **Search** merges Steam Store, SteamDB, Hubcap and the private API; exact AppID matches must surface first.
+- **Performance:** keep startup under a second. Network goes on worker threads; the TUI is raw-terminal (nothing logs to stdout — logs go to a file).
 
-- **No Hardcoded User Home Paths**: Never hardcode `/home/deck/` or `/home/<username>/`. Always use `os.path.expanduser("~")` or `Path.home()`.
-- **System Inode Preservation**: When modifying SLSsteam configuration files (`~/.config/SLSsteam/config.yaml`), write updates **in-place** (or via `BatchConfigEditor` / `_atomic_write`) to preserve the file's system inode and prevent breaking SLSsteam's `inotify` file watcher.
-- **ACF-Independent Architecture & Strict No-ACF Invariant**: In ACF-Independent mode, EXE-fingerprinter delegates manifest creation entirely to Steam natively via SLSsteam (`install|<appid>|<library_index>`). EXE-fingerprinter must **NEVER** write or generate `.acf` manifest files under any circumstance (including emergency timeouts, pipe failures, or offline Steam sessions). When Steam starts, it natively discovers installed files and creates the manifest. The exceptions where EXE-fingerprinter edits an `.acf` file are: explicitly pinned builds (`pin_build=True`), preserving the pinned `buildid` against Steam clobbering it; and AT0-M migration, which sets an existing ACF's `StateFlags` to `6` (see below). During uninstall, poll Steam client up to 10s to delete the `.acf` manifest; if Steam fails to delete it, automatically discover and clean up candidate manifests across all Steam libraries.
-- **Spliced Ticket Plugin**: Managed under **Settings → EXE-fingerprinter tab** (below the SteamAPI provider selector). When toggling, enforce the legality warning dialog strictly without emojis: `"Bypassing DRM is illegal in many countries, make sure you are aware of this!"`. Automatically enables `Plugins: yes` and `SmartTickets: 0x1` in SLSsteam config.yaml.
-- **SLSsteam Config Section Rules & Invariants**:
-  - **DecryptionKeys**: If an AppID has a decryption key (root AppKey) or depot key, it **MUST** be added to `DecryptionKeys` 100% of the time when adding the game. Never refuse, block, or sanitize valid 64-hex keys in `DecryptionKeys`. Users have full freedom to toggle keys on/off in the Depots tab without self-sanitation resetting them.
-  - **AdditionalDepots**: Parent/Base AppIDs must **NEVER** be added to `AdditionalDepots` under any circumstances (only content depot IDs and build download IDs belong here). Any entry present in `AdditionalApps` or `AppIds` is strictly guarded from entering `AdditionalDepots`.
-  - **AdditionalApps**: Normal games must have their base AppID added. DLC-only games must have only their DLC AppIDs added (never base AppID).
-  - **Plugin Config Auto-Seeding & Gates**: Deploying plugins or enabling AT0-M mode must automatically ensure `Plugins: yes`, `AdditionalDepots:`, and `DecryptionKeys:` exist in `config.yaml`. AT0-M moves/installs must strictly gate on these sections and an active interceptor.
-  - **AT0-M ACF Adoption**: During AT0-M migration (single or batch), an existing `.acf` is NOT deleted: its `StateFlags` is set to `6` (UpdateRequired | FullyInstalled) so Steam verifies and adopts the files already on disk after a restart, without re-downloading. "Fix Installation" on an AT0-M game asks the user to either delete the ACF or set `StateFlags=6`. The SLSsteam install API (`install_via_sls`) must ONLY be invoked for "Fix Installation", never during game transfers.
-  - **Migration Depot Scope**: Standard game AT0-M migrations inject all depots and keys from the Hubcap bundle without smart filtering, while DLC-only games strictly preserve the mapped DLC depot scope.
-  - **Pre-flight Manifest Bundle**: When transferring to AT0-M, verify that the Hubcap ZIP bundle exists locally; auto-fetch it if missing, and abort cleanly (preserving EXE-fingerprinter markers) if Hubcap fetch fails.
-- **Build ID Stamping Invariant**: During verify, update, or package installation, the newly parsed package/manifest build ID (`new_bid` / `parsed_data["buildid"]`) must always take precedence over stale installed metadata (`game_data["buildid"]`) across `actions.py`, `task_manager.py`, and `post_install.py`, unless an explicit rollback build is pinned (`pin_build` / `_is_rollback`).
-- **Library Action Dialog Independence**: Library actions (e.g. `_on_manifest_download_complete`) must never require an active Game Details dialog instance (`self._details_dialog`), ensuring direct actions from the Steam Library tab function identically.
-- **DLC-Only Depot Selection Guard**: Any DLC-only operation (`is_dlc_only=True`) must always prompt the user with `DepotSelectionDialog` (`should_prompt = True`, `auto_skip = False`) and must not silently reuse cached base-game selections.
-- **External Metadata & Fix Caching**: External API lookups (e.g. `lua.tools` community fixes) must use persistent disk and memory caching (7-day default TTL) with 404/empty-result caching to prevent UI rate-limiting, backed by a manual refresh button.
-- **Pre-release Verification Suite (`scripts/prerelease_check.py`)**: Do NOT run this test suite automatically. Never run it during development, after tasks, or on the `canary` branch unless the user explicitly and deliberately requests it. Automated CI also skips this suite on the `canary` branch.
-- **AT0-M DLC-Only & Complication Invariants**:
-  - **DLC-Only AT0-M Mapping Invariant**: In DLC-only mode, only the user's selected DLC depots and their mapped DLC AppIDs (resolved via `build_app_to_depots_map`) are injected into `AdditionalApps`, `AdditionalDepots`, and `DecryptionKeys`. The parent/base AppID must **NEVER** enter `AdditionalApps` for a DLC-only game, neither on initial AT0-M migration nor when converting back to ACCELA mode. If a selected DLC depot lacks a decryption key, trigger an emergency manifest fetch before completing mapping.
-  - **AT0-M Pre-Handoff Sanitization**:
-    - **Goldberg**: If Goldberg emulator is detected (`_is_goldberg_applied`), restore `.dll.valve` / `.so.valve` backups and delete `steam_settings/` / `steam_appid.txt` before Steam handoff (ignoring non-fatal errors).
-    - **EOS Proxy**: Revert EOS proxy DLL to genuine binaries (`EOSDetector.remove_proxy`) prior to handoff, as Steam file integrity checks overwrite modified DLLs.
-    - **Manifest Pinning**: For games with pinned builds, write the depot-to-manifest mapping to `config.yaml` (`ManifestIds`) via `set_manifest_ids` to lock the build in SLSsteam.
-    - **No Delayed Install API**: Never trigger delayed `slssteam_api_send("install|...")` after migration. Prompt the user with a dialog to restart Steam so Steam client safely adopts files without unexpected redownloads.
-    - **Complications Preflight Review**: If a game being migrated has any complications (pinned build, DLC-only, EOS proxy, Goldberg), display a preflight review window detailing all config additions and reversions before proceeding. Clean games proceed directly.
+## Release & versioning
 
-- **Performance: keep startup, Settings and Game Details instant.** EXE-fingerprinter opens its main window in under a second; every new feature must keep it that way. Measure before and after (`python -X importtime`, or `cProfile` around `MainWindow()`), and follow these rules:
-  - **Nothing slow on the GUI thread.** Network requests, `systemctl`/subprocess calls, large file scans and SQLite work run on a `QThread` / `TaskRunner` / background thread. Results come back through a Qt signal or `utils.main_thread.post_to_main_thread` (a `QTimer.singleShot` started from a plain Python thread never fires).
-  - **Import heavy modules where they are used, not at module top level** of anything the main window, Settings or Game Details imports: `curl_cffi`, `bs4`, `core.morrenus_api`, scrapers and other large packages. When a heavy import feeds a worker, do the import inside the worker function. `core/steamdb_scraper.py` loads `curl_cffi` and `bs4` on first use for this reason (`_LazyModule`); test availability with `bool(cffi_requests)`, never `is not None`.
-  - **Build pages lazily.** Settings pages are registered with `tab_widget.addLazyTab(label, build)` and built the first time they are opened; the build function passes its page to `tab_widget.addTab(page, label)`. A page draws first from local data (cache, bundled manifest, config files) and fills in network-dependent parts from a background job afterwards (see the AT0-M plugin buttons with `offline_manifest()` and Settings -> Companions).
-  - **Game Details opens first, fetches second.** Artwork, logos, SteamGridDB, ProtonDB and similar lookups start after the dialog is shown (e.g. `QTimer.singleShot` from `showEvent`, guarded so it runs once) and must check that the dialog still exists before touching it (`sip.isdeleted`).
-  - **Cache misses as well as hits.** A lookup that failed or found nothing (no logo, no depots for an AppID, 404) is remembered with a TTL so it is not retried on every start or every open.
-  - **No work at import time** beyond constants: no file reads, network, or subprocesses when a module is imported.
-- **Companions (Uran / Epsilon)**: Settings -> Companions (after at0-m) manages the Uran Decky plugin (`~/homebrew/plugins/Uran`, settings `~/homebrew/settings/Uran/settings.json`) and the Epsilon bridge (systemd user units `epsilon.socket` / `epsilon-updater.timer`, settings `~/.config/exe_fingerprinter-decky/settings.json`, status on `127.0.0.1:1952/status`). Both keep their own settings and must keep working without EXE-fingerprinter; EXE-fingerprinter only edits their files (merge, keep unknown keys, atomic replace) through `utils/companions.py`.
+Releases are built by `.github/workflows/build-appimage.yml`:
 
----
+1. Tag `vX.Y.Z` (stable), `vX.Y.Z-beta.N` (beta), `vX.Y.Z-canary.N` (canary).
+2. The workflow builds `ExeFingerprinter.AppImage` with a bundled Python runtime, `.zsync` for delta updates and checksums, and a companion source archive. It stamps `src/version.py` (`APP_VERSION`, `BUILD_DATE`, `BUILD_TIMESTAMP`).
+3. CI (`ci.yml`) runs ruff, compileall, the smoke import gate and `scripts/prerelease_check.py`.
 
-## 2. Release & Versioning Guidelines
+## Safety
 
-### A. Release Channels & Tag Naming Conventions
-EXE-fingerprinter enforces a clean 4-branch workflow: `stable`, `beta`, `canary`, and `arm64`:
-- **Stable Channel**: Official releases tagged with clean semantic version tags without pre-release suffixes (e.g. `v3.0.0`, `v3.0.1`). Clean versions with no suffix are strictly treated as official Stable releases (`prerelease: false`).
-- **Beta Channel**: Active preview releases. Tags must contain `beta`, `dev`, or `rc` (e.g. `v3.1.0-beta.1`).
-  - *Strict Rule*: Do not use `alpha`.
-- **Canary Channel**: Bleeding-edge / experimental releases. Tags must contain `canary` or `testing` (e.g. `v3.1.0-canary.1`).
-- **ARM64 Branch**: Auto-synced ARM64 port.
-
-### B. Automated GitHub Actions CI/CD Pipeline
-Releases are automated via [.github/workflows/build-appimage.yml](file:///.github/workflows/build-appimage.yml):
-1. **Trigger**: Push a version tag (e.g. `git tag v3.0.0 && git push origin v3.0.0`) or trigger manually with `workflow_dispatch` in the GitHub Actions UI.
-2. **Automated AppImage & ZSync Build**:
-   - Compiles AppImage in a clean `ubuntu-22.04` environment using `appimagetool`.
-   - Embeds update string: `gh-releases-zsync|niwia|EXE-fingerprinter|latest|ExeFingerprinter.AppImage.zsync`.
-   - Automatically generates `ExeFingerprinter.AppImage.zsync` enabling delta updates where users download only changed blocks (~5-15MB instead of 300MB).
-   - Generates SHA-256 checksums (`ExeFingerprinter.AppImage.sha256`).
-3. **Automated GitHub Release Publishing**:
-   - Automatically marks Beta and Canary releases as pre-releases on GitHub. Stable releases (`v3.0.0`) are published as official full releases.
-   - Attaches `ExeFingerprinter.AppImage` (capital `.AppImage` required for compatibility), `.zsync`, companion source archives (`.tar.gz` and `.zip`), and checksum files (`.sha256`).
-
-### C. Companion Source Code Release Packaging (Automated)
-Every GitHub Actions release run automatically generates and publishes standalone source code archives (`EXE-fingerprinter-<tag>-linux-source.tar.gz` and `EXE-fingerprinter-<tag>-linux-source.zip`) alongside SHA-256 checksums (`.sha256`).
-- Archive layout:
-  ```text
-  EXE-fingerprinter-<version>-linux-source/
-  ├── install.sh
-  ├── uninstall.sh
-  └── bin/
-      ├── src/           # Python codebase (excluding __pycache__ & heavy optional deps)
-      ├── run.sh         # Venv/system python launcher wrapper
-      ├── requirements.txt
-      └── icon.png
-  ```
-- Packaging rules:
-  - Prunes `__pycache__` directories and `*.pyc` bytecode files.
-  - Strips heavy on-demand binaries (`Goldberg`, `Steamless`, `SLScheevo` under `src/deps/`) which are fetched dynamically from R2, keeping the source distribution lightweight (~38MB).
-  - Computes and publishes `.sha256` checksum files alongside each archive.
-
-### D. Local AppImage Builds (When Testing Locally)
-- Production binary: **`ExeFingerprinter.AppImage`** (`~/.local/share/ACCELA/ExeFingerprinter.AppImage`).
-- Local beta development binary: **`EXE-fingerprinter-2.7dev.AppImage`** (`~/.local/share/ACCELA/EXE-fingerprinter-2.7dev.AppImage`).
-- Local canary development binary: **`exe_fingerprinter3.0canary.appimage`** (`~/.local/share/ACCELA/exe_fingerprinter3.0canary.appimage`).
-- Build command using local AppDir:
-  ```bash
-  ARCH=x86_64 /home/aiwin/.local/share/ACCELA/appimagetool -n AppDir ExeFingerprinter.AppImage
-  ```
-
----
-
-## 3. Installer Script (`install.sh`) Rules
-
-- Installer scripts must query GitHub API (`https://api.github.com/repos/niwia/ASSella/releases`) with channel filtering (`--beta`, `--canary`, `--stable`).
-- Auto-detect channel from `$LOCAL_VER` (e.g. `2.7.0dev` → beta channel) when run interactively or without arguments.
-- Always verify assets end with `.AppImage` and exclude `.zsync` files from binary download targets.
+- `scripts/prerelease_check.py` is hermetic (no network); keep it that way.
+- `scripts/smoke_import_check.py` must pass — it is the guard against deleted-module imports.
+- Never commit secrets (Hubcap keys, API credentials). The panel token and the Hubcap key live in Vercel env vars only.
+- The app must run on a clean Linux desktop with a stock Python 3 and the dependencies in `requirements.txt` — that is what CI validates.

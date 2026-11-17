@@ -1,9 +1,17 @@
+"""Qt-free helpers for EXE-fingerprinter.
+
+Paths are platform-aware; the app's data root follows the rebrand
+(``~/.local/share/EXE-fingerprinter`` on Linux). A one-time migration
+renames the legacy ``ACCELA`` folder. ``get_exe_pawprint_dir`` returns the
+folder where downloaded ``.exe`` files land (``%APPDATA%\\exe-pawprint``
+on Windows).
+"""
 import logging
 import os
 import platform
+import ssl
 import re
 import shutil
-import ssl
 import subprocess
 import sys
 import tempfile
@@ -11,27 +19,25 @@ import urllib.request
 from pathlib import Path
 from typing import Optional, Tuple
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont
-from PyQt6.QtWidgets import (
-    QCheckBox,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QSlider,
-    QVBoxLayout,
-    QWidget,
-    QDialog,
-    QSpinBox,
-    QDialogButtonBox,
-    QFormLayout,
-)
-
-from utils.paths import Paths
-from utils.qt_utils import clear_layout
-
 logger = logging.getLogger(__name__)
+
+
+def get_exe_pawprint_dir(app_id: str | int | None = None) -> Path:
+    """Where downloaded ``.exe`` files go (``%APPDATA%/exe-pawprint/<appid>`` on Windows)."""
+    system = platform.system().lower()
+    if system == "windows":
+        base = Path(os.environ.get("APPDATA") or (Path.home() / "AppData" / "Roaming"))
+        root = base / "exe-pawprint"
+    elif system == "darwin":
+        root = Path.home() / "Library" / "Application Support" / "exe-pawprint"
+    else:
+        root = Path(os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local" / "share")) / "exe-pawprint"
+    root.mkdir(parents=True, exist_ok=True)
+    if app_id is None:
+        return root
+    target = root / str(app_id)
+    target.mkdir(parents=True, exist_ok=True)
+    return target
 
 
 def _get_user_dotnet_path() -> str:
@@ -52,21 +58,6 @@ def _get_user_dotnet_path() -> str:
         return os.path.expanduser("~/.dotnet/dotnet")
 
 
-def format_bytes(num_bytes: int) -> str:
-    """Format byte count into human-readable string (B, KB, MB, GB, TB)."""
-    try:
-        num = float(num_bytes)
-    except (ValueError, TypeError):
-        return ""
-    if num >= 1024**4:
-        return f"{num / (1024**4):.2f} TB"
-    elif num >= 1024**3:
-        return f"{num / (1024**3):.2f} GB"
-    elif num >= 1024**2:
-        return f"{num / (1024**2):.1f} MB"
-    elif num >= 1024:
-        return f"{num / 1024:.1f} KB"
-    return f"{int(num)} B"
 
 
 def is_arm64() -> bool:
@@ -79,23 +70,6 @@ def is_arm64() -> bool:
     return platform.machine().lower() in ("aarch64", "arm64", "armv8b", "armv8l")
 
 
-def is_armada_os() -> bool:
-    """Check if the current host is running Armada OS.
-
-    Can be simulated on other systems via EXE_FINGERPRINTER_FORCE_ARMADA=1.
-    """
-    if os.environ.get("EXE_FINGERPRINTER_FORCE_ARMADA") in ("1", "true", "True"):
-        return True
-    try:
-        for p in ("/etc/os-release", "/usr/lib/os-release"):
-            if os.path.exists(p):
-                with open(p, "r", encoding="utf-8") as f:
-                    content = f.read().lower()
-                    if "id=armada" in content or 'name="armada"' in content or "armada-os" in content:
-                        return True
-    except Exception:
-        pass
-    return False
 
 
 def _get_user_dotnet_root() -> str:
@@ -111,6 +85,8 @@ def _get_user_dotnet_root() -> str:
         return os.path.join(local_app_data, "Microsoft", "dotnet")
     else:
         return os.path.expanduser("~/.dotnet")
+
+
 
 
 def get_dotnet_env() -> dict[str, str]:
@@ -152,6 +128,8 @@ def get_dotnet_env() -> dict[str, str]:
     return env
 
 
+
+
 def _clean_corrupt_hostfxr(dotnet_root: str):
     """Detect and clean ghost/corrupted host/fxr directories that break .NET host.
 
@@ -177,6 +155,8 @@ def _clean_corrupt_hostfxr(dotnet_root: str):
         logger.debug(f"Error during host/fxr cleanup: {e}")
 
 
+
+
 def dotnet_has_compatible_runtime(list_runtimes_output: str) -> bool:
     """True when --list-runtimes output contains .NET 9 or newer.
 
@@ -188,6 +168,8 @@ def dotnet_has_compatible_runtime(list_runtimes_output: str) -> bool:
         if match and int(match.group(1)) >= 9:
             return True
     return False
+
+
 
 
 def get_dotnet_path() -> str | None:
@@ -257,6 +239,8 @@ def get_dotnet_path() -> str | None:
     return None
 
 
+
+
 def install_dotnet_9() -> bool:
     """Install .NET 9 runtime using official installer script."""
     try:
@@ -267,6 +251,8 @@ def install_dotnet_9() -> bool:
     except (OSError, subprocess.SubprocessError) as e:
         logger.error(f"Error installing .NET 9: {e}")
         return False
+
+
 
 
 def _install_dotnet_9_linux() -> bool:
@@ -372,6 +358,8 @@ def _install_dotnet_9_linux() -> bool:
         return False
 
 
+
+
 def _install_dotnet_9_windows() -> bool:
     """Install .NET 9 runtime on Windows using official installer script."""
     max_retries = 2
@@ -459,6 +447,8 @@ def _install_dotnet_9_windows() -> bool:
     return False
 
 
+
+
 def ensure_dotnet_availability() -> bool:
     """Ensure .NET 9 runtime is available, install if missing."""
     _clean_corrupt_hostfxr(_get_user_dotnet_root())
@@ -490,24 +480,14 @@ def ensure_dotnet_availability() -> bool:
     return False
 
 
-def resource_path(relative_path: str) -> Path:
-    """Get absolute path to resource, works for dev and for PyInstaller."""
-    norm = str(relative_path).replace("\\", "/")
-    if norm in ("deps/DepotDownloader.dll", "deps/depotdownloader.dll"):
-        try:
-            from utils.paths import Paths
-            return Paths.depot_downloader_dll()
-        except Exception:
-            pass
-
-    base_path = getattr(sys, "_MEIPASS", None)
-    if base_path is None:
-        base_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-    return Path(os.path.join(base_path, relative_path))
 
 
-def get_base_path(app_name: str = "ACCELA") -> Path:
+def get_base_path(app_name: str = "EXE-fingerprinter") -> Path:
     """Return the base directory for the current platform (no logs dir)."""
+    try:
+        _rename_legacy_base()
+    except Exception:
+        pass
     system = platform.system().lower()
 
     if system == "linux":
@@ -554,6 +534,28 @@ def get_base_path(app_name: str = "ACCELA") -> Path:
         return Path.home() / ".logs" / app_name
 
 
+
+
+
+def _rename_legacy_base() -> None:
+    """One-time rename of the old ACCELA data folder to the EXE-fingerprinter one."""
+    try:
+        import shutil
+        system = platform.system().lower()
+        if system == "windows":
+            base = Path(os.environ.get("APPDATA", "")) / "EXE-fingerprinter"
+        elif system == "darwin":
+            base = Path.home() / "Library" / "Logs" / "EXE-fingerprinter"
+        else:
+            base = Path(os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local" / "share")) / "EXE-fingerprinter"
+        new = Path(str(base).replace("EXE-fingerprinter", "EXE-fingerprinter"))
+        if base.exists() and not new.exists():
+            shutil.move(str(base), str(new))
+            logger.info(f"Renamed legacy data folder {base} -> {new}")
+    except Exception as exc:
+        logger.debug(f"Legacy data folder rename skipped: {exc}")
+
+
 def get_cache_dir(subfolder: str = "") -> Path:
     """Return cache directory (~/.local/share/ACCELA/cache/[subfolder]).
     Checks legacy location first to maintain 100% backward compatibility.
@@ -571,6 +573,8 @@ def get_cache_dir(subfolder: str = "") -> Path:
     return c_path
 
 
+
+
 def get_manifests_dir(subfolder: str = "") -> Path:
     """Return manifests directory (~/.local/share/ACCELA/manifests/[subfolder]).
     Checks legacy location first to maintain 100% backward compatibility.
@@ -586,6 +590,8 @@ def get_manifests_dir(subfolder: str = "") -> Path:
     m_path = base / "manifests"
     m_path.mkdir(parents=True, exist_ok=True)
     return m_path
+
+
 
 
 def get_data_dir() -> Path:
@@ -616,6 +622,8 @@ DB_RELOCATED_FILES = {
 }
 
 
+
+
 def get_data_file_path(filename: str) -> Path:
     """Return path for a database or state file (e.g. steam_headers.db, install_history.json).
     Checks new db/ folder under base_path first; if not found, falls back to legacy locations.
@@ -640,6 +648,8 @@ def get_data_file_path(filename: str) -> Path:
     if legacy_file.exists():
         return legacy_file
     return get_data_dir() / filename
+
+
 
 
 def migrate_databases_to_db_folder() -> None:
@@ -691,94 +701,6 @@ def migrate_databases_to_db_folder() -> None:
         logger.warning(f"[DB Migration] Database migration check failed: {e}")
 
 
-def _get_slscheevo_path() -> Path:
-    """Get path to SLScheevo executable or Python script."""
-
-    # Running in a PyInstaller bundle -> use the embedded executable
-    executable_name = "SLScheevo.exe" if sys.platform == "win32" else "SLScheevo"
-    relative_path = f"SLScheevo/{executable_name}"
-
-    # Use Path.depot() for relative pathing directly inside the deps folder.
-    binary_path = Paths.deps(relative_path)
-    script_path = Paths.deps("SLScheevo/SLScheevo.py")
-
-    # Prefer the bundled executable over the Python script
-    if binary_path.exists():
-        logger.info(f"Using SLScheevo executable at: {binary_path}")
-        return binary_path
-
-    # Fallback to Python script if executable not found
-    if script_path.exists():
-        logger.info(f"Using SLScheevo script at: {script_path}")
-        return script_path
-
-    logger.error(
-        "SLScheevo is not installed (tried: %s, %s). "
-        "Download it from Settings -> Tools -> Optional Components.",
-        binary_path, script_path,
-    )
-    # Return binary_path anyway so error handling can deal with it
-    return binary_path
-
-
-def get_slscheevo_path() -> Path:
-    return _get_slscheevo_path()
-
-
-def get_schema_grabber_path() -> Path:
-    binary_path = Paths.deps("SLScheevo/schema-grabber")
-    if binary_path.exists():
-        return binary_path
-    legacy_path = Paths.deps("schema-grabber/schema-grabber")
-    if legacy_path.exists():
-        return legacy_path
-    fallback_path = Path.home() / ".local/share/ACCELA/schema-grabber/bin/Release/net9.0/linux-x64/publish/schema-grabber"
-    if fallback_path.exists():
-        return fallback_path
-    return binary_path
-
-
-def _ensure_template_file(save_dir: Path) -> None:
-    """Ensure UserGameStats_TEMPLATE.bin exists in the save directory."""
-    template_in_save_dir = save_dir / "data" / "UserGameStats_TEMPLATE.bin"
-
-    # If template already exists, no need to copy
-    if template_in_save_dir.exists():
-        return
-
-    # Find the original template file
-    template_source = Paths.deps("SLScheevo/data/UserGameStats_TEMPLATE.bin")
-
-    # If we found the source template, copy it
-    if template_source and template_source.exists():
-        # Create data directory if it doesn't exist
-        (save_dir / "data").mkdir(exist_ok=True)
-        # Copy the template file
-        try:
-            shutil.copy2(template_source, template_in_save_dir)
-            logger.info(f"Copied {str(template_source)} to {template_in_save_dir}")
-        except OSError as e:
-            logger.warning(f"Failed to copy {str(template_source)}: {e}")
-    else:
-        logger.warning(f"Could not find {str(template_source)} source to copy")
-
-
-def _get_slscheevo_save_path() -> Path:
-    # Get save directory for credentials
-    save_dir = get_base_path() / "SLScheevo"
-
-    # Create directory tree
-    save_dir.mkdir(parents=True, exist_ok=True)
-
-    # Ensure template file exists
-    _ensure_template_file(save_dir)
-
-    logger.info(f"SLScheevo save directory: {save_dir}")
-    return save_dir
-
-
-def get_slscheevo_save_path() -> Path:
-    return _get_slscheevo_save_path()
 
 
 def is_running_in_pyinstaller() -> bool:
@@ -786,885 +708,40 @@ def is_running_in_pyinstaller() -> bool:
     return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
 
 
-def check_venv(path: str | Path) -> Path | None:
-    """Check if a path is a valid virtual environment."""
-    # Convert to absolute path immediately
-    venv_path = Path(path).resolve()
 
-    if venv_path.exists() and venv_path.is_dir():
-        # Check for standard venv markers
-        has_cfg = (venv_path / "pyvenv.cfg").exists()
-        # Check for the actual python binary
-        has_bin = (venv_path / "bin" / "python").exists() or (
-            venv_path / "Scripts" / "python.exe"
-        ).exists()
 
-        if has_cfg or has_bin:
-            return venv_path
-
-    return None
-
-
-def get_venv_path() -> Path | None:
-    """Get absolute path to venv Python."""
-    # Return None if running from PyInstaller temp directory
-    # The venv won't be accessible from the MEIPASS temp folder
-    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        logger.debug(
-            "Running from PyInstaller - skipping venv lookup "
-            "(will use bundled .exe if available)"
-        )
-        return None
-
-    venv_dir = None
-
-    # 1. Check AppImage environment (Highest priority for your use case)
-    app_dir = os.environ.get("APPDIR")
-    if app_dir:
-        # Should be at {APPDIR}/bin/.venv
-        venv_dir = check_venv(Path(app_dir) / "bin" / ".venv")
-        if venv_dir:
-            return venv_dir
-        # The APPDIR env var is set but the venv wasn't found there.
-        # Log what was tried so it's easier to debug future mismatches.
-        logger.debug(f"AppImage APPDIR set to '{app_dir}' but no .venv found at {Path(app_dir) / 'bin' / '.venv'}")
-
-    # 1b. Glob-based fallback for AppImages whose mount point has a random suffix
-    # e.g. /tmp/.mount_ASSellXYZ/bin/.venv — the suffix changes every run.
-    if not venv_dir and sys.platform != "win32":
-        import glob
-        for candidate in glob.glob("/tmp/.mount_*/bin/.venv"):
-            venv_dir = check_venv(Path(candidate))
-            if venv_dir:
-                logger.debug(f"Found AppImage .venv via glob: {venv_dir}")
-                return venv_dir
-
-    # 2. Check relative to this script file (Absolute traversal)
-    current_file_dir = Path(__file__).resolve().parent
-    for _ in range(4):
-        venv_dir = check_venv(current_file_dir / ".venv")
-        if venv_dir:
-            return venv_dir
-        if current_file_dir == current_file_dir.parent:
-            break
-        current_file_dir = current_file_dir.parent
-
-    # 3. Final Fallback: CWD (Forced to absolute)
-    if not venv_dir:
-        venv_dir = check_venv(Path.cwd() / ".venv")
-
-    if venv_dir:
-        logger.info(f"Found absolute venv path at: {venv_dir}")
-    else:
-        logger.debug("Could not locate .venv directory")
-
-    return venv_dir
-
-
-def get_venv_python() -> str | None:
-    """Get Python executable path, preferring venv if available."""
-    venv_path = get_venv_path()
-
-    if venv_path:
-        # Return Python from venv
-        if sys.platform == "win32":
-            python_exe = venv_path / "Scripts" / "python.exe"
-        else:
-            python_exe = venv_path / "bin" / "python"
-
-        if python_exe.exists():
-            return str(python_exe)
-
-    return None
-
-
-def get_venv_activate() -> str | None:
-    """Get venv activate script path if available."""
-    venv_path = get_venv_path()
-
-    if venv_path:
-        if sys.platform == "win32":
-            activate_script = venv_path / "Scripts" / "activate.bat"
-        else:
-            activate_script = venv_path / "bin" / "activate"
-
-        if activate_script.exists():
-            return str(activate_script)
-
-    return None
-
-
-def add_gradient_border(
-    element: QWidget, accent_color: str, background_color: str
-) -> None:
-    """Add a gradient border to a UI element."""
-    accent_q_color = QColor(accent_color).darker().name()
-    bg_q_color = QColor(background_color).darker().name()
-
-    current_style = element.styleSheet()
-    border_style = f"""
-        border-top: 2px solid qlineargradient(
-            x1:0, y1:0, x2:1, y2:0,
-            stop:0 {accent_q_color},
-            stop:0.5 {bg_q_color},
-            stop:1 {accent_q_color}
-        );
-        border-bottom: 2px solid qlineargradient(
-            x1:0, y1:0, x2:1, y2:0,
-            stop:0 {accent_q_color},
-            stop:0.5 {bg_q_color},
-            stop:1 {accent_q_color}
-        );
-        border-left: 2px solid qlineargradient(
-            x1:0, y1:0, x2:0, y2:1,
-            stop:0 {accent_q_color},
-            stop:0.5 {bg_q_color},
-            stop:1 {accent_q_color}
-        );
-        border-right: 2px solid qlineargradient(
-            x1:0, y1:0, x2:0, y2:1,
-            stop:0 {accent_q_color},
-            stop:0.5 {bg_q_color},
-            stop:1 {accent_q_color}
-        );
-    """
-    element.setStyleSheet(current_style + border_style)
-
-
-def create_slider_setting(
-    name: str,
-    setting_key: str,
-    default_value: int,
-    parent_widget: Optional[QWidget] = None,
-) -> Tuple[QHBoxLayout, QSlider, QLabel, QPushButton]:
-    """Helper function to create a slider setting with value label/reset."""
-    layout = QHBoxLayout()
-
-    label = QLabel(f"{name}:")
-    label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-    label.setFixedWidth(105)
-
-    slider = QSlider(Qt.Orientation.Horizontal)
-    slider.setRange(0, 100)
-    slider.setTickPosition(QSlider.TickPosition.TicksBothSides)
-
-    value_label = QLabel(f"{default_value}%")
-    value_label.setFixedWidth(30)
-
-    reset_button = QPushButton("Reset")
-    reset_button.setFixedHeight(25)
-    reset_button.clicked.connect(lambda: slider.setValue(default_value))
-
-    if parent_widget and hasattr(parent_widget, "settings"):
-        current_value = parent_widget.settings.value(
-            setting_key, default_value, type=int
-        )
-        slider.setValue(current_value)
-        value_label.setText(f"{current_value}%")
-
-        # Connect value change to update label
-        def update_label(value):
-            value_label.setText(f"{value}%")
-            if hasattr(parent_widget, f"on_{setting_key}_changed"):
-                getattr(parent_widget, f"on_{setting_key}_changed")(value)
-
-        slider.valueChanged.connect(update_label)
-
-    layout.addWidget(label)
-    layout.addWidget(slider, 1)
-    layout.addWidget(value_label)
-    layout.addWidget(reset_button)
-
-    return layout, slider, value_label, reset_button
-
-
-class Material3Switch(QWidget):
-    """
-    A 100% specification-compliant Material 3 Switch component.
-    Features smooth thumb sliding animation, morphing thumb diameter, and checkmark icon.
-    """
-    toggled = pyqtSignal(bool)
-    stateChanged = pyqtSignal(int)
-
-    def __init__(self, checked: bool = False, accent_color: str = "#7ab3ff", parent=None):
-        super().__init__(parent)
-        self.setFixedSize(46, 26)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._checked = checked
-        self._locked = False
-        self.accent_color = QColor(accent_color)
-        self._thumb_pos = 1.0 if checked else 0.0
-
-        from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
-        self._anim = QPropertyAnimation(self, b"thumb_pos", self)
-        self._anim.setDuration(160)
-        self._anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-
-    def set_accent_color(self, hex_color: str):
-        self.accent_color = QColor(hex_color)
-        self.update()
-
-    def setLocked(self, locked: bool):
-        if self._locked != locked:
-            self._locked = locked
-            if locked:
-                self.setCursor(Qt.CursorShape.ForbiddenCursor)
-            else:
-                self.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.update()
-
-    def isLocked(self) -> bool:
-        return self._locked
-
-    def get_thumb_pos(self) -> float:
-        return self._thumb_pos
-
-    def set_thumb_pos(self, pos: float):
-        self._thumb_pos = pos
-        self.update()
-
-    from PyQt6.QtCore import pyqtProperty
-    thumb_pos = pyqtProperty(float, get_thumb_pos, set_thumb_pos)
-
-    def isChecked(self) -> bool:
-        return self._checked
-
-    def setChecked(self, checked: bool):
-        if self._checked != checked:
-            self._checked = checked
-            self._anim.stop()
-            self._anim.setStartValue(self._thumb_pos)
-            self._anim.setEndValue(1.0 if checked else 0.0)
-            self._anim.start()
-            self.toggled.emit(checked)
-            self.stateChanged.emit(2 if checked else 0)
-
-    def mousePressEvent(self, event):
-        if self._locked:
-            return
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.setChecked(not self._checked)
-        super().mousePressEvent(event)
-
-    def paintEvent(self, event):
-        from PyQt6.QtGui import QPainter, QBrush, QPen, QPainterPath
-        from PyQt6.QtCore import QRectF
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        W = 44.0
-        H = 24.0
-        x_off = (self.width() - W) / 2.0
-        y_off = (self.height() - H) / 2.0
-        rect = QRectF(x_off, y_off, W, H)
-
-        t = self._thumb_pos  # 0.0 (off) to 1.0 (on)
-
-        # 1. Base Track & Thumb Colors
-        if t > 0.01:
-            track_bg = QColor(
-                int(0x1e * (1 - t) + self.accent_color.red() * t),
-                int(0x1e * (1 - t) + self.accent_color.green() * t),
-                int(0x1e * (1 - t) + self.accent_color.blue() * t),
-                int(100 * (1 - t) + 255 * t)
-            )
-        else:
-            track_bg = QColor(0x1e, 0x1e, 0x22, 200)
-
-        if t > 0.5:
-            from utils.color_utils import get_best_foreground_color
-            fg_hex = get_best_foreground_color(self.accent_color.name())
-            thumb_color = QColor(fg_hex)
-        else:
-            thumb_color = QColor(180, 184, 196)
-
-        check_icon_color = self.accent_color
-
-        # If locked, run track, thumb, and checkmark colors through get_grayscale_color (saturation = 0, full opacity)
-        if self._locked:
-            from utils.color_utils import get_grayscale_color
-            track_bg = QColor(get_grayscale_color(track_bg.name()))
-            thumb_color = QColor(get_grayscale_color(thumb_color.name()))
-            check_icon_color = QColor(get_grayscale_color(self.accent_color.name()))
-
-        # 2. Paint Track
-        painter.setBrush(QBrush(track_bg))
-        if t > 0.01 and t < 0.99:
-            border_col = QColor(142, 144, 153, int(255 * (1 - t)))
-            painter.setPen(QPen(border_col, 2))
-        elif t <= 0.01:
-            painter.setPen(QPen(QColor(142, 144, 153), 2))
-        else:
-            painter.setPen(Qt.PenStyle.NoPen)
-
-        path = QPainterPath()
-        path.addRoundedRect(rect, 12, 12)
-        painter.drawPath(path)
-
-        # 3. Paint Thumb Circle (interpolates position & size)
-        thumb_diameter = 12.0 + 6.0 * t
-        thumb_x = (x_off + 6.0) + (20.0 - 6.0) * t
-        thumb_y = y_off + (H - thumb_diameter) / 2.0
-
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QBrush(thumb_color))
-        painter.drawEllipse(QRectF(thumb_x, thumb_y, thumb_diameter, thumb_diameter))
-
-        # 4. Checkmark Icon inside thumb when checked (t > 0.8)
-        if t > 0.8:
-            check_pen = QPen(check_icon_color, 2)
-            check_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-            painter.setPen(check_pen)
-
-            tc_x = thumb_x + thumb_diameter / 2.0
-            tc_y = thumb_y + thumb_diameter / 2.0
-            check_path = QPainterPath()
-            check_path.moveTo(tc_x - 3.5, tc_y)
-            check_path.lineTo(tc_x - 1, tc_y + 2.5)
-            check_path.lineTo(tc_x + 3.5, tc_y - 2.5)
-            painter.drawPath(check_path)
-
-
-class CheckboxSetting(QWidget):
-    """A Material 3 Switch setting row with label + description on the left and switch control on the far right."""
-    stateChanged = pyqtSignal(int)
-    toggled = pyqtSignal(bool)
-
-    def __init__(
-        self,
-        text: str,
-        setting_key: str,
-        default_value: bool,
-        parent_widget: Optional[QWidget] = None,
-        tooltip: Optional[str] = None,
-        show_description: bool = True,
-    ):
-        super().__init__(None)  # Pass None to super() so Qt doesn't position at top-left (0,0) before layout placement!
-        self.setting_key = setting_key
-        self.default_value = default_value
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(2, 4, 2, 4)
-        layout.setSpacing(12)
-
-        # Left Text Block (Label stacked above Description)
-        text_box = QVBoxLayout()
-        text_box.setContentsMargins(0, 0, 0, 0)
-        text_box.setSpacing(2)
-
-        self.label = QLabel(text)
-        self.label.setStyleSheet("color: #FFFFFF; font-size: 9.5pt; font-weight: 500; border: none; background: transparent;")
-        self.label.setWordWrap(True)
-        text_box.addWidget(self.label)
-
-        ac = "#7ab3ff"
-        if parent_widget and hasattr(parent_widget, "accent_color"):
-            ac = parent_widget.accent_color
-
-        self.checkbox = Material3Switch(checked=False, accent_color=ac)
-
-        # Initialize checked state from settings when parent_widget provided
-        if parent_widget and hasattr(parent_widget, "settings"):
-            current_value = parent_widget.settings.value(
-                setting_key, default_value, type=bool
-            )
-            self.checkbox.setChecked(current_value)
-
-        self.checkbox.stateChanged.connect(self.stateChanged.emit)
-        self.checkbox.toggled.connect(self.toggled.emit)
-
-        self._original_tooltip = tooltip
-        self.desc_label = None
-        if tooltip:
-            if show_description:
-                self.desc_label = QLabel(tooltip)
-                self.desc_label.setStyleSheet("color: rgba(255, 255, 255, 0.6); font-size: 8.5pt; font-weight: 400; border: none; background: transparent;")
-                self.desc_label.setWordWrap(True)
-                text_box.addWidget(self.desc_label)
-            self.setToolTip(tooltip)
-
-        layout.addLayout(text_box, 1)
-        layout.addWidget(self.checkbox)
-
-    def isChecked(self) -> bool:
-        return self.checkbox.isChecked()
-
-    def setChecked(self, value: bool) -> None:
-        self.checkbox.setChecked(value)
-
-    def setLocked(self, locked: bool, lock_reason: Optional[str] = None):
-        self._locked = locked
-        self.checkbox.setLocked(locked)
-        if locked:
-            self.label.setStyleSheet("color: #FFFFFF; font-size: 9.5pt; font-weight: 500; border: none; background: transparent;")
-            if lock_reason:
-                self.setToolTip(lock_reason)
-                if self.desc_label:
-                    self.desc_label.setText(lock_reason)
-                    self.desc_label.setStyleSheet("color: rgba(255, 255, 255, 0.7); font-size: 8.5pt; font-weight: 400; border: none; background: transparent;")
-        else:
-            self.label.setStyleSheet("color: #FFFFFF; font-size: 9.5pt; font-weight: 500; border: none; background: transparent;")
-            if hasattr(self, "_original_tooltip") and self._original_tooltip:
-                self.setToolTip(self._original_tooltip)
-                if self.desc_label:
-                    self.desc_label.setText(self._original_tooltip)
-                    self.desc_label.setStyleSheet("color: rgba(255, 255, 255, 0.6); font-size: 8.5pt; font-weight: 400; border: none; background: transparent;")
-
-    def isLocked(self) -> bool:
-        return getattr(self, "_locked", False)
-
-    def setEnabled(self, enabled: bool) -> None:
-        super().setEnabled(enabled)
-        self.checkbox.setEnabled(enabled)
-        if enabled:
-            self.label.setStyleSheet("color: #FFFFFF; font-size: 9.5pt; font-weight: 500; border: none; background: transparent;")
-            if self.desc_label:
-                self.desc_label.setStyleSheet("color: rgba(255, 255, 255, 0.6); font-size: 8.5pt; font-weight: 400; border: none; background: transparent;")
-            self.checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
-        else:
-            self.label.setStyleSheet("color: rgba(255, 255, 255, 0.38); font-size: 9.5pt; font-weight: 500; border: none; background: transparent;")
-            if self.desc_label:
-                self.desc_label.setStyleSheet("color: rgba(255, 255, 255, 0.25); font-size: 8.5pt; font-weight: 400; border: none; background: transparent;")
-            self.checkbox.setCursor(Qt.CursorShape.ForbiddenCursor)
-
-    def setToolTip(self, text: Optional[str]):
-        super().setToolTip(text or "")
-        self.label.setToolTip(text or "")
-        self.checkbox.setToolTip(text or "")
-        if self.desc_label and text:
-            self.desc_label.setText(text)
-
-
-def create_checkbox_setting(
-    text: str,
-    setting_key: str,
-    default_value: bool,
-    parent_widget: Optional[QWidget] = None,
-    tooltip: Optional[str] = None,
-    show_description: bool = True,
-) -> CheckboxSetting:
-    """Helper function to create a checkbox setting."""
-    return CheckboxSetting(text, setting_key, default_value, parent_widget, tooltip, show_description=show_description)
-
-
-def create_text_setting(
-    name: str,
-    setting_key: str,
-    default_value: str,
-    parent_widget: Optional[QWidget] = None,
-    placeholder: Optional[str] = None,
-    tooltip: Optional[str] = None,
-) -> Tuple[QHBoxLayout, QLineEdit]:
-    """Helper function to create a text input setting."""
-    layout = QHBoxLayout()
-
-    label = QLabel(f"{name}:")
-    layout.addWidget(label)
-
-    line_edit = QLineEdit()
-    if placeholder:
-        line_edit.setPlaceholderText(placeholder)
-
-    if parent_widget and hasattr(parent_widget, "settings"):
-        current_value = parent_widget.settings.value(
-            setting_key, default_value, type=str
-        )
-        line_edit.setText(current_value)
-
-    if tooltip:
-        line_edit.setToolTip(tooltip)
-
-    layout.addWidget(line_edit)
-
-    return layout, line_edit
-
-
-def create_color_setting(
-    name: str,
-    setting_key: str,
-    default_color: str,
-    parent_widget: Optional[QWidget] = None,
-) -> Tuple[QHBoxLayout, QPushButton, QPushButton]:
-    """Helper function to create a color picker setting."""
-    layout = QHBoxLayout()
-
-    label = QLabel(f"{name}:")
-
-    color_button = QPushButton()
-    if parent_widget and hasattr(parent_widget, "settings"):
-        current_color = parent_widget.settings.value(
-            setting_key, default_color, type=str
-        )
-        color_button.setStyleSheet(f"background-color: {current_color};")
-    else:
-        color_button.setStyleSheet(f"background-color: {default_color};")
-
-    reset_button = QPushButton("Reset")
-
-    layout.addWidget(label)
-    layout.addWidget(color_button)
-    layout.addWidget(reset_button)
-    layout.addStretch()
-
-    return layout, color_button, reset_button
-
-
-def create_font_setting(
-    parent_widget: Optional[QWidget] = None,
-) -> Tuple[QHBoxLayout, QPushButton, QPushButton]:
-    """Helper function to create a font chooser setting."""
-    layout = QHBoxLayout()
-
-    label = QLabel("Font:")
-
-    font_button = QPushButton("Choose Font")
-
-    if parent_widget and hasattr(parent_widget, "settings"):
-        # Load current font settings
-        current_font = QFont()
-        saved_fam = parent_widget.settings.value("font", "Open Sans")
-        if saved_fam.lower() in ("trixiecyrg-plain", "trixiecyrg-plain regular", "trixie"):
-            saved_fam = "Open Sans"
-        current_font.setFamily(saved_fam)
-        current_font.setPointSize(
-            parent_widget.settings.value("font-size", 10, type=int)
-        )
-
-        font_style = parent_widget.settings.value("font-style", "Normal")
-        if font_style == "Italic":
-            current_font.setItalic(True)
-        elif font_style == "Bold":
-            current_font.setBold(True)
-        elif font_style == "Bold Italic":
-            current_font.setBold(True)
-            current_font.setItalic(True)
-
-        font_button.setFont(current_font)
-        parent_widget.current_font = current_font
-
-        # Update button text to show current font
-        def update_font_text():
-            font = parent_widget.current_font
-            font_text = f"{font.family()} {font.pointSize()}pt"
-            if font.bold() and font.italic():
-                font_text += " Bold Italic"
-            elif font.bold():
-                font_text += " Bold"
-            elif font.italic():
-                font_text += " Italic"
-            font_button.setText(font_text)
-            font_button.setFont(font)
-
-        update_font_text()
-        parent_widget.update_font_button_text = update_font_text
-
-    reset_button = QPushButton("Reset")
-
-    layout.addWidget(label)
-    layout.addWidget(font_button)
-    layout.addWidget(reset_button)
-    layout.addStretch()
-
-    return layout, font_button, reset_button
-
-
-def create_font_from_settings(settings) -> QFont:
-    """Create a QFont object from application settings."""
-    font_family = settings.value("font", "Open Sans")
-    if font_family.lower() in ("trixiecyrg-plain", "trixiecyrg-plain regular", "trixie"):
-        font_family = "Open Sans"
-    font_size = settings.value("font-size", 10, type=int)
-    font_style = settings.value("font-style", "Normal")
-
-    font = QFont(font_family)
-    font.setPointSize(font_size)
-    if font_style == "Italic":
-        font.setItalic(True)
-    elif font_style == "Bold":
-        font.setBold(True)
-    elif font_style == "Bold Italic":
-        font.setBold(True)
-        font.setItalic(True)
-
-    return font
-
-
-def get_machine_id() -> bytes:
-    import os
-    import sys
-    # 1. Try /etc/machine-id (Linux standard)
-    for path in ("/etc/machine-id", "/var/lib/dbus/machine-id"):
+def format_bytes(num_bytes: int) -> str:
+    """Format byte count into human-readable string (B, KB, MB, GB, TB)."""
+    try:
+        num = float(num_bytes)
+    except (ValueError, TypeError):
+        return ""
+    if num >= 1024**4:
+        return f"{num / (1024**4):.2f} TB"
+    elif num >= 1024**3:
+        return f"{num / (1024**3):.2f} GB"
+    elif num >= 1024**2:
+        return f"{num / (1024**2):.1f} MB"
+    elif num >= 1024:
+        return f"{num / 1024:.1f} KB"
+    return f"{int(num)} B"
+
+
+
+
+def resource_path(relative_path: str) -> Path:
+    """Absolute path to a bundled resource, in dev and when frozen."""
+    norm = str(relative_path).replace("\\", "/")
+    if norm in ("deps/DepotDownloader.dll", "deps/depotdownloader.dll"):
         try:
-            if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as f:
-                    content = f.read().strip()
-                    if content:
-                        return content.encode("utf-8")
+            from utils.paths import Paths
+
+            return Paths.depot_downloader_dll()
         except Exception:
             pass
 
-    # 2. Try Windows registry GUID if on Windows
-    if sys.platform == "win32":
-        try:
-            import winreg
-            key = winreg.OpenKey(
-                winreg.HKEY_LOCAL_MACHINE,
-                r"SOFTWARE\Microsoft\Cryptography"
-            )
-            machine_guid, _ = winreg.QueryValueEx(key, "MachineGuid")
-            winreg.CloseKey(key)
-            if machine_guid:
-                return machine_guid.strip().encode("utf-8")
-        except OSError:
-            pass
-
-    # 3. Fallback to uuid.getnode()
-    import uuid
-    return str(uuid.getnode()).encode("utf-8")
-
-
-def get_encryption_key() -> bytes:
-    import base64
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-
-    # Derive a key from the machine's persistent ID
-    machine_id = get_machine_id()
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=b'exe_fingerprinter_salt_key_123', # Fixed salt
-        iterations=100000,
-    )
-    return base64.urlsafe_b64encode(kdf.derive(machine_id))
-
-
-def encrypt_string(plain_text: str) -> str:
-    if not plain_text:
-        return ""
-    from cryptography.fernet import Fernet
-    try:
-        key = get_encryption_key()
-        f = Fernet(key)
-        return f.encrypt(plain_text.encode('utf-8')).decode('utf-8')
-    except Exception:
-        return ""
-
-
-def decrypt_string(encrypted_text: str) -> str:
-    if not encrypted_text:
-        return ""
-    from cryptography.fernet import Fernet
-    
-    # Try decrypting using the new persistent machine ID key
-    try:
-        key = get_encryption_key()
-        f = Fernet(key)
-        return f.decrypt(encrypted_text.encode('utf-8')).decode('utf-8')
-    except Exception:
-        pass
-
-    # Fallback to the old MAC-address-based key in case they have an old config
-    try:
-        import uuid
-        import base64
-        from cryptography.hazmat.primitives import hashes
-        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-        old_machine_id = str(uuid.getnode()).encode('utf-8')
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=b'exe_fingerprinter_salt_key_123',
-            iterations=100000,
-        )
-        old_key = base64.urlsafe_b64encode(kdf.derive(old_machine_id))
-        f = Fernet(old_key)
-        return f.decrypt(encrypted_text.encode('utf-8')).decode('utf-8')
-    except Exception:
-        return ""
-
-
-def get_steam_stats_dir() -> Path | None:
-    import sys
-    import os
-    from pathlib import Path
-    if sys.platform == "win32":
-        import winreg
-        try:
-            key = winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam"
-            )
-            steam_path, _ = winreg.QueryValueEx(key, "SteamPath")
-            winreg.CloseKey(key)
-            dest = Path(os.path.normpath(steam_path)) / "appcache/stats"
-            return dest
-        except OSError:
-            return None
-    else:
-        native_path = Path.home() / ".local/share/Steam"
-        symlink_path = Path.home() / ".steam/steam"
-        flatpak_path = Path.home() / ".var/app/com.valvesoftware.Steam/data/Steam"
-        
-        for path in (native_path, symlink_path, flatpak_path):
-            if path.exists():
-                dest = path / "appcache/stats"
-                return dest
-    return None
-
-
-
-
-
-from utils.dlc_helpers import get_dlc_only_info, is_dlc_only_mode
-
-
-class FontSelectionDialog(QDialog):
-    def __init__(self, initial_font: QFont, parent=None):
-        super().__init__(parent)
-        try:
-            from ui.theme import register_application_fonts
-            register_application_fonts()
-        except Exception:
-            pass
-
-        from ui.dialogs.themed_dialog import install_themed_frame
-
-        self.setWindowTitle("Select Font")
-        self.setMinimumWidth(400)
-        self.resize(400, 290)
-        
-        self.setStyleSheet("""
-            QLabel[form_label="true"] {
-                color: #FFFFFF;
-                font-size: 9.5pt;
-            }
-            QSpinBox {
-                background-color: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 6px;
-                color: #FFFFFF;
-                padding: 5px 8px;
-                font-size: 9.5pt;
-            }
-        """)
-
-        layout = install_themed_frame(self, margins=(16, 16, 16, 16), spacing=14)
-
-        form_layout = QFormLayout()
-        form_layout.setSpacing(10)
-
-        lbl_f = QLabel("Font:", self)
-        lbl_f.setProperty("form_label", True)
-        from ui.widgets.modern_dropdown import ModernComboBox, ModernFontComboBox
-        self.font_combo = ModernFontComboBox(self)
-        if initial_font and initial_font.family():
-            if initial_font.family().lower() in ("trixiecyrg-plain", "trixiecyrg-plain regular", "trixie"):
-                initial_font = QFont("Open Sans", initial_font.pointSize())
-            self.font_combo.setCurrentFont(initial_font)
-        form_layout.addRow(lbl_f, self.font_combo)
-
-        lbl_s = QLabel("Style:", self)
-        lbl_s.setProperty("form_label", True)
-        self.style_combo = ModernComboBox(self)
-        self.style_combo.addItems(["Normal", "Bold", "Italic", "Bold Italic"])
-        
-        if initial_font.bold() and initial_font.italic():
-            self.style_combo.setCurrentIndex(3)
-        elif initial_font.bold():
-            self.style_combo.setCurrentIndex(1)
-        elif initial_font.italic():
-            self.style_combo.setCurrentIndex(2)
-        else:
-            self.style_combo.setCurrentIndex(0)
-            
-        form_layout.addRow(lbl_s, self.style_combo)
-
-        lbl_sz = QLabel("Size (pt):", self)
-        lbl_sz.setProperty("form_label", True)
-        self.size_spin = QSpinBox(self)
-        self.size_spin.setRange(6, 72)
-        self.size_spin.setValue(initial_font.pointSize() if initial_font.pointSize() > 0 else 10)
-        form_layout.addRow(lbl_sz, self.size_spin)
-
-        layout.addLayout(form_layout)
-
-        preview_group = QVBoxLayout()
-        preview_title = QLabel("Preview:", self)
-        preview_title.setStyleSheet("color: rgba(255, 255, 255, 0.5); font-size: 8.5pt;")
-        self.preview_label = QLabel("Pack my box with five dozen liquor jugs. 1234567890", self)
-        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setWordWrap(True)
-        
-        preview_group.addWidget(preview_title)
-        preview_group.addWidget(self.preview_label)
-        layout.addLayout(preview_group)
-
-        self.button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
-            self
-        )
-        self.button_box.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(255, 255, 255, 0.09);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 6px;
-                color: #FFFFFF;
-                padding: 6px 16px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 0.18);
-            }
-        """)
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-        layout.addWidget(self.button_box)
-
-        self.font_combo.currentFontChanged.connect(self.update_preview)
-        self.style_combo.currentIndexChanged.connect(self.update_preview)
-        self.size_spin.valueChanged.connect(self.update_preview)
-
-        self.update_preview()
-
-    def update_preview(self):
-        font = self.get_selected_font()
-        self.preview_label.setFont(font)
-        weight = "bold" if font.bold() else "normal"
-        style = "italic" if font.italic() else "normal"
-        self.preview_label.setStyleSheet(
-            f"background-color: rgba(255, 255, 255, 0.04); "
-            f"border: 1px dashed rgba(255, 255, 255, 0.15); "
-            f"border-radius: 6px; padding: 12px; min-height: 48px; color: #FFFFFF; "
-            f"font-family: '{font.family()}'; font-size: {font.pointSize()}pt; "
-            f"font-weight: {weight}; font-style: {style};"
-        )
-
-    def get_selected_font(self) -> QFont:
-        font = self.font_combo.currentFont()
-        font.setPointSize(self.size_spin.value())
-        style = self.style_combo.currentText()
-        if style == "Bold":
-            font.setBold(True)
-            font.setItalic(False)
-        elif style == "Italic":
-            font.setBold(False)
-            font.setItalic(True)
-        elif style == "Bold Italic":
-            font.setBold(True)
-            font.setItalic(True)
-        else:
-            font.setBold(False)
-            font.setItalic(False)
-        return font
-
-    @staticmethod
-    def get_font(initial_font: QFont, parent=None) -> Tuple[QFont, bool]:
-        dialog = FontSelectionDialog(initial_font, parent)
-        result = dialog.exec()
-        if result == QDialog.DialogCode.Accepted:
-            return dialog.get_selected_font(), True
-        return initial_font, False
-
-
-
+    base_path = getattr(sys, "_MEIPASS", None)
+    if base_path is None:
+        base_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+    return Path(os.path.join(base_path, relative_path))
 

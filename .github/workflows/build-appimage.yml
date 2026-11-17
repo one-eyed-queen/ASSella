@@ -59,14 +59,14 @@ jobs:
       - name: Install System Packaging Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y zsync libfuse2 squashfs-tools wget curl file python3-venv python3-pip git tor libevent-2.1-7 libgl1 libegl1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3 zip
+          sudo apt-get install -y zsync libfuse2 squashfs-tools wget curl file python3-venv python3-pip git tor libevent-2.1-7 zip
 
       - name: Determine Release Channel & Metadata
         id: meta
         run: |
           TAG="${GITHUB_REF_NAME:-}"
           if [ -z "$TAG" ] || [ "$TAG" = "beta" ] || [ "$TAG" = "canary" ] || [ "$TAG" = "main" ]; then
-            TAG="v$(cat src/res/version 2>/dev/null || echo '2.7.1dev')"
+            TAG="v$(grep -oP 'APP_VERSION = "\K[^"]+' src/version.py | head -1)"
           fi
           
           # Detect channel from tag if on tag push, else use manual input
@@ -138,14 +138,13 @@ jobs:
           cat << 'EOF' > AppDir/exe_fingerprinter.desktop
           [Desktop Entry]
           Name=EXE-fingerprinter
-          Comment=Steam Game & Depot Management Suite
+          Comment=Download a Steam game's .exe files only
           Exec=AppRun %U
           Icon=exe_fingerprinter
-          Terminal=false
+          Terminal=true
           Type=Application
           Categories=Utility;Game;
-          # Must match QApplication::applicationName() in src/main.py, which is
-          # what the window manager matches against to pick the taskbar icon.
+          # The TUI needs a terminal; desktop launchers open one when Terminal=true.
           StartupWMClass=EXE-fingerprinter
           EOF
           # Legacy alias: earlier builds shipped this name, and some launchers
@@ -154,22 +153,9 @@ jobs:
           
           # Copy icons: bundle scalable SVG alongside PNG fallback (and legacy accela aliases) so
           # AppImage extractors, desktop entries and .DirIcon all resolve cleanly.
-          if [ -f "src/res/logo/icon.svg" ]; then
-            cp "src/res/logo/icon.svg" AppDir/exe_fingerprinter.svg
-            cp "src/res/logo/icon.svg" AppDir/accela.svg
-            mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
-            cp "src/res/logo/icon.svg" AppDir/usr/share/icons/hicolor/scalable/apps/exe_fingerprinter.svg
-          fi
-          if [ -f "src/res/logo/icon.png" ]; then
-            cp "src/res/logo/icon.png" AppDir/exe_fingerprinter.png
-            cp "src/res/logo/icon.png" AppDir/.DirIcon
-          elif [ -f "src/res/logo/accela.png" ]; then
-            cp "src/res/logo/accela.png" AppDir/exe_fingerprinter.png
-            cp "src/res/logo/accela.png" AppDir/.DirIcon
-          elif [ -f "exe_fingerprinter_logo.png" ]; then
-            cp "exe_fingerprinter_logo.png" AppDir/exe_fingerprinter.png
-            cp "exe_fingerprinter_logo.png" AppDir/.DirIcon
-          fi
+          cp exe_fingerprinter_logo.png AppDir/exe_fingerprinter.png
+          cp exe_fingerprinter_logo.png AppDir/.DirIcon
+          cp exe_fingerprinter_logo.png AppDir/accela.png
           # Legacy icon alias.
           [ -f AppDir/exe_fingerprinter.png ] && cp AppDir/exe_fingerprinter.png AppDir/accela.png
 
@@ -205,7 +191,7 @@ jobs:
           rm -rf AppDir/bin/src/deps/Goldberg AppDir/bin/src/deps/Steamless AppDir/bin/src/deps/SLScheevo AppDir/bin/src/deps/schema-grabber
           BUILD_DATE_UTC="$(date -u +%Y-%m-%d)"
           BUILD_TS_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          python3 -c 'import re, sys; p = "AppDir/bin/src/utils/version.py"; t = open(p, "r", encoding="utf-8").read(); t = re.sub(r"^BUILD_DATE\s*=.*$", f"BUILD_DATE = \"{sys.argv[1]}\"", t, flags=re.M); t = re.sub(r"^BUILD_TIMESTAMP\s*=.*$", f"BUILD_TIMESTAMP = \"{sys.argv[2]}\"", t, flags=re.M); open(p, "w", encoding="utf-8").write(t); print(f"Stamped {p}: {sys.argv[1]} / {sys.argv[2]}")' "$BUILD_DATE_UTC" "$BUILD_TS_UTC"
+          python3 -c 'import re, sys; p = "AppDir/bin/src/version.py"; t = open(p, "r", encoding="utf-8").read(); t = re.sub(r"^BUILD_DATE\s*=.*$", f"BUILD_DATE = \"{sys.argv[1]}\"", t, flags=re.M); t = re.sub(r"^BUILD_TIMESTAMP\s*=.*$", f"BUILD_TIMESTAMP = \"{sys.argv[2]}\"", t, flags=re.M); open(p, "w", encoding="utf-8").write(t); print(f"Stamped {p}: {sys.argv[1]} / {sys.argv[2]}")' "$BUILD_DATE_UTC" "$BUILD_TS_UTC"
 
           # 5. Bundle appimageupdatetool (AppImageUpdate) for in-app delta updates.
           # Ships as a self-contained AppImage in bin/; the app extracts and runs
@@ -308,7 +294,7 @@ jobs:
 
           # 11. Sanity check: Verify all required imports inside bundled AppDir runtime
           echo "Verifying AppDir runtime imports..."
-          QT_QPA_PLATFORM=offscreen AppDir/bin/.venv/bin/python3 -c "import PyQt6.QtCore, PyQt6.QtWidgets, requests, yaml, cryptography, configobj, rich, vdf, steam, steam.client, zstandard, curl_cffi; app = PyQt6.QtWidgets.QApplication(['app', '-platform', 'offscreen']); print('AppDir verification: All critical dependencies imported and QApplication created successfully!')"
+          (cd AppDir/bin && PYTHONPATH=. .venv/bin/python3 -c "import rich, requests, urllib3, PIL; import tui.app; import tui.engine; import core.manifest_dump; import core.morrenus_api; print('AppDir verification: .exe runner imports and bundled runtime OK!')")
           test -x AppDir/bin/appimageupdatetool || { echo "::error::appimageupdatetool missing from AppDir"; exit 1; }
           echo "appimageupdatetool present and executable."
           # zsync2 fallback is optional — bundled above so delta updates work
@@ -484,11 +470,10 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Import check inside the bundled interpreter"
-          QT_QPA_PLATFORM=offscreen AppDir_extract/bin/.venv/bin/python3 - <<'PY'
+          (cd AppDir_extract/bin && PYTHONPATH=. .venv/bin/python3 - <<'PY'
           import importlib, sys
-          mods = ["PyQt6.QtCore","PyQt6.QtWidgets","PyQt6.QtGui","requests","yaml",
-                  "cryptography","configobj","rich","vdf","steam","steam.client",
-                  "zstandard","curl_cffi","psutil","bs4","gevent","capstone"]
+          mods = ["rich", "requests", "urllib3", "PIL", "tui.app", "tui.engine",
+                  "core.manifest_dump", "core.morrenus_api", "core.exe_fingerprinter_api"]
           bad = []
           for m in mods:
               try: importlib.import_module(m)
@@ -499,20 +484,20 @@ jobs:
               sys.exit(1)
           print(f"All {len(mods)} bundled dependencies import cleanly.")
           PY
+          )
           echo "::endgroup::"
 
           echo "::group::Pre-release suite against the extracted image"
           if [ -f AppDir_extract/bin/src/scripts/prerelease_check.py ]; then
             QT_QPA_PLATFORM=offscreen EXE_FINGERPRINTER_TESTER_NO_REEXEC=1 \
               AppDir_extract/bin/.venv/bin/python3 -u \
-              AppDir_extract/bin/src/scripts/prerelease_check.py \
-              --ci --src AppDir_extract/bin/src 2>&1 | tee /tmp/appimage_prerelease.log || true
+              scripts/prerelease_check.py 2>&1 | tee /tmp/appimage_prerelease.log || true
             grep -E 'RESULTS:|STATUS:' /tmp/appimage_prerelease.log || true
           else
             echo "pre-release suite not bundled in AppImage; running repo copy against extracted src"
             QT_QPA_PLATFORM=offscreen EXE_FINGERPRINTER_TESTER_NO_REEXEC=1 \
               AppDir_extract/bin/.venv/bin/python3 -u scripts/prerelease_check.py \
-              --ci --src AppDir_extract/bin/src 2>&1 | tee /tmp/appimage_prerelease.log || true
+              2>&1 | tee /tmp/appimage_prerelease.log || true
             grep -E 'RESULTS:|STATUS:' /tmp/appimage_prerelease.log || true
           fi
           echo "::endgroup::"
@@ -535,12 +520,7 @@ jobs:
 
           # 2. Bin files (requirements, icon, run launcher)
           cp requirements.txt "${PKG_NAME}/bin/"
-          [ -f "src/res/logo/icon.svg" ] && cp "src/res/logo/icon.svg" "${PKG_NAME}/bin/icon.svg"
-          if [ -f "src/res/logo/icon.png" ]; then
-            cp "src/res/logo/icon.png" "${PKG_NAME}/bin/icon.png"
-          elif [ -f "src/res/logo/accela.png" ]; then
-            cp "src/res/logo/accela.png" "${PKG_NAME}/bin/icon.png"
-          fi
+          cp exe_fingerprinter_logo.png "${PKG_NAME}/bin/icon.png"
 
           printf '%s\n' \
             '#!/usr/bin/env bash' \
