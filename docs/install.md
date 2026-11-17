@@ -3,8 +3,8 @@
 ## From source
 
 ```bash
-git clone https://github.com/one-eyed-queen/ASSella.git
-cd ASSella
+git clone https://github.com/one-eyed-queen/paws-fingerprinter.git
+cd paws-fingerprinter
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt

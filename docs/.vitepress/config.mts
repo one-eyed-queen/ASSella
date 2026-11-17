@@ -15,7 +15,7 @@ export default defineConfig({
     nav: [
       { text: 'Installation', link: '/install' },
       { text: 'How it works', link: '/downloading' },
-      { text: 'Releases', link: 'https://github.com/niwia/ASSella/releases' }
+      { text: 'Releases', link: 'https://github.com/one-eyed-queen/paws-fingerprinter/releases' }
     ],
     sidebar: [
       {
@@ -28,7 +28,7 @@ export default defineConfig({
       }
     ],
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/niwia/ASSella' }
+      { icon: 'github', link: 'https://github.com/one-eyed-queen/paws-fingerprinter' }
     ],
     search: {
       provider: 'local'
