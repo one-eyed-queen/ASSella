@@ -720,7 +720,7 @@ class FingerprintScreen(Screen):
 class ExternalFingerprintScreen(Screen):
     """Pick any .exe and fingerprint it — no game depots involved."""
 
-    BINDINGS = [("escape", "back", "back"), ("p", "pick", "pick"), ("enter", "pick", "pick")]
+    BINDINGS = [("escape", "back", "back"), ("p", "pick", "pick")]
 
     def compose(self) -> ComposeResult:
         yield AppHeader("external fingerprint", id="hdr")
@@ -729,10 +729,10 @@ class ExternalFingerprintScreen(Screen):
             "CodeView GUID, strings, disassembly: copy the TOML or export it.",
             id="app-subtitle",
         )
-        yield Static("Press Enter (or the button) to pick an .exe.", id="scan-status")
+        yield Static("Press P (or the button) to pick an .exe.", id="scan-status")
         with Horizontal(id="button-row"):
             yield Button("Pick .exe…", id="btn-pick", variant="primary")
-        yield FooterHelp("esc back · enter pick a file")
+        yield FooterHelp("esc back · p pick a file")
 
     def action_back(self) -> None:
         self.app.pop_screen()
