@@ -15,6 +15,8 @@ are ever added or removed.
 from __future__ import annotations
 
 import logging
+import random
+from collections import deque
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -134,7 +136,12 @@ class HomeScreen(Screen):
                 yield FooterHelp("pick something (up/down, enter, q to quit)")
 
     def on_mount(self) -> None:
+        self._art_history: deque = deque(maxlen=10)
         self._build_menu()
+        self._refresh_art()
+        self.set_interval(8.0, self._refresh_art)
+
+    def on_screen_resume(self, event) -> None:
         self._refresh_art()
 
     def _refresh_art(self) -> None:
@@ -142,9 +149,15 @@ class HomeScreen(Screen):
             self.query_one("#art-zone").display = False
             return
         try:
-            name = art.random_pick(tier="sfw", nsfw=False) or "placeholder.txt"
+            library = art.library(nsfw=False)
+            choices = [name for name, piece in library.items() if piece.lines and name not in self._art_history]
+            if not choices:
+                self._art_history.clear()
+                choices = [name for name, piece in library.items() if piece.lines]
+            name = random.choice(choices) if choices else "placeholder.txt"
         except Exception:
             name = "placeholder.txt"
+        self._art_history.append(name)
         self.query_one(AsciiPanel).show(name)
 
     def _build_menu(self) -> None:
@@ -707,39 +720,59 @@ class FingerprintScreen(Screen):
 class ExternalFingerprintScreen(Screen):
     """Pick any .exe and fingerprint it — no game depots involved."""
 
-    BINDINGS = [("escape", "back", "back")]
+    BINDINGS = [("escape", "back", "back"), ("p", "pick", "pick"), ("enter", "pick", "pick")]
 
     def compose(self) -> ComposeResult:
         yield AppHeader("external fingerprint", id="hdr")
-        yield Static("Choose any .exe — one native file picker.", id="scan-status")
+        yield Static(
+            "Fingerprint any .exe — hashes, PE layout, imports, version info,\n"
+            "CodeView GUID, strings, disassembly: copy the TOML or export it.",
+            id="app-subtitle",
+        )
+        yield Static("Press Enter (or the button) to pick an .exe.", id="scan-status")
         with Horizontal(id="button-row"):
             yield Button("Pick .exe…", id="btn-pick", variant="primary")
-        yield FooterHelp("esc back")
-
-    def on_mount(self) -> None:
-        self.run_worker(self._pick, thread=True, group="exe-pick")
+        yield FooterHelp("esc back · enter pick a file")
 
     def action_back(self) -> None:
         self.app.pop_screen()
 
+    def action_pick(self) -> None:
+        self._start_picking()
+
+    def on_mount(self) -> None:
+        self.query_one("#btn-pick", Button).focus()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-pick":
-            self._pick()
+            self._start_picking()
+
+    def _start_picking(self) -> None:
+        self.query_one("#scan-status", Static).update("Opening the file picker…")
+        self.query_one("#btn-pick", Button).disabled = True
+        self.run_worker(self._pick_worker, thread=True, group="exe-pick", exclusive=True)
 
     @work(thread=True, exclusive=True, group="exe-pick")
-    def _pick(self) -> None:
+    def _pick_worker(self) -> None:
         from .native_pick import pick_executable
 
         path = pick_executable("Fingerprint which .exe?")
-        self.app.call_from_thread(self._picked, path)
+        self.app.call_from_thread(self._analyzed, path)
 
-    def _picked(self, path: Optional[str]) -> None:
+    def _analyzed(self, path: Optional[str]) -> None:
         if not path:
-            self.query_one("#scan-status", Static).update("No file selected — press Pick .exe… or Esc.")
+            self.query_one("#scan-status", Static).update("Cancelled. Press Enter to pick again.")
+            self.query_one("#btn-pick", Button).disabled = False
             return
         from core.fingerprint import fingerprint_file
 
-        report = fingerprint_file(path, source="external file")
+        try:
+            report = fingerprint_file(path, source="external file")
+        except Exception as exc:
+            logger.warning("[Fingerprint] analysis failed for %s: %s", path, exc)
+            self.query_one("#scan-status", Static).update(f"Analysis failed: {exc}")
+            self.query_one("#btn-pick", Button).disabled = False
+            return
         self.app.pop_screen()
         self.app.push_screen(FingerprintScreen(report=report, work_dir=str(Path(path).parent)))
 

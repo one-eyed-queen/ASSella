@@ -11,7 +11,20 @@ CELL = (10, 20)
 _GRAPHICS = False
 _TGP = False
 
-if sys.__stdout__ is not None and sys.__stdout__.isatty():
+# Terminals that definitely implement the kitty graphics protocol — trust the
+# environment over the probe, which only sees an answer when the app runs on a
+# full tty (paws launches that way too).
+_TRUSTED_TGP = bool(
+    (os.environ.get("KITTY_WINDOW_ID") and os.environ.get("TERM", "").startswith("xterm-kitty"))
+    or os.environ.get("GHOSTTY_RESOURCES_DIR")
+    or os.environ.get("TERM", "").startswith("wezterm")
+)
+
+if _TRUSTED_TGP:
+    _GRAPHICS = True
+    _TGP = True
+
+if sys.__stdout__ is not None and sys.__stdout__.isatty() or _TRUSTED_TGP:
     try:
         logging.getLogger("textual_image").setLevel(logging.CRITICAL)
         import textual_image._terminal as _probe
@@ -99,12 +112,7 @@ def available() -> bool:
 
 
 def underlay_ok() -> bool:
-    if not (_GRAPHICS and _TGP):
-        return False
-    env = os.environ
-    return bool(
-        env.get("KITTY_WINDOW_ID") or env.get("GHOSTTY_RESOURCES_DIR") or env.get("TERM", "").startswith("xterm-kitty")
-    )
+    return _GRAPHICS and _TGP
 
 
 def _stable_render(self):

@@ -61,6 +61,7 @@ def _tk_pick_file(title: str = "Choose a file", filetypes=(("Executables", "*.ex
 
 
 def pick_folder(title: str = "Choose a destination") -> str | None:
+    # one tool per platform, in preference order: a cancel is a cancel, never a second dialog
     if sys.platform.startswith(("linux", "freebsd", "openbsd")):
         for cmd in (
             ["zenity", "--file-selection", "--directory", f"--title={title}"],
@@ -68,24 +69,21 @@ def pick_folder(title: str = "Choose a destination") -> str | None:
             ["qarma", "--file-selection", "--directory", f"--title={title}"],
         ):
             if shutil.which(cmd[0]):
-                path = _run(cmd)
-                if path:
-                    return path
+                return _run(cmd)
     if sys.platform in ("win32", "darwin") or _tk_available():
         return _tk_pick_folder(title)
     return None
 
 
 def pick_executable(title: str = "Choose a file to fingerprint") -> str | None:
+    # one tool per platform, in preference order: a cancel is a cancel, never a second dialog
     if sys.platform.startswith(("linux", "freebsd", "openbsd")):
         for cmd in (
             ["zenity", "--file-selection", f"--title={title}", "--file-filter=executables|*.exe|*.EXE", "--file-filter=*"],
             ["kdialog", "--getopenfilename", os.path.expanduser("~"), "executables (*.exe)", "--title", title],
         ):
             if shutil.which(cmd[0]):
-                path = _run(cmd)
-                if path:
-                    return path
+                return _run(cmd)
     if sys.platform in ("win32", "darwin") or _tk_available():
         return _tk_pick_file(title)
     return None
