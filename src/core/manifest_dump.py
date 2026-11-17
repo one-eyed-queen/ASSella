@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import shutil
 import tempfile
 import zipfile
 import time
@@ -265,17 +266,51 @@ def discard_keys_file(keys_path: str) -> None:
             pass
 
 
+def _manifest_cache_dir(app_id: AppId) -> Path:
+    from utils.helpers import get_base_path
+
+    cache = Path(get_base_path()) / "manifest_cache" / str(app_id)
+    cache.mkdir(parents=True, exist_ok=True)
+    return cache
+
+
+def _persistent_manifest_path(app_id: AppId, depot_id: str, manifest_id: str) -> Path:
+    safe_id = re.sub(r"[^0-9]", "0", str(app_id))
+    return _manifest_cache_dir(safe_id) / f"{depot_id}_{manifest_id}.manifest"
+
+
+def _cached_manifest(app_id: AppId, depot_id: str) -> str:
+    """A .manifest this machine already fetched for ``depot_id``, if any (newest wins)."""
+    matches = list(_manifest_cache_dir(app_id).glob(f"{depot_id}_*.manifest"))
+    if not matches:
+        return ""
+    return str(max(matches, key=lambda p: p.stat().st_mtime))
+
+
+def stash_manifest_in_cache(app_id: AppId, depot_id: str, manifest_id: str, source: str) -> None:
+    """Keep a copy of a manifest this machine fetched, for future offline listings."""
+    try:
+        src = Path(source)
+        dest = _persistent_manifest_path(app_id, depot_id, manifest_id)
+        if src.exists() and not dest.exists():
+            shutil.copyfile(src, dest)
+    except OSError as exc:
+        logger.debug("[ManifestDump] could not cache manifest for %s: %s", depot_id, exc)
+
+
 def _local_bundle_manifest(
     app_id: AppId,
     depot_id: str,
     manifests_dir: Optional[Path] = None,
     temp_root: Optional[str] = None,
+    manifest_id: Optional[str] = None,
 ) -> str:
-    """A locally available ``.manifest`` for ``depot_id`` from the cached Hubcap bundle, if any.
-
-    Never downloads anything — only consults what is already in ``manifests_dir`` so the
-    API-first path can still produce a listing without touching Steam at all.
-    """
+    """A locally available ``.manifest`` for ``depot_id``: the app's own persistent
+    cache first, then the cached Hubcap bundle. Downloads nothing."""
+    if manifest_id:
+        cached = _persistent_manifest_path(app_id, depot_id, manifest_id)
+        if cached.is_file():
+            return str(cached)
     try:
         zip_path = find_manifest_bundle(app_id, manifests_dir)
     except ManifestDumpError:
@@ -317,6 +352,10 @@ def prepare_manifest_dump(
     manifest id are enough for DepotDownloader to fetch the manifest from
     Steam itself, and nothing is downloaded from Hubcap at all.
     """
+    # An out-of-band local .manifest wins — this is the one thing that lets
+    # DepotDownloader work with no Steam access at all for the listing.
+    cached_manifest = _cached_manifest(app_id, depot_id)
+
     # API first: your private API serves the base-game keys and manifest GIDs.
     api_error = ""
     if key_lookup is not None:
@@ -331,11 +370,12 @@ def prepare_manifest_dump(
             os.makedirs(temp_dir, exist_ok=True)
             keys_path = os.path.join(temp_dir, "depot.keys")
             write_keys_file(keys_path, depot_id, api_info["key"])
-            # Prefer the cached bundle's local .manifest over a Steam fetch:
-            # the listing then needs no Steam connection at all, and the
-            # Hubcap-provided manifest is the only one that is guaranteed
-            # current for the keys this API serves.
-            local_manifest = _local_bundle_manifest(app_id, depot_id, manifests_dir, temp_root)
+            # A previously-cached or bundle-carried .manifest over a Steam fetch:
+            # no Steam traffic for the listing, and the cached one is whatever
+            # this machine already downloaded (any build).
+            local_manifest = cached_manifest or _local_bundle_manifest(
+                app_id, depot_id, manifests_dir, temp_root, str(api_info["manifest"])
+            )
             return ManifestDump(
                 app_id=app_id,
                 depot_id=depot_id,
@@ -380,24 +420,28 @@ def prepare_manifest_dump(
     write_keys_file(keys_path, depot_id, depot_key)
 
     manifest_file = ""
-    try:
-        manifest_path = find_manifest_file(temp_dir, depot_id)
-        manifest_file = str(manifest_path)
-        manifest_id = manifest_id_from_name(manifest_path.name)
-    except ManifestDumpError:
-        # No local .manifest: the API's manifest id lets DepotDownloader fetch
-        # it by itself. Without that there is nothing usable to scan.
-        api_manifest = (
-            _api_depot_map(app_id)[0].get(str(depot_id), {}).get("manifest", "")
-            if key_lookup is None
-            else ""
-        )
-        if not api_manifest:
-            # A key on disk outlives the dialog, so never leave one behind for
-            # a dump that cannot be used.
-            discard_keys_file(keys_path)
-            raise
-        manifest_id = str(api_manifest)
+    if cached_manifest:
+        manifest_file = cached_manifest
+        manifest_id = os.path.basename(cached_manifest).split("_", 1)[1].split(".")[0]
+    else:
+        try:
+            manifest_path = find_manifest_file(temp_dir, depot_id)
+            manifest_file = str(manifest_path)
+            manifest_id = manifest_id_from_name(manifest_path.name)
+        except ManifestDumpError:
+            # No local .manifest: the API's manifest id lets DepotDownloader fetch
+            # it by itself. Without that there is nothing usable to scan.
+            api_manifest = (
+                _api_depot_map(app_id)[0].get(str(depot_id), {}).get("manifest", "")
+                if key_lookup is None
+                else ""
+            )
+            if not api_manifest:
+                # A key on disk outlives the dialog, so never leave one behind for
+                # a dump that cannot be used.
+                discard_keys_file(keys_path)
+                raise
+            manifest_id = str(api_manifest)
 
     return ManifestDump(
         app_id=app_id,

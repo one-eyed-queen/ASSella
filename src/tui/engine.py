@@ -141,7 +141,7 @@ def scan_app(
 
     Key order: your private API, then the local Hubcap bundle as a fallback.
     """
-    from core.manifest_dump import prepare_manifest_dump
+    from core.manifest_dump import prepare_manifest_dump, stash_manifest_in_cache
 
     result = ScanResult(app_id=str(app_id))
     result.key_dir = _private_key_dir()
@@ -228,6 +228,14 @@ def scan_app(
             failed_ids.append(plan.depot_id)
             continue
 
+        # keep DepotDownloader's own manifest cache in a persistent place for future offline listings
+        stash_manifest_in_cache(
+            app_id,
+            plan.depot_id,
+            plan.manifest_id,
+            os.path.join(dump.temp_dir, ".DepotDownloader", f"{plan.depot_id}_{plan.manifest_id}.manifest"),
+        )
+
         if progress:
             progress(f"Reading executables in depot {plan.depot_id}…", index, total)
         found = exe_scan.list_executables(dump.txt_path)
@@ -278,6 +286,12 @@ def scan_app(
                     continue
                 if not os.path.exists(dump.txt_path):
                     continue
+                stash_manifest_in_cache(
+                    app_id,
+                    plan.depot_id,
+                    plan.manifest_id,
+                    os.path.join(dump.temp_dir, ".DepotDownloader", f"{plan.depot_id}_{plan.manifest_id}.manifest"),
+                )
                 found = exe_scan.list_executables(dump.txt_path)
                 if found:
                     # the retry worked — drop the stale failure for this depot
