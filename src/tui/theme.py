@@ -1,88 +1,74 @@
-"""Colour palettes for the EXE-fingerprinter TUI.
+"""Textual themes for EXE-fingerprinter.
 
-* ``rice``    — warmer and higher contrast, the default on an interactive terminal,
-* ``minimal`` — greyscale, for terminals with limited colour,
-* auto picks rice (or minimal when NO_COLOR/TERM=dumb), and ``colour_blind``
-  swaps red/green signalling for a blue/orange pair that stays distinguishable
-  with deuteranopia and protanopia.
+* ``rice``    — the default on any terminal with truecolor, matches the
+  desktop's near-black canvas with warm orange accents.
+* ``minimal`` — greyscale; automatically picked on dumb / NO_COLOR terminals.
+
+Colour-blind mode replaces red/green signalling with blue/orange. Textual
+handles the actual terminal details (alternate screen, cursor, repaints) so
+this module only ships palette definitions and the detection helpers.
 """
 
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
 
-
-@dataclass(frozen=True)
-class Theme:
-    name: str
-    background: str
-    panel: str
-    border: str
-    text: str
-    muted: str
-    accent: str
-    accent_alt: str
-    success: str
-    warning: str
-    error: str
-    selection: str
-
+from textual.theme import Theme
 
 RICE = Theme(
     name="rice",
-    background="#0d0b09",
-    panel="#15110d",
-    border="#3a2f22",
-    text="#f0e6d2",
-    muted="#a08c74",
-    accent="#ffb86b",
-    accent_alt="#ff8fb3",
+    primary="#ffb86b",
+    secondary="#ff8fb3",
+    accent="#ffd76b",
+    warning="#ffd76b",
+    error="#ff8f8f",
     success="#a8d08d",
-    warning="#ffd479",
-    error="#ff6b6b",
-    selection="#2c2116",
+    foreground="#f0e6d2",
+    background="#0d0b09",
+    surface="#15110d",
+    panel="#15110d",
+    boost="#241f18",
+    dark=True,
 )
 
 MINIMAL = Theme(
     name="minimal",
-    background="black",
-    panel="#141414",
-    border="#3a3a3a",
-    text="#e0e0e0",
-    muted="#8a8a8a",
-    accent="#d0d0d0",
-    accent_alt="#b0b0b0",
+    primary="#e8e8e8",
+    secondary="#a0a0a0",
+    accent="#ffffff",
+    warning="#e0e0e0",
+    error="#ffffff",
     success="#d0d0d0",
-    warning="#c0c0c0",
-    error="#f0f0f0",
-    selection="#2a2a2a",
+    foreground="#d8d8d8",
+    background="#101010",
+    surface="#161616",
+    panel="#161616",
+    boost="#202020",
+    dark=True,
 )
 
+# Blue/orange signalling pair that survives deuteranopia and protanopia.
 COLOUR_BLIND = Theme(
     name="colour-blind",
-    background="#0e1116",
-    panel="#161b22",
-    border="#30363d",
-    text="#f0f6fc",
-    muted="#9aa4b2",
-    accent="#4ea1ff",
-    accent_alt="#e69f00",
-    success="#56b4e9",   # blue, not green
-    warning="#e69f00",   # orange
-    error="#d55e00",     # vermillion
-    selection="#1b2a3d",
+    primary="#6cb4ff",
+    secondary="#ff9d5c",
+    accent="#9cd0ff",
+    warning="#ffb84d",
+    error="#ff9d5c",
+    success="#6cb4ff",
+    foreground="#f0e6d2",
+    background="#0d0b09",
+    surface="#15110d",
+    panel="#15110d",
+    boost="#241f18",
+    dark=True,
 )
 
 
-def _setting(key: str, default):
-    """Read a GUI setting without requiring a QApplication."""
-    try:
-        from utils.settings import get_settings
+def _setting(key: str, default=None):
+    from utils.settings import get_settings
 
-        return get_settings().value(key, default)
-    except Exception:
-        return default
+    return get_settings().value(key, default)
 
 
 def colour_blind_enabled() -> bool:
@@ -92,27 +78,19 @@ def colour_blind_enabled() -> bool:
     return bool(raw)
 
 
-def resolve_theme(name: str | None = None) -> Theme:
-    """Pick a palette from a name, the settings, or the environment.
-
-    ``auto`` (and ``None``) chooses minimal when the terminal asks for no
-    colour, otherwise rice.
-    """
-    requested = (name or _setting("tui_theme", "auto") or "auto").strip().lower()
-    if requested in ("ocean", "default", ""):
+def resolve_theme_name(name: str | None = None) -> str:
+    requested = (name or str(_setting("tui_theme", "auto") or "auto")).strip().lower()
+    if requested in ("", "default", "ocean"):
         requested = "rice"
-
     if requested == "auto":
         if os.environ.get("NO_COLOR") or os.environ.get("TERM", "").lower() == "dumb":
             requested = "minimal"
         else:
             requested = "rice"
+    return requested
 
+
+def themes() -> list[Theme]:
     if colour_blind_enabled():
-        base = COLOUR_BLIND
-        # Keep the requested background variant but take the signalling colours.
-        if requested == "minimal":
-            base = Theme(**{**COLOUR_BLIND.__dict__, "name": "colour-blind-minimal"})
-        return base
-
-    return {"rice": RICE, "minimal": MINIMAL}.get(requested, RICE)
+        return [COLOUR_BLIND, MINIMAL]
+    return [RICE, MINIMAL]

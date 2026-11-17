@@ -2,10 +2,9 @@
 #
 # Regenerate with:
 #   uv pip compile requirements.in -o requirements.txt --python-version 3.13
-#
-# Only what the .exe downloader needs: the terminal UI, HTTP clients and the
-# sixel fallback. Everything else was removed with the library/update flows.
 rich>=13.7.0
 requests>=2.31.0
 urllib3>=1.26.0
 Pillow>=10.0.0
+textual>=3.0.0
+textual-image>=0.12.0

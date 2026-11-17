@@ -1,0 +1,173 @@
+/* EXE-fingerprinter TUI theme.
+ *
+ * Colour comes from the registered Theme palette ($primary, $background, …);
+ * this sheet only maps layout and which boxes are panels. The :fresh
+ * modifier on focus (Textual's default) flips — we don't want a jarring
+ * inversion on the focused widget, so focus uses $boost instead.
+ */
+
+Screen {
+    background: $background;
+    color: $foreground;
+}
+
+/* ── shared header / footer ───────────────────────────────────────── */
+#app-header {
+    height: 3;
+    background: $surface;
+    color: $primary;
+    content-align: left middle;
+    padding: 0 2;
+    text-style: bold;
+}
+
+#app-subtitle {
+    height: 1;
+    background: $surface;
+    color: $secondary;
+    padding: 0 2;
+    text-style: italic;
+}
+
+#footer {
+    height: 1;
+    background: $boost;
+    color: $secondary;
+    content-align: left middle;
+    padding: 0 2;
+}
+
+/* ── panels ───────────────────────────────────────────────────────── */
+.panel {
+    background: $panel;
+    border: tall $surface;
+    border-title-color: $primary;
+    padding: 1 2;
+}
+
+.panel:focus-within {
+    border: tall $primary;
+}
+
+/* ── search screen ────────────────────────────────────────────────── */
+#search-input {
+    margin: 1 2 0 2;
+    height: 3;
+    dock: top;
+}
+
+#search-hint {
+    height: 1;
+    color: $secondary;
+    padding: 0 2;
+}
+
+#logo {
+    height: 9;
+    content-align: center middle;
+    padding: 0 1;
+}
+
+#results {
+    height: 1fr;
+    margin: 0 2 1 2;
+    border: tall $surface;
+    padding: 0 1;
+}
+
+#results > ListItem {
+    padding: 0 1;
+    border-bottom: solid $boost;
+}
+
+#results > ListItem.--highlight {
+    background: $boost;
+    color: $primary;
+}
+
+/* ── game screen ──────────────────────────────────────────────────── */
+#app-title {
+    height: 2;
+    content-align: left middle;
+    padding: 0 2;
+    text-style: bold;
+    color: $primary;
+    background: $surface;
+}
+
+#app-subtitle {
+    height: 1;
+    content-align: left middle;
+    padding: 0 2;
+    color: $secondary;
+    background: $surface;
+    text-style: italic;
+}
+
+#scan-status {
+    height: 2;
+    padding: 0 2;
+    content-align: left middle;
+    color: $warning;
+}
+
+#exe-list {
+    height: 1fr;
+    margin: 0 2;
+    border: tall $surface;
+}
+
+#button-row {
+    height: 3;
+    padding: 0 2;
+    align: left middle;
+}
+
+#button-row > Button {
+    margin-right: 1;
+}
+
+Button.primary {
+    background: $primary;
+    color: $background;
+    text-style: bold;
+}
+
+Button.success {
+    background: $success;
+    color: $background;
+    text-style: bold;
+}
+
+/* ── progress ─────────────────────────────────────────────────────── */
+#progress {
+    height: 2;
+    padding: 0 2;
+    color: $secondary;
+    content-align: left middle;
+}
+
+/* ── settings screen ──────────────────────────────────────────────── */
+#settings-wrap {
+    padding: 1 2;
+}
+
+.settings-label {
+    height: 1;
+    color: $secondary;
+    margin-top: 1;
+}
+
+.settings-input {
+    height: 3;
+}
+
+#settings-status {
+    color: $success;
+    height: 1;
+    margin-top: 1;
+}
+
+#settings-status.-error {
+    color: $error;
+}

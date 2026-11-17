@@ -39,6 +39,7 @@ EXPECTED_SKIPS = {
 HARD_DEPENDENCIES = {
     "rich",
     "requests",
+    "textual",
 }
 
 

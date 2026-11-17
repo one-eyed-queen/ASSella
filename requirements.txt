@@ -6,18 +6,40 @@ charset-normalizer==3.5.2
     # via requests
 idna==3.20
     # via requests
+linkify-it-py==2.2.0
+    # via markdown-it-py
 markdown-it-py==4.2.0
-    # via rich
+    # via
+    #   mdit-py-plugins
+    #   rich
+    #   textual
+mdit-py-plugins==0.7.0
+    # via textual
 mdurl==0.1.2
     # via markdown-it-py
 pillow==13.0.0
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   textual-image
+platformdirs==4.14.5
+    # via textual
 pygments==2.21.0
-    # via rich
+    # via
+    #   rich
+    #   textual
 requests==2.34.2
     # via -r requirements.in
 rich==15.0.0
+    # via
+    #   -r requirements.in
+    #   textual
+    #   textual-image
+textual==8.2.8
     # via -r requirements.in
+textual-image==0.14.4
+    # via -r requirements.in
+typing-extensions==4.16.0
+    # via textual
 urllib3==2.8.0
     # via
     #   -r requirements.in
