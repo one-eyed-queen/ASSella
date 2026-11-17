@@ -287,6 +287,14 @@ def _cached_manifest(app_id: AppId, depot_id: str) -> str:
     return str(max(matches, key=lambda p: p.stat().st_mtime))
 
 
+def save_manifest_bytes(app_id: AppId, depot_id: str, manifest_id: str, data: bytes) -> str:
+    """Write API-served manifest bytes into the persistent cache; return its path."""
+    dest = _persistent_manifest_path(app_id, depot_id, manifest_id)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+    return str(dest)
+
+
 def stash_manifest_in_cache(app_id: AppId, depot_id: str, manifest_id: str, source: str) -> None:
     """Keep a copy of a manifest this machine fetched, for future offline listings."""
     try:

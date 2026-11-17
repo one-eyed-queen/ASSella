@@ -277,6 +277,48 @@ def depots(appid: int, refresh: bool = False, timeout: float = TIMEOUT) -> ApiRe
     )
 
 
+def manifest_bytes(appid: int, depot_id: str, timeout: float = 90.0) -> ApiResult:
+    """.manifest bytes for one depot from the API's server-side Hubcap bundle."""
+    config = load_config()
+    auth = ensure_token()
+    if not auth.ok:
+        return auth
+    url = f"{config.base_url}/api/v1/depots/{int(appid)}/manifest/{int(depot_id)}"
+    try:
+        response = requests.get(url, headers=_headers(current_token()), timeout=timeout)
+    except requests.RequestException as exc:
+        return ApiResult(False, error=f"network error: {exc}")
+    if response.status_code == 401:
+        clear_token()
+        return ApiResult(False, error="token rejected — sign in again")
+    if response.status_code >= 400:
+        try:
+            detail = (response.json() or {}).get("detail", "")
+        except ValueError:
+            detail = response.text[:200]
+        return ApiResult(False, error=detail or f"HTTP {response.status_code}")
+    return ApiResult(True, data={
+        "bytes": response.content,
+        "manifest_id": response.headers.get("X-Manifest-Id", ""),
+    })
+
+
+def exes(appid: int, refresh: bool = False, timeout: float = 60.0) -> ApiResult:
+    """.exe listing parsed from the manifests by the private API (no Steam CM, no Hubcap key needed locally)."""
+    config = load_config()
+    auth = ensure_token()
+    if not auth.ok:
+        return auth
+    params = {"refresh": "true"} if refresh else None
+    return _request(
+        "GET",
+        f"{config.base_url}/api/v1/depots/{int(appid)}/exes",
+        token=current_token(),
+        timeout=timeout,
+        params=params,
+    )
+
+
 def fingerprint(appid: int, refresh: bool = False) -> ApiResult:
     config = load_config()
     auth = ensure_token()
