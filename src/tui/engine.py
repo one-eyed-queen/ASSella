@@ -164,6 +164,7 @@ def scan_app(
     needs_bundle = any(str(p.depot_id) not in api_map for p in plans)
     if needs_bundle:
         ensure_bundle(app_id, progress)
+    failed_ids: List[str] = []
     dotnet, dll = _dotnet_and_dll()
     total = len(plans)
 
@@ -179,6 +180,7 @@ def scan_app(
             dump = prepare_manifest_dump(app_id, plan.depot_id)
         except Exception as exc:
             result.errors.append(f"Depot {plan.depot_id}: {exc}")
+            failed_ids.append(plan.depot_id)
             continue
 
         # Keep a private copy of the single-line keys file: the shared
@@ -189,6 +191,7 @@ def scan_app(
             os.chmod(keys_path, 0o600)
         except OSError as exc:
             result.errors.append(f"Depot {plan.depot_id}: could not store its key ({exc}).")
+            failed_ids.append(plan.depot_id)
             continue
 
         plan.manifest_id = dump.manifest_id
@@ -213,13 +216,16 @@ def scan_app(
                     f"Depot {plan.depot_id}: DepotDownloader exited with "
                     f"code {proc.returncode}" + (f" ({tail[0]})" if tail else ".")
                 )
+                failed_ids.append(plan.depot_id)
                 continue
         except (OSError, subprocess.SubprocessError) as exc:
             result.errors.append(f"Depot {plan.depot_id}: failed to run DepotDownloader ({exc}).")
+            failed_ids.append(plan.depot_id)
             continue
 
         if not os.path.exists(dump.txt_path):
             result.errors.append(f"Depot {plan.depot_id}: no manifest listing was produced.")
+            failed_ids.append(plan.depot_id)
             continue
 
         if progress:
@@ -232,6 +238,65 @@ def scan_app(
                     "path": entry["path"],
                     "size": entry["size"],
                 }
+            )
+
+    # Second chance for depots whose manifest can only come from Hubcap.
+    # The API serves keys and GIDs, but Steam refuses manifests for paid games
+    # for anonymous clients — the Hubcap bundle ships the manifest itself.
+    retry = [p for p in plans if str(p.depot_id) in set(failed_ids)]
+    if retry:
+        if progress:
+            progress("Depot listings failed — trying the Hubcap bundle…", total, total)
+        bundle = ensure_bundle(app_id, progress)
+        if bundle:
+            for index, plan in enumerate(retry):
+                if cancel and cancel.is_set():
+                    break
+                if progress:
+                    progress(f"Retrying depot {plan.depot_id} from the bundle…", index, len(retry))
+                try:
+                    dump = prepare_manifest_dump(app_id, plan.depot_id)
+                except Exception as exc:
+                    logger.debug("[Scan] retry dump for %s failed: %s", plan.depot_id, exc)
+                    continue
+                try:
+                    proc = subprocess.run(
+                        dump.command(dotnet, dll),
+                        capture_output=True,
+                        text=True,
+                        timeout=900,
+                        env={**os.environ, "DOTNET_NOLOGO": "1"},
+                    )
+                    if proc.returncode != 0:
+                        logger.debug(
+                            "[Scan] retry for %s exited with code %d: %s",
+                            plan.depot_id, proc.returncode, (proc.stdout or proc.stderr or "").strip()[-300:],
+                        )
+                        continue
+                except (OSError, subprocess.SubprocessError) as exc:
+                    logger.debug("[Scan] retry for %s failed: %s", plan.depot_id, exc)
+                    continue
+                if not os.path.exists(dump.txt_path):
+                    continue
+                found = exe_scan.list_executables(dump.txt_path)
+                if found:
+                    # the retry worked — drop the stale failure for this depot
+                    result.errors = [
+                        e for e in result.errors if e.startswith(f"Depot {plan.depot_id}:") is False
+                    ]
+                    for entry in found:
+                        result.entries.append(
+                            {
+                                "depot_id": plan.depot_id,
+                                "path": entry["path"],
+                                "size": entry["size"],
+                            }
+                        )
+                    logger.info("[Scan] depot %s listing recovered from the bundle (%d executables)", plan.depot_id, len(found))
+        else:
+            result.errors.append(
+                "The Hubcap bundle was unavailable for this game (check your Hubcap key in Settings) — "
+                "Steam refuses anonymous manifest downloads for paid games, so the listing cannot be built without it."
             )
 
     result.entries.sort(key=lambda e: (e["depot_id"], e["path"].lower()))

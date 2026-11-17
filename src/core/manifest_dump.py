@@ -16,6 +16,7 @@ import logging
 import os
 import re
 import tempfile
+import zipfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -220,13 +221,18 @@ def read_depot_key(
 
 def find_manifest_file(temp_dir: str, depot_id: str) -> Path:
     """The bundle's ``.manifest`` for ``depot_id``, or the only one there is."""
+    # Only the manifest whose filename prefix matches the depot, or the bundle's
+    # own unprefixed manifest when there is exactly one file in the temp dir and
+    # none of them belongs to a different depot.
     manifest_files = list(Path(temp_dir).glob(f"{depot_id}_*.manifest"))
     if not manifest_files:
         candidates = list(Path(temp_dir).glob("*.manifest"))
-        # Only accept an un-prefixed bundle when there is exactly one file:
-        # the temp dir is reused across dumps, so picking any manifest would
-        # risk attaching another depot's manifest to this one.
-        if len(candidates) == 1:
+        foreign = []
+        for name in (c.name for c in candidates):
+            head = name.split("_", 1)[0]
+            if head.isdigit() and head != str(depot_id):
+                foreign.append(name)
+        if len(candidates) == 1 and not foreign:
             manifest_files = candidates
     if not manifest_files:
         raise ManifestDumpError(
@@ -257,6 +263,40 @@ def discard_keys_file(keys_path: str) -> None:
             os.remove(keys_path)
         except OSError:
             pass
+
+
+def _local_bundle_manifest(
+    app_id: AppId,
+    depot_id: str,
+    manifests_dir: Optional[Path] = None,
+    temp_root: Optional[str] = None,
+) -> str:
+    """A locally available ``.manifest`` for ``depot_id`` from the cached Hubcap bundle, if any.
+
+    Never downloads anything — only consults what is already in ``manifests_dir`` so the
+    API-first path can still produce a listing without touching Steam at all.
+    """
+    try:
+        zip_path = find_manifest_bundle(app_id, manifests_dir)
+    except ManifestDumpError:
+        return ""
+    if zip_path is None:
+        return ""
+    temp_dir = os.path.join(
+        temp_root or tempfile.gettempdir(), f"selective_manifests_{app_id}"
+    )
+    try:
+        os.makedirs(temp_dir, exist_ok=True)
+        # only a manifest whose filename prefix matches the depot — never a
+        # neighbour's .manifest standing in for this one
+        for existing in Path(temp_dir).glob(f"{depot_id}_*.manifest"):
+            return str(existing)
+        extract_bundle(str(zip_path), temp_dir)
+        manifest = find_manifest_file(temp_dir, depot_id)
+        return str(manifest)
+    except (ManifestDumpError, OSError, zipfile.BadZipFile) as exc:
+        logger.debug("[ManifestDump] local manifest for %s not usable: %s", depot_id, exc)
+        return ""
 
 
 def prepare_manifest_dump(
@@ -291,11 +331,16 @@ def prepare_manifest_dump(
             os.makedirs(temp_dir, exist_ok=True)
             keys_path = os.path.join(temp_dir, "depot.keys")
             write_keys_file(keys_path, depot_id, api_info["key"])
+            # Prefer the cached bundle's local .manifest over a Steam fetch:
+            # the listing then needs no Steam connection at all, and the
+            # Hubcap-provided manifest is the only one that is guaranteed
+            # current for the keys this API serves.
+            local_manifest = _local_bundle_manifest(app_id, depot_id, manifests_dir, temp_root)
             return ManifestDump(
                 app_id=app_id,
                 depot_id=depot_id,
                 manifest_id=str(api_info["manifest"]),
-                manifest_file="",
+                manifest_file=local_manifest,
                 keys_path=keys_path,
                 temp_dir=temp_dir,
                 txt_path=os.path.join(temp_dir, f"manifest_{depot_id}_{api_info['manifest']}.txt"),

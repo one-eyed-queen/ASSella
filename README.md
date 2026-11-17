@@ -99,14 +99,16 @@ python3 src/main.py --api --appid 620 --download  # also download the executable
 
 The app **never ships depot keys**. To fetch `.exe` lists or download them you need Steam depot access, which comes from one of:
 
+**Why big games need Hubcap at all:** Steam serves manifests for paid games to nobody — not to anonymous clients, and not even to holders of the depot key. A paid depot's `.manifest` can only come from a machine that owns or is authorized to access the game. Hubcap's servers hold those manifests, and your account gets them. The free redistributable depots (Rockstar Launcher, Social Club, redistributables) are the exception — Steam serves those anonymously, which is why a couple of `.exe`s always list fine.
+
 1. **Your own Hubcap account** (third-party manifest service):
    - Create an account at **https://hubcapmanifest.com**
    - Copy your API key from your account page
    - In the app: **Settings → Hubcap API key → paste → save**
    - Hubcap is rate-limited and metered — your usage comes out of your own Hubcap quota. Keys stay on your machine; they are never committed to this repository.
-2. **Your private EXE-fingerprinter API** (see below) — it serves depot keys/GIDs to authorized accounts; if you have one, you don't need Hubcap.
+2. **Your private EXE-fingerprinter API** (see below) — it serves depot keys/GIDs to authorized accounts; if you have one, you don't need Hubcap for keys. But the base-game manifests themselves still need Hubcap — unsigned or revoked Hubcap keys mean paid-game depots stay unlistable.
 
-If neither is configured, search and the report viewer still work; only depot-key-backed features fail — they will say exactly which source is missing and why.
+If neither is configured, search and the report viewer still work; depot-key-backed features fail — they say exactly which source is missing and why.
 
 ---
 
