@@ -2109,33 +2109,31 @@ class LibraryActionsMixin:
             ):
                 return
 
-        # Trigger SLSsteam install pipe and registration
+        # Trigger Steam-side install (ACF regeneration) via the native install pipe.
+        # In ACF-Independent mode the Steam install is the manifest source of truth.
         if sys.platform == "linux":
             try:
-                from utils.slssteam_integration import install_via_sls, _experimental_mode_enabled, patch_acf_via_sls
+                from utils.settings import get_settings
+                from core.native_steam.native_steam_handoff import (
+                    _is_slssteam_available,
+                    resolve_library_index,
+                    send_sls_api,
+                    sync_manifests_to_depotcache,
+                )
+
                 if is_at0m:
                     try:
-                        from core.native_steam.native_steam_handoff import sync_manifests_to_depotcache
                         sync_manifests_to_depotcache(appid, path)
                     except Exception as s_err:
                         logger.debug(f"Depotcache sync during fix for {appid}: {s_err}")
-                    install_via_sls(
-                        appid=appid,
-                        game_name=game_data.get("game_name", ""),
-                        library_path=path,
-                        game_data=game_data,
-                    )
-                elif _experimental_mode_enabled():
-                    install_via_sls(
-                        appid=appid,
-                        game_name=game_data.get("game_name", ""),
-                        library_path=path,
-                        game_data=game_data,
-                    )
-                else:
-                    patch_acf_via_sls(appid, library_path=path)
+
+                if get_settings().value("experimental_acf_independent", False, type=bool) and _is_slssteam_available():
+                    library_index = resolve_library_index(path)
+                    sent = send_sls_api(f"install|{appid}|{library_index}")
+                    if not sent:
+                        logger.warning(f"Steam install pipe failed during fix for {appid}")
             except Exception as sls_err:
-                logger.warning(f"SLS install error during fix for {appid}: {sls_err}")
+                logger.warning(f"Steam install error during fix for {appid}: {sls_err}")
 
         # Fallback: regenerate ACF if manifest still missing after failed repair (only for non-AT0-M games)
         if not is_at0m and not os.path.exists(acf):

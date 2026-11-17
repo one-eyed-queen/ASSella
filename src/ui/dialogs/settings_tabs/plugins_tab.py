@@ -38,7 +38,6 @@ from ui.dialogs.themed_message_box import ThemedMessageBox
 from utils.settings import get_settings
 from utils.yaml_config_manager import (
     ensure_plugins_enabled,
-    ensure_smart_tickets_enabled,
 )
 
 logger = logging.getLogger(__name__)
@@ -252,7 +251,6 @@ def create_plugins_tab(dialog, add_to_dialog: bool = False) -> QWidget:
                 "Bypassing DRM is illegal in many countries, make sure you are aware of this!",
             )
             ensure_plugins_enabled()
-            ensure_smart_tickets_enabled()
 
     styx_enable_cb.toggled.connect(_on_styx_toggled)
     styx_layout.addWidget(styx_enable_cb)

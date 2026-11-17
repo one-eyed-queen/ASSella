@@ -600,8 +600,9 @@ class DownloadDepotsTask(QObject):
         falls back to 'needs download' state (blue Install button).
         """
         try:
-            from utils.slssteam_integration import _experimental_mode_enabled
-            if not _experimental_mode_enabled():
+            from utils.settings import get_settings
+
+            if not get_settings().value("experimental_acf_independent", False, type=bool):
                 return
         except Exception:
             return

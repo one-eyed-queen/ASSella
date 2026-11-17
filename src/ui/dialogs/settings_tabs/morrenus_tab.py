@@ -199,7 +199,7 @@ def create_api_key_setting(
 
     sync_state = {"toggle": None}
     if hubcap_sync:
-        from utils.sls_lua_config import (
+        from managers.katamari_config_manager import (
             generate_hubcap_timestamp,
             get_hubcap_key_conf_path,
             sync_hubcap_api_key,

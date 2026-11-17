@@ -28,7 +28,6 @@ select = ["F821", "F823", "F811", "TC003", "T201"]
 # output, or the logger's own stderr fallback - so T201 would be a false
 # positive. Listed per file (never as a directory) so each exemption is
 # auditable, and only ever for T201.
-"src/utils/assfixer.py" = ["T201"]  # standalone CLI: ANSI-coloured console output
 "src/core/at0m.py" = ["T201"]       # self-test / CLI block (run_test + __main__)
 "src/utils/logger.py" = ["T201"]    # logger's own stderr fallback around handlers
 "scripts/test_launcher_bypass.py" = ["T201"]  # test runner: prints its own results

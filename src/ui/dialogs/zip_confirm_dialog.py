@@ -1734,7 +1734,6 @@ class ZipImportConfirmationDialog(QDialog):
             )
             from utils.plugin_games import (
                 SHARED_REDISTS,
-                SLSBridge,
                 build_depot_comment,
                 build_key_comment,
                 load_plugin_library,
@@ -1844,8 +1843,6 @@ class ZipImportConfirmationDialog(QDialog):
                         save_plugin_library(plib)
                 except Exception as _pl_err:
                     logger.debug(f"[ZipConfirmDialog] Failed to update plugin_library.json: {_pl_err}")
-
-                SLSBridge.notify_reload()
 
             # 5. Check pinned manifests if rollback / pin is selected
             if self.pin_checkbox.isChecked() or self.result_data.get("intent") in ("Rollback", "Downgrade"):

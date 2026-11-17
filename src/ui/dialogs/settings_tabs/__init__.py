@@ -13,29 +13,15 @@ from ui.dialogs.settings_tabs.exe_fingerprinter_tab import create_exe_fingerprin
 from ui.dialogs.settings_tabs.downloads_tab import create_downloads_tab
 from ui.dialogs.settings_tabs.advanced_tab import (
     create_advanced_tab,
-    goldberg_checked_warning,
-    goldberg_checked_warning_from_mode,
-    goldberg_warning_box,
-    on_experimental_acf_toggled,
     steamless_unchecked_warning,
 )
 from ui.dialogs.settings_tabs.health_tab import (
     HealthStatusTile,
     create_health_tab,
     refresh_health_tab_status,
-    handle_sls_version_check_done,
-    on_sls_bin_tile_clicked,
-    on_sls_version_tile_clicked,
     on_rec_setting_toggled,
     update_rec_score_badge,
     apply_health_recommended_settings,
-    run_assfixer_check,
-    handle_assfixer_check_done,
-    run_assfixer_repair,
-    handle_assfixer_repair_done,
-    run_assfixer_restore,
-    on_h3adcrab_clicked,
-    on_r3set_crab_clicked,
 )
 from ui.dialogs.settings_tabs.tools_tab import (
     create_tools_tab,
@@ -46,12 +32,6 @@ from ui.dialogs.settings_tabs.tools_tab import (
     run_steamless_aio_manually,
     browse_aio_script,
     update_achievements_button_state,
-    update_asshead_status_ui,
-    open_sls_config,
-    restore_sls_backup,
-    run_asshead_fixer,
-    run_denuvo_sync,
-    on_denuvo_sync_finished,
 )
 from ui.dialogs.settings_tabs.style_tab import (
     create_style_tab,
@@ -83,9 +63,7 @@ from ui.dialogs.settings_tabs.webui_tab import (
     disable_boot,
     update_service_status,
 )
-from ui.dialogs.settings_tabs.at0m_tab import create_at0m_tab, create_vapor_tab
 from ui.dialogs.settings_tabs.plugins_tab import create_plugins_tab
-from ui.dialogs.settings_tabs.mrc_settings_tab import create_mrc_settings_tab
 from ui.dialogs.settings_tabs.luatools_tab import create_luatools_tab
 
 __all__ = [
@@ -100,9 +78,6 @@ __all__ = [
     "create_tools_tab",
     "create_style_tab",
     "create_webui_tab",
-    "create_at0m_tab",
     "create_plugins_tab",
-    "create_vapor_tab",
-    "create_mrc_settings_tab",
     "create_luatools_tab",
 ]

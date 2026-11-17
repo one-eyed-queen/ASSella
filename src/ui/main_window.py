@@ -63,7 +63,6 @@ class MainWindow(QMainWindow):
 
     refresh_system_status_signal = pyqtSignal()
     plugin_check_ready_signal = pyqtSignal(list)
-    notify_sls_watcher_crashed_signal = pyqtSignal()
     # Signal used to safely invoke a callable on the main thread from a background thread.
     # Using a typed signal instead of Q_ARG(object, fn) avoids PyQt6 GIL/metatype crashes.
     _main_thread_callable = pyqtSignal(object)
@@ -72,7 +71,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.refresh_system_status_signal.connect(self.refresh_system_status)
         self.plugin_check_ready_signal.connect(self._on_plugin_check_ready)
-        self.notify_sls_watcher_crashed_signal.connect(self.notify_sls_filewatcher_crashed)
         self._main_thread_callable.connect(self._run_on_main_thread)
         self._steamdb_verified = False
         self._steamdb_check_running = False
@@ -211,13 +209,6 @@ class MainWindow(QMainWindow):
         self.expiry_value = None
         self.update_all_btn = None
         self.steam_updates_value = None
-        self.sls_lbl = None
-        self.sls_status_value = None
-        self.slssteam_lbl = None
-        self.slssteam_status_value = None
-        self.denuvo_sync_lbl = None
-        self.denuvo_sync_value = None
-        self._denuvo_sync_status = "Idle"
 
 
         self.progress_container = None
@@ -289,25 +280,14 @@ class MainWindow(QMainWindow):
         else:
             self._update_web_ui_status_label()
 
-        # Trigger SLSsteam boot updates and config checks sequentially in a background thread
-        import threading
-        from utils.assfixer import run_boot_config_check
-
         # Warm up Byparr and verify SteamDB Cloudflare bypass in the background.
         # Deferred on purpose: Byparr spawns a headless Chromium, which costs
         # seconds of CPU and RAM. Doing that while the library scan and the
         # update check are still running is what made the window feel stuck
         # right after boot.
         self._schedule_steamdb_warmup()
-        
-        def run_boot_checks():
-            try:
-                from utils.slssteam_integration import check_slssteam_binary_is_latest
-                check_slssteam_binary_is_latest()
-            except Exception as e:
-                logger.debug(f"SLS binary boot version check skipped/failed: {e}")
-            run_boot_config_check()
 
+        def run_boot_checks():
             # Plugin check (background thread): only works out what would
             # change (retired / remotely disabled plugins, missing family
             # plugins, updates). The user is asked before anything happens.
@@ -324,7 +304,7 @@ class MainWindow(QMainWindow):
             # and doing that while the manifest check is still hammering Steam
             # is what made the first minute after boot feel crowded.
 
-            # Run Denuvo cache prefetch and clean SLS config of any accidental blocklists (runs ONCE on v2.5.5 launch)
+            # Run Denuvo cache prefetch (runs ONCE on v2.5.5 launch)
             try:
                 from core.ratings import sync_denuvo_cache_and_config
                 if self.settings and not self.settings.value("denuvo_config_cleaned_v255", False, type=bool):
@@ -333,7 +313,7 @@ class MainWindow(QMainWindow):
                     if cfg and cfg.exists():
                         clean_denuvo_games_section(cfg)
                     self.settings.setValue("denuvo_config_cleaned_v255", True)
-                    logger.info("Executed one-time SLS Denuvo blocklist cleanup for v2.5.5")
+                    logger.info("Executed one-time Denuvo blocklist cleanup for v2.5.5")
                 sync_denuvo_cache_and_config(main_window=self, force=False)
             except Exception as e:
                 logger.debug(f"Denuvo boot prefetch skipped/failed: {e}")
@@ -352,8 +332,8 @@ class MainWindow(QMainWindow):
 
         # Show the Canary welcome slideshow on first launch. This replaced the
         # older Training Wheels Protocol dialog, which was removed: every action
-        # it offered (recommended settings, config check/repair, SLS install +
-        # version tiles) already exists in Settings -> Health.
+        # it offered (recommended settings, version tiles) already exists in
+        # Settings -> Health.
         from utils.settings import is_canary_welcome_needed
         if is_canary_welcome_needed():
             QTimer.singleShot(1000, self._show_canary_welcome)
@@ -395,109 +375,6 @@ class MainWindow(QMainWindow):
             dlg.exec()
         except Exception as e:
             logger.error(f"Failed to display Canary Welcome dialog: {e}", exc_info=True)
-
-    def _prompt_experimental_features_once_if_needed(self):
-        """Prompt user once on startup to try experimental features if not already enabled."""
-        has_prompted = self.settings.value("has_prompted_experimental", False, type=bool)
-        isp_bypass = self.settings.value("isp_bypass_hubcap", False, type=bool)
-        sls_acf = self.settings.value("experimental_acf_independent", False, type=bool)
-
-        if not has_prompted and (not isp_bypass or not sls_acf):
-            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QCheckBox, QPushButton, QHBoxLayout
-
-            dlg = QDialog(self)
-            dlg.setWindowTitle("Experimental Features — Try & Feedback")
-            dlg.setFixedWidth(540)
-            dlg.setStyleSheet("""
-                QDialog {
-                    background-color: #1a1b26;
-                    color: #a9b1d6;
-                    border: 1px solid #3b4261;
-                    border-radius: 8px;
-                }
-                QLabel { color: #c0caf5; }
-                QCheckBox { color: #7aa2f7; font-size: 13px; font-weight: bold; }
-                QCheckBox::indicator { width: 16px; height: 16px; }
-                QPushButton {
-                    background-color: #3b4261;
-                    color: #c0caf5;
-                    border: none;
-                    border-radius: 4px;
-                    padding: 8px 16px;
-                    font-weight: bold;
-                }
-                QPushButton:hover { background-color: #7aa2f7; color: #15161e; }
-            """)
-
-            layout = QVBoxLayout(dlg)
-            layout.setContentsMargins(20, 20, 20, 20)
-            layout.setSpacing(10)
-
-            title_lbl = QLabel("Try EXE-fingerprinter Experimental Features!", dlg)
-            title_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #7aa2f7;")
-            layout.addWidget(title_lbl)
-
-            desc_lbl = QLabel(
-                "Enhance your download stability and Steam integration by testing our experimental features. "
-                "You can change these anytime in Settings -> Experimental.",
-                dlg
-            )
-            desc_lbl.setWordWrap(True)
-            desc_lbl.setStyleSheet("color: #a9b1d6; font-size: 12px; margin-bottom: 6px;")
-            layout.addWidget(desc_lbl)
-
-            chk_isp = QCheckBox("Enable ISP Bypass (Hubcap API)", dlg)
-            chk_isp.setChecked(True)
-            layout.addWidget(chk_isp)
-
-            isp_sub = QLabel(
-                "Bypasses ISP DNS censorship on Hubcap API requests using Google/Cloudflare DNS (1.1.1.1/8.8.8.8) "
-                "with background Tor fallback. (Only affects API calls, not game file downloads).",
-                dlg
-            )
-            isp_sub.setWordWrap(True)
-            isp_sub.setStyleSheet("color: #565f89; font-size: 11px; margin-left: 22px; margin-bottom: 8px;")
-            layout.addWidget(isp_sub)
-
-            chk_acf = QCheckBox("Enable 'Let SLS handle ACF' (Native ACF Mode)", dlg)
-            chk_acf.setChecked(True)
-            layout.addWidget(chk_acf)
-
-            acf_sub = QLabel(
-                "Delegates .acf file creation and updates directly to Steam via SLSsteam API instead of writing them manually. "
-                "Fixes 'Content Encrypted' errors, play instantly without Steam restarts, and clean native uninstallation.",
-                dlg
-            )
-            acf_sub.setWordWrap(True)
-            acf_sub.setStyleSheet("color: #565f89; font-size: 11px; margin-left: 22px; margin-bottom: 12px;")
-            layout.addWidget(acf_sub)
-
-            btn_box = QHBoxLayout()
-            btn_box.addStretch()
-
-            skip_btn = QPushButton("Skip for Now", dlg)
-            skip_btn.setStyleSheet("background-color: transparent; color: #565f89;")
-            skip_btn.clicked.connect(dlg.reject)
-
-            save_btn = QPushButton("Enable Selected & Continue", dlg)
-            save_btn.clicked.connect(dlg.accept)
-
-            btn_box.addWidget(skip_btn)
-            btn_box.addWidget(save_btn)
-            layout.addLayout(btn_box)
-
-            res = dlg.exec()
-            self.settings.setValue("has_prompted_experimental", True)
-            if res == QDialog.DialogCode.Accepted:
-                self.settings.setValue("isp_bypass_hubcap", chk_isp.isChecked())
-                self.settings.setValue("experimental_acf_independent", chk_acf.isChecked())
-                if chk_acf.isChecked():
-                    try:
-                        from utils.yaml_config_manager import ensure_slssteam_prerequisites
-                        ensure_slssteam_prerequisites()
-                    except Exception:
-                        pass
-
 
     def _setup_window_properties(self) -> None:
         """Configure basic window properties."""
@@ -622,23 +499,6 @@ class MainWindow(QMainWindow):
         self.game_manager.all_updates_checked.connect(
             lambda: self.simplified_terminal._on_update_check_finished() if hasattr(self, "simplified_terminal") and self.simplified_terminal else None
         )
-
-        # AT0-M Sync: share the newest Hubcap key with katamari.conf.lua (which
-        # Uran, Epsilon and the plugins read). Small file reads, off the GUI thread.
-        if self.settings.value("atom_hubcap_sync_enabled", False, type=bool):
-            import threading
-
-            def _sync_hubcap_key():
-                try:
-                    from utils.sls_lua_config import sync_hubcap_api_key
-
-                    synced, msg = sync_hubcap_api_key(get_settings())
-                    if synced:
-                        logger.info(f"[AT0-M Sync] {msg}")
-                except Exception as e:
-                    logger.debug(f"[AT0-M Sync] startup sync skipped: {e}")
-
-            threading.Thread(target=_sync_hubcap_key, name="hubcap-key-sync", daemon=True).start()
 
         # Initial stats fetch
         self.refresh_hubcap_stats()
@@ -813,8 +673,6 @@ class MainWindow(QMainWindow):
             return
         self._after_update_check_connected = True
         try:
-            # update_checks_finished covers the AT0-M stage too, so the queued
-            # work really starts after every check of this cycle is over.
             self.game_manager.update_checks_finished.connect(
                 self._drain_after_update_check_queue,
                 Qt.ConnectionType.QueuedConnection,
@@ -1294,28 +1152,7 @@ class MainWindow(QMainWindow):
         hubcap_api_item.addWidget(self.hubcap_api_value)
         row1_layout.addLayout(hubcap_api_item)
 
-        # 2. SLS Config (hidden)
-        self.sls_lbl = QLabel("SLS Config:")
-        self.sls_lbl.setStyleSheet("color: rgba(255, 255, 255, 0.70); font-size: 11px; background: transparent; border: none;")
-        self.sls_status_value = QLabel("Checking...")
-        self.sls_status_value.setStyleSheet(self._get_status_style("neutral"))
-        sls_item = QHBoxLayout()
-        sls_item.setSpacing(4)
-        sls_item.addWidget(self.sls_lbl)
-        sls_item.addWidget(self.sls_status_value)
-
-        # 3. SLSsteam Status (Online/Offline)
-        self.slssteam_lbl = QLabel("SLSsteam:")
-        self.slssteam_lbl.setStyleSheet("color: rgba(255, 255, 255, 0.70); font-size: 11px; background: transparent; border: none;")
-        self.slssteam_status_value = QLabel("Checking...")
-        self.slssteam_status_value.setStyleSheet(self._get_status_style("neutral"))
-        slssteam_item = QHBoxLayout()
-        slssteam_item.setSpacing(4)
-        slssteam_item.addWidget(self.slssteam_lbl)
-        slssteam_item.addWidget(self.slssteam_status_value)
-        row1_layout.addLayout(slssteam_item)
-
-        # 4. Steam Client Process Status (Online/Offline)
+        # 2. Steam Client Process Status (Online/Offline)
         steam_conn_lbl = QLabel("Steam:")
         steam_conn_lbl.setStyleSheet("color: rgba(255, 255, 255, 0.70); font-size: 11px; background: transparent; border: none;")
         self.steam_conn_value = QLabel("Checking...")
@@ -1326,13 +1163,13 @@ class MainWindow(QMainWindow):
         steam_conn_item.addWidget(self.steam_conn_value)
         row1_layout.addLayout(steam_conn_item)
 
-        # 5. Overall System & SLS Health Status (lies after steam status thing but before steamdb status)
+        # 4. Overall System & Health Status (lies after steam status thing but before steamdb status)
         health_lbl = QLabel("Health:")
         health_lbl.setStyleSheet("color: rgba(255, 255, 255, 0.70); font-size: 11px; background: transparent; border: none;")
         self.health_status_value = QLabel("Checking...")
         self.health_status_value.setStyleSheet(self._get_status_style("neutral"))
         self.health_status_value.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.health_status_value.setToolTip("System & SLSsteam Health Status. Click to open Health settings.")
+        self.health_status_value.setToolTip("System & Health Status. Click to open Health settings.")
         self.health_status_value.mousePressEvent = lambda e: self.open_settings(initial_tab="Health")
         health_item = QHBoxLayout()
         health_item.setSpacing(4)
@@ -1340,7 +1177,7 @@ class MainWindow(QMainWindow):
         health_item.addWidget(self.health_status_value)
         row1_layout.addLayout(health_item)
 
-        # 6. SteamDB Solver Status (Right next to Health) - only visible if Byparr is installed
+        # 5. SteamDB Solver Status (Right next to Health) - only visible if Byparr is installed
         self.steamdb_container = QWidget()
         self.steamdb_container.setStyleSheet("background: transparent; border: none;")
         self.steamdb_item = QHBoxLayout(self.steamdb_container)
@@ -1598,22 +1435,8 @@ class MainWindow(QMainWindow):
         return f"color: {c} !important; font-size: 11px; font-weight: bold; border: none; background: transparent;"
 
     @pyqtSlot()
-    def notify_sls_filewatcher_crashed(self) -> None:
-        """Update UI when SLSsteam filewatcher has crashed in Steam."""
-        warning_msg = "SLSsteam Filewatcher crashed in Steam . Restart Steam"
-        if hasattr(self, "status_pager") and self.status_pager:
-            self.status_pager.show_warning(warning_msg, 30)
-        elif hasattr(self, "drop_text_label") and self.drop_text_label:
-            self.drop_text_label.setText(warning_msg)
-
-        if hasattr(self, "active_game_card") and self.active_game_card:
-            self.active_game_card.set_sub_status(warning_msg, is_warning=True)
-
-        self.refresh_system_status_now()
-
-    @pyqtSlot()
     def refresh_system_status(self) -> None:
-        """Schedule a refresh of the local Steam/SLS/EXE-fingerprinter status labels.
+        """Schedule a refresh of the local Steam and EXE-fingerprinter status labels.
 
         The actual work runs in _apply_system_status_refresh(), coalesced to at
         most one pass per second. A bulk update check rebuilds the dashboard
@@ -1641,7 +1464,7 @@ class MainWindow(QMainWindow):
         self._apply_system_status_refresh()
 
     def _apply_system_status_refresh(self) -> None:
-        """Refresh local Steam updates, SLS, and EXE-fingerprinter status labels."""
+        """Refresh local Steam and EXE-fingerprinter status labels."""
         if not hasattr(self, "steam_updates_value") or not self.steam_updates_value:
             return
 
@@ -1652,7 +1475,7 @@ class MainWindow(QMainWindow):
             self._gui_phase = "idle"
 
     def _collect_system_status(self) -> None:
-        """Collect and render the Steam/SLS/EXE-fingerprinter status labels."""
+        """Collect and render the Steam and download-backend status labels."""
         if not hasattr(self, "steam_updates_value") or not self.steam_updates_value:
             return
 
@@ -1663,137 +1486,50 @@ class MainWindow(QMainWindow):
         else:
             self.steam_updates_value.setText("Allowed")
             self.steam_updates_value.setStyleSheet(self._get_status_style("warning"))
-            
-        # --- SLS Detection ---
-        from ui.dialogs.settings_sls import get_sls_paths
-        import os
-
-        sls_paths = get_sls_paths()
-        sls_detected = sls_paths.get("detected", False)
-        version_file_exists = os.path.exists(sls_paths.get("version_file", "")) if sls_detected else False
-
-        # --- SLS Detection & API Integration ---
-        from utils.slssteam_integration import (
-            is_slssteam_process_active,
-            is_steam_process_running,
-            is_sls_filewatcher_dead,
-        )
-        sls_active = self.settings.value("experimental_acf_independent", False, type=bool) if self.settings else False
-
-        # SLS Config Status (SLS Integration Status)
-        if hasattr(self, "sls_lbl") and self.sls_lbl:
-            self.sls_lbl.setEnabled(sls_active)
-        if hasattr(self, "sls_status_value") and self.sls_status_value:
-            self.sls_status_value.setEnabled(True)
-            if sls_active:
-                self.sls_status_value.setText("Active")
-                self.sls_status_value.setStyleSheet(self._get_status_style("success"))
-            else:
-                self.sls_status_value.setText("Disabled")
-                self.sls_status_value.setStyleSheet(self._get_status_style("neutral"))
-
-        # SLSsteam API Status (Active check of process)
-        if hasattr(self, "slssteam_lbl") and self.slssteam_lbl:
-            self.slssteam_lbl.setEnabled(True)
-        if hasattr(self, "slssteam_status_value") and self.slssteam_status_value:
-            self.slssteam_status_value.setEnabled(True)
-            if sls_active and is_slssteam_process_active():
-                self.slssteam_status_value.setText("Online")
-                self.slssteam_status_value.setStyleSheet(self._get_status_style("success"))
-            else:
-                self.slssteam_status_value.setText("Offline")
-                self.slssteam_status_value.setStyleSheet(self._get_status_style("error"))
 
         # Steam Client Process Status
         if hasattr(self, "steam_conn_value") and self.steam_conn_value:
             self.steam_conn_value.setEnabled(True)
-            if not is_steam_process_running():
+            from core.steam_helpers import is_steam_running, get_installed_steam_client_version
+
+            if not is_steam_running():
                 self.steam_conn_value.setText("Offline")
                 self.steam_conn_value.setStyleSheet(self._get_status_style("error"))
                 self.steam_conn_value.setToolTip("Steam client is not running.")
-            elif is_sls_filewatcher_dead():
-                self.steam_conn_value.setText("Restart")
-                self.steam_conn_value.setStyleSheet(self._get_status_style("warning"))
-                self.steam_conn_value.setToolTip(
-                    "Steam: Restart required\n"
-                    "• SLSsteam file watcher has crashed in Steam.\n"
-                    "• Restart Steam to reload game configs and licenses."
-                )
             else:
-                from core.steam_helpers import get_installed_steam_client_version
                 client_ver = get_installed_steam_client_version()
                 disp_text = client_ver if client_ver else "Online"
                 self.steam_conn_value.setText(disp_text)
                 self.steam_conn_value.setStyleSheet(self._get_status_style("success"))
                 self.steam_conn_value.setToolTip(f"Steam client is running (Version: {disp_text}).")
 
-        # Health Visor Status (SLS binary + version + config + SLS API)
+        # Health Visor Status (download backend readiness)
         if hasattr(self, "health_status_value") and self.health_status_value:
             try:
-                import utils.assfixer as assfixer
-                from utils.slssteam_integration import check_slssteam_binary_is_latest
+                from utils.paths import Paths
 
-                sls_detected = sls_paths.get("detected", False)
-                # cached_only: this runs on the GUI thread and must never wait
-                # on the network. The background boot check fills the cache.
-                ver_res = check_slssteam_binary_is_latest(cached_only=True)
-                ver_status = ver_res.get("status", "error")
-                version_ok = (ver_status == "up_to_date")
-
-                cfg_boot_status = getattr(assfixer, "boot_status", None)
-                config_ok = (cfg_boot_status == "optimal")
-
-                sls_api_enabled = self.settings.value("experimental_acf_independent", False, type=bool) if self.settings else False
-                sls_api_active = sls_api_enabled and is_slssteam_process_active()
-                watcher_dead = is_sls_filewatcher_dead()
-
-                if cfg_boot_status in ("checking", None) or ver_status == "checking":
-                    self.health_status_value.setText("Checking...")
-                    self.health_status_value.setStyleSheet(self._get_status_style("neutral"))
-                    self.health_status_value.setToolTip("Checking System & SLS Health status...")
-                elif sls_detected and version_ok and config_ok and sls_api_active and not watcher_dead:
+                dll = Paths.depot_downloader_dll()
+                backend_ok = dll.exists()
+                if backend_ok:
                     self.health_status_value.setText("Good")
                     self.health_status_value.setStyleSheet(self._get_status_style("success"))
                     self.health_status_value.setToolTip(
                         "Health: Good\n"
-                        "• SLSsteam Binary: Detected\n"
-                        f"• SLSsteam Version: Up to date ({ver_res.get('release_tag', '')})\n"
-                        "• SLS Config: Optimal\n"
-                        "• SLS Native API: Active\n\n"
+                        f"• Download backend: DepotDownloaderMod present ({dll})\n\n"
                         "Click to open Health settings."
                     )
                 else:
-                    issues = []
-                    if not sls_detected:
-                        issues.append("SLSsteam binary not found")
-                    elif not version_ok:
-                        tag = ver_res.get("release_tag", "")
-                        issues.append(f"SLSsteam update available ({tag})" if tag else "SLSsteam outdated")
-                    if not config_ok:
-                        issues.append("SLS config needs repair/resync")
-                    if not sls_api_active:
-                        if not sls_api_enabled:
-                            issues.append("SLS Native API disabled in settings")
-                        elif not is_slssteam_process_active():
-                            if not is_steam_process_running():
-                                issues.append("Steam not running (SLS not injected)")
-                            else:
-                                issues.append("SLS process not injected into Steam")
-                    if watcher_dead:
-                        issues.append("SLS filewatcher crashed (Restart Steam)")
-
-                    self.health_status_value.setText("Attention" if issues else "Checking...")
-                    self.health_status_value.setStyleSheet(self._get_status_style("warning"))
-                    tooltip = "Health: Attention required\n" + "\n".join(f"• {iss}" for iss in issues) + "\n\nClick to open Health settings."
-                    self.health_status_value.setToolTip(tooltip)
+                    self.health_status_value.setText("Missing")
+                    self.health_status_value.setStyleSheet(self._get_status_style("error"))
+                    self.health_status_value.setToolTip(
+                        "Health: Attention required\n"
+                        f"• Download backend: DepotDownloaderMod missing ({dll})\n\n"
+                        "Click to open Health settings."
+                    )
             except Exception as e:
                 logger.debug(f"Error updating Health visor status: {e}")
                 self.health_status_value.setText("Checking...")
                 self.health_status_value.setStyleSheet(self._get_status_style("neutral"))
-
-
-
-
 
         # SteamDB Visor Sync
         if hasattr(self, "steamdb_container") and hasattr(self, "steamdb_status_value"):
@@ -1990,7 +1726,7 @@ class MainWindow(QMainWindow):
             return
         self._last_hubcap_refresh_time = now
 
-        # Also refresh Steam and SLS status locally
+        # Also refresh Steam and Health status locally
         self.refresh_system_status()
 
         # Trigger background network checks if offline/connecting or forced
@@ -2152,75 +1888,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, "active_hubcap_label") and self.active_hubcap_label:
             self.active_hubcap_label.setText("Hubcap: Error")
 
-    def sync_at0m_keys(self, appid: str) -> None:
-        """Syncs the Hubcap decryption keys of a Steam-managed (AT0-M) game.
-
-        EXE-fingerprinter never downloads an AT0-M game - Steam does. What EXE-fingerprinter does
-        is make sure SLSsteam holds the decryption keys of the depots the game
-        needs, so Steam can actually decrypt them.
-        """
-        import threading
-
-        appid = str(appid)
-        running = getattr(self, "_at0m_key_syncs_running", None)
-        if running is None:
-            running = set()
-            self._at0m_key_syncs_running = running
-        if appid in running:
-            logger.info(f"[AT0-M] A key sync for {appid} is already running.")
-            return
-
-        gm = self.game_manager
-        game = gm.get_game(appid) if gm else None
-        name = (game or {}).get("game_name") or f"App {appid}"
-
-        running.add(appid)
-        self._refresh_at0m_sync_rows()
-
-        def _worker():
-            try:
-                from managers.at0m_update_checker import At0mUpdateChecker
-                ok, message = At0mUpdateChecker.get_instance().sync_keys(appid)
-            except Exception as e:
-                logger.error(f"[AT0-M] Key sync failed for {appid}: {e}", exc_info=True)
-                ok, message = False, str(e)
-            self._main_thread_callable.emit(
-                lambda: self._on_at0m_key_sync_finished(appid, ok, message, name)
-            )
-
-        threading.Thread(target=_worker, daemon=True).start()
-
-    def _refresh_at0m_sync_rows(self) -> None:
-        """Repaints the pending-updates list so a running sync shows as busy."""
-        if hasattr(self, "simplified_terminal") and self.simplified_terminal:
-            self.simplified_terminal.update_stats(immediate=True)
-
-    def _on_at0m_key_sync_finished(self, appid: str, ok: bool, message: str, name: str) -> None:
-        """Reports the outcome of a key sync to the user."""
-        running = getattr(self, "_at0m_key_syncs_running", None)
-        if running is not None:
-            running.discard(str(appid))
-
-        if ok:
-            if hasattr(self, "status_pager") and self.status_pager:
-                self.status_pager.set_status(f"KEYS SYNCED · {name}")
-            ThemedMessageBox.information(self, "Keys Synced", message)
-        else:
-            logger.warning(f"[AT0-M] Key sync failed for {name}: {message}")
-            ThemedMessageBox.warning(self, "Key Sync Failed", message)
-
-        self._refresh_at0m_sync_rows()
-
-    @pyqtSlot(str)
-    def _show_key_sync_notice(self, names_text: str) -> None:
-        """Tells the user that the keys are in place but Steam does the download."""
-        ThemedMessageBox.information(
-            self,
-            "Keys Synced",
-            f"Keys synced for:\n{names_text}\n\n"
-            f"Launch or update the game(s) in Steam to finish.",
-        )
-
     def run_update_all_flow(self) -> None:
         """Flow for updating all games that have update_available status."""
         # Guard: prevent re-entrancy if a cycle is already running
@@ -2239,8 +1906,6 @@ class MainWindow(QMainWindow):
 
         games = self.game_manager.get_all_games()
         updateable_games = []
-        at0m_key_games = []
-        from utils.game_modes import is_atom_managed
         for g in games:
             if g.get("update_status") == "update_available":
                 appid = str(g.get("appid", ""))
@@ -2248,14 +1913,9 @@ class MainWindow(QMainWindow):
                     continue
                 if self.settings.value(f"pin_build/{appid}", False, type=bool):
                     continue
-                if is_atom_managed(g):
-                    # Steam-managed games are downloaded by Steam, never by
-                    # DepotDownloader. All EXE-fingerprinter does is sync the keys.
-                    at0m_key_games.append(g)
-                else:
-                    updateable_games.append(g)
+                updateable_games.append(g)
 
-        if not updateable_games and not at0m_key_games:
+        if not updateable_games:
             self._update_all_running = False
             ThemedMessageBox.information(
                 self,
@@ -2264,7 +1924,7 @@ class MainWindow(QMainWindow):
             )
             return
 
-        total = len(updateable_games) + len(at0m_key_games)
+        total = len(updateable_games)
 
         # --- Immediate feedback: update button before the thread even starts ---
         self._set_update_all_btn_preparing(0, total)
@@ -2285,32 +1945,6 @@ class MainWindow(QMainWindow):
             skipped_names = []
             synced_names = []
             key_processed = 0
-
-            # --- Phase 1: sync the keys of the Steam-managed games ---
-            # Steam downloads those games itself, so all EXE-fingerprinter can do is
-            # make sure SLSsteam holds the decryption keys.
-            if at0m_key_games:
-                from managers.at0m_update_checker import At0mUpdateChecker
-                checker = At0mUpdateChecker.get_instance()
-                for key_game in at0m_key_games:
-                    key_appid = str(key_game.get("appid", "0"))
-                    key_name = format_game_display_name(key_game)
-                    self._set_update_all_btn_preparing(
-                        key_processed, total, current_name=key_name
-                    )
-                    logger.info(f"[Update All] Syncing keys for {key_name} ({key_appid})...")
-                    try:
-                        ok, message = checker.sync_keys(key_appid)
-                    except Exception as e:
-                        logger.error(f"[Update All] Key sync failed for {key_name}: {e}")
-                        ok, message = False, str(e)
-                    key_processed += 1
-                    if ok:
-                        synced_names.append(key_name)
-                        logger.info(f"[Update All] Keys synced for {key_name}")
-                    else:
-                        logger.warning(f"[Update All] Key sync failed for {key_name}: {message}")
-                        skipped_names.append(key_name)
 
             for idx, game_data in enumerate(updateable_games):
                 appid = str(game_data.get("appid", "0"))
@@ -2536,15 +2170,6 @@ class MainWindow(QMainWindow):
             from PyQt6.QtCore import Q_ARG
             QMetaObject.invokeMethod(self, "update_dashboard_elements", Qt.ConnectionType.QueuedConnection)
 
-            # Tell the user that the keys are in place but Steam does the download
-            if synced_names:
-                QMetaObject.invokeMethod(
-                    self,
-                    "_show_key_sync_notice",
-                    Qt.ConnectionType.QueuedConnection,
-                    Q_ARG(str, "\n".join(f"• {n}" for n in synced_names)),
-                )
-
             # Notify user about any skipped games
             if skipped_names and queued == 0:
                 QMetaObject.invokeMethod(
@@ -2553,7 +2178,7 @@ class MainWindow(QMainWindow):
                     Qt.ConnectionType.QueuedConnection,
                     Q_ARG(str, "\n".join(f"• {n}" for n in skipped_names)),
                     Q_ARG(bool, True),
-                    Q_ARG(bool, bool(at0m_key_games) and not updateable_games),
+                    Q_ARG(bool, False),
                 )
             elif skipped_names:
                 QMetaObject.invokeMethod(
@@ -2742,12 +2367,6 @@ class MainWindow(QMainWindow):
             try:
                 from core.steamdb_scraper import ByparrManager
                 ByparrManager.stop()
-            except Exception:
-                pass
-            # Signal SLS background retry workers to stop before teardown
-            try:
-                from utils.slssteam_integration import register_shutdown
-                register_shutdown()
             except Exception:
                 pass
             from utils.update_status_cache import get_update_cache

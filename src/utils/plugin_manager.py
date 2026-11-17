@@ -46,7 +46,6 @@ from utils.settings import get_settings
 from utils.yaml_config_manager import (
     ensure_plugins_enabled,  # noqa: F401  (re-exported for older callers)
     ensure_sls_plugin_config_sections,
-    ensure_smart_tickets_enabled,
     get_sls_plugins_dirs,
     is_slssteam_plugins_enabled,  # noqa: F401
 )
@@ -1034,9 +1033,6 @@ def deploy_plugin(filename: str, force_download: bool = False, only_if_missing: 
     deployable, why = is_plugin_deployable(filename)
     if not deployable:
         return False, False, f"{filename} cannot be installed: {why}"
-
-    if filename in ("spliced-tickets.lua", "styx.lua") or is_ticket_splicer(filename):
-        ensure_smart_tickets_enabled()
 
     set_plugin_user_disabled(filename, False)
 

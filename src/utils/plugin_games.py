@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from utils.helpers import get_base_path
-from utils.sls_bridge import SLSBridge
 from utils.yaml_config_manager import (
     SHARED_REDISTS,
     _get_section_bounds,
@@ -404,9 +403,6 @@ def register_plugin_game(
                     f"({appid_str}); the library record may list refused depots."
                 )
 
-    # Notify bridge / SLSsteam of update
-    SLSBridge.notify_reload()
-
     mode_str = "DLC-only" if is_dlc_only else "normal"
     logger.info(
         f"[PluginGames] Successfully registered '{name}' ({appid_str}) "
@@ -579,9 +575,6 @@ def unregister_plugin_game(appid: Union[str, int], keep_in_additional_apps: bool
         except Exception as e:
             logger.debug(f"[PluginGames] Error removing pinned manifests for {appid_str}: {e}")
 
-        # 5. Notify bridge / SLSsteam of update
-        SLSBridge.notify_reload()
-
     game_label = target_game.get("name") or appid_str
     logger.info(f"[PluginGames] Successfully unregistered '{game_label}' ({appid_str}) [keep_apps={keep_in_additional_apps}]")
     return True
@@ -653,7 +646,6 @@ def sync_all_plugin_games_to_config(only: Optional[Dict[str, Any]] = None) -> No
                 editor.add_key(did_str, key, comment=key_comment)
 
         if editor.has_changes:
-            SLSBridge.notify_reload()
             logger.info("[PluginGames] Synced all registered plugin games to config.yaml in a single batch")
 
 

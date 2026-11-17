@@ -18,6 +18,7 @@ import logging
 import os
 import re
 import shutil
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -39,6 +40,96 @@ def get_sls_config_dir() -> Path:
 def get_katamari_conf_path() -> Path:
     """Return canonical path to ~/.config/SLSsteam/katamari.conf.lua."""
     return get_sls_config_dir() / "katamari.conf.lua"
+
+
+def get_hubcap_key_conf_path() -> Path:
+    """Return canonical path to katamari.conf.lua (the hubcap section the plugins read)."""
+    return get_katamari_conf_path()
+
+
+def generate_hubcap_timestamp() -> int:
+    """Generate chronological timestamp in YYYYMMDDHHMMSS format (e.g. 20261026224500)."""
+    now = time.localtime()
+    return int(
+        f"{now.tm_year:04d}{now.tm_mon:02d}{now.tm_mday:02d}"
+        f"{now.tm_hour:02d}{now.tm_min:02d}{now.tm_sec:02d}"
+    )
+
+
+def _timestamp_to_sort_key(ts: int) -> int:
+    """Convert timestamp to a chronologically sortable integer."""
+    if not ts or ts <= 0:
+        return 0
+    # 14-digit YYYYMMDDHHMMSS format (>= 20200101000000) is already strictly chronological
+    if ts >= 20200101000000:
+        return ts
+    s = str(ts).strip()
+    # Legacy custom mmhhddyyyy format (ending in 2024..2030, length 9 or 10)
+    if len(s) in (9, 10) and any(s.endswith(y) for y in ("2024", "2025", "2026", "2027", "2028", "2029", "2030")):
+        try:
+            padded = s.zfill(10)
+            minute = int(padded[0:2])
+            hour = int(padded[2:4])
+            day = int(padded[4:6])
+            year = int(padded[6:10])
+            return (year * 100000000) + (day * 1000000) + (hour * 10000) + minute
+        except ValueError:
+            pass
+    return ts
+
+
+def _is_valid_hubcap_key(key: str) -> bool:
+    """Basic validation guard for Hubcap API key. Must be alphanumeric/hyphens/underscores, >= 8 chars."""
+    if not key or not isinstance(key, str):
+        return False
+    k = key.strip()
+    if len(k) < 8 or any(c.isspace() for c in k):
+        return False
+    return bool(re.match(r"^[a-zA-Z0-9_\-]+$", k))
+
+
+def sync_hubcap_api_key(settings: Any, conf_path: Optional[Path] = None) -> Tuple[bool, str]:
+    """Keep the Hubcap API key in EXE-fingerprinter and in katamari.conf.lua (hubcap section) the same.
+
+    The newer side wins, by timestamp:
+      - katamari.conf.lua newer (and its key valid): copy it into EXE-fingerprinter.
+      - EXE-fingerprinter newer (and its key valid): write it into katamari.conf.lua.
+
+    Returns (synced, message).
+    """
+    path = conf_path or get_hubcap_key_conf_path()
+    if not path.is_file():
+        return False, "katamari.conf.lua does not exist"
+
+    local_key = str((settings.value("morrenus_api_key", "", type=str) or "") if settings is not None else "").strip()
+    try:
+        local_ts = int(str(settings.value("morrenus_api_key_timestamp", 0)).strip() or 0) if settings is not None else 0
+    except (ValueError, TypeError):
+        local_ts = 0
+    if local_key and local_ts == 0:
+        local_ts = generate_hubcap_timestamp()
+        if settings is not None:
+            settings.setValue("morrenus_api_key_timestamp", str(local_ts))
+
+    hub = KatamariConfigManager.load_config(path).get("hubcap", {}) or {}
+    lua_key = str(hub.get("api_key") or "").strip()
+    lua_ts = int(hub.get("api_key_timestamp") or 0)
+    lua_sort = _timestamp_to_sort_key(lua_ts)
+    local_sort = _timestamp_to_sort_key(local_ts)
+
+    if lua_sort > local_sort and _is_valid_hubcap_key(lua_key):
+        if settings is not None:
+            settings.setValue("morrenus_api_key", lua_key)
+            settings.setValue("morrenus_api_key_timestamp", str(lua_ts))
+        return True, "Synced API key from katamari.conf.lua to EXE-fingerprinter"
+
+    if (local_sort > lua_sort or (local_sort > 0 and lua_sort == 0)) and _is_valid_hubcap_key(local_key):
+        ok = KatamariConfigManager.set_hubcap_api_key(local_key, local_ts, path)
+        if not ok:
+            return False, "Could not write katamari.conf.lua"
+        return True, "Synced API key from EXE-fingerprinter to katamari.conf.lua"
+
+    return False, "Already in sync"
 
 
 # The Katamari Cloudflare worker. Lettuce uses it as worker_base (routes

@@ -1138,20 +1138,34 @@ class CLITaskManager:
 
         # 2. If ACF-Independent mode is active, delegate manifest creation entirely to Steam natively
         try:
-            from utils.slssteam_integration import install_via_sls, _experimental_mode_enabled
-            if _experimental_mode_enabled():
+            from utils.settings import get_settings
+
+            if get_settings().value("experimental_acf_independent", False, type=bool):
                 self.logger.info("ACF-Independent Mode is active. Delegating manifest creation to Steam natively.")
                 if appid and appid not in ("0", "N/A", "unknown"):
-                    install_via_sls(
-                        appid=str(appid),
-                        game_name=self.game_data.get("game_name", ""),
-                        library_path=self.current_dest_path or "",
-                        game_data=self.game_data,
-                        size_on_disk=size_on_disk,
+                    from core.native_steam.native_steam_handoff import (
+                        _is_slssteam_available,
+                        resolve_library_index,
+                        send_sls_api,
                     )
+
+                    if not _is_slssteam_available():
+                        self.logger.info(
+                            f"ACF-Independent Mode: SLSsteam/Steam not available for {appid} — "
+                            "AppID recorded in config.yaml; Steam will register on next launch."
+                        )
+                        return
+
+                    library_index = resolve_library_index(self.current_dest_path or "")
+                    sent = send_sls_api(f"install|{appid}|{library_index}")
+                    if not sent:
+                        self.logger.warning(
+                            f"ACF-Independent Mode: Steam install pipe send failed for {appid}; "
+                            "config is written, Steam will pick it up on next launch."
+                        )
                 return
         except Exception as e:
-            self.logger.error(f"Error in SLSsteam install flow for {appid}: {e}")
+            self.logger.error(f"Error in Steam native install flow for {appid}: {e}")
 
         # 3. Fallback: Write standard Steam .acf manifest file when experimental mode is disabled
         if appid:

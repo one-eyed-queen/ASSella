@@ -937,27 +937,25 @@ class PreReleaseTester:
     # PHASE 12: Spliced Ticket Plugin & SLS Configuration
     # =========================================================================
     def test_phase12_spliced_ticket_plugin(self):
-        print(f"\n{BOLD}{BLUE}--- Phase 12: Spliced Ticket Plugin & SLS Configuration ---{RESET}")
+        print(f"\n{BOLD}{BLUE}--- Phase 12: Spliced Ticket Plugin & Plugin Configuration ---{RESET}")
         t0 = time.time()
         try:
             from utils.yaml_config_manager import (
-                ensure_smart_tickets_enabled,
-                is_smart_tickets_enabled,
                 ensure_plugins_enabled,
+                is_slssteam_config_management_enabled,
             )
             with tempfile.TemporaryDirectory() as tmp_d:
                 cfg = Path(tmp_d) / "config.yaml"
-                cfg.write_text("Plugins: false\nSmartTickets: 0x0\n")
+                cfg.write_text("Plugins: false\n")
 
-                ensure_smart_tickets_enabled(config_path=cfg, enable=True)
-                assert is_smart_tickets_enabled(config_path=cfg) is True
-                ensure_smart_tickets_enabled(config_path=cfg, enable=False)
-                assert is_smart_tickets_enabled(config_path=cfg) is False
+                ok = ensure_plugins_enabled(config_path=cfg)
+                assert ok is True
+                content = cfg.read_text()
+                assert "Plugins: yes" in content or "Plugins: true" in content
 
-                ensure_plugins_enabled(config_path=cfg)
-                assert "Plugins: yes" in cfg.read_text() or "Plugins: true" in cfg.read_text()
+                assert is_slssteam_config_management_enabled() is True
 
-            self.log_result("Spliced Ticket Plugin SLS Configuration Management", True, "SmartTickets & Plugins toggles verified", duration=time.time() - t0)
+            self.log_result("Spliced Ticket Plugin SLS Configuration Management", True, "Plugins toggle verified", duration=time.time() - t0)
         except Exception as e:
             self.log_result("Spliced Ticket Plugin SLS Configuration Management", False, str(e), duration=time.time() - t0)
 

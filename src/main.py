@@ -15,7 +15,6 @@ from utils.main_thread import post_to_main_thread
 from utils.settings import get_settings
 from utils.yaml_config_manager import (
     backup_config_on_startup,
-    ensure_slssteam_prerequisites,
     get_user_config_path,
 )
 from utils.version import app_version
@@ -223,11 +222,9 @@ def main():
     try:
         backup_created = backup_config_on_startup(config_path)
         if backup_created:
-            logger.info("SLSsteam config backup created at startup")
+            logger.info("Config backup created at startup")
 
         if config_path.exists():
-            ensure_slssteam_prerequisites(config_path)
-
             # config.yaml holds every depot decryption key the user owns.
             # Older versions left it world-readable; tighten existing installs.
             try:
@@ -244,15 +241,6 @@ def main():
 
             # "All games online" lives in config.yaml (FakeAppIds 0: 480) and is
             # read from there; it is no longer re-applied from EXE-fingerprinter's settings.
-
-            # A Steam update would replace the files SLSsteam patches, so the
-            # config keeps DisableUpdates set. The writer memoises "already
-            # correct", so this costs nothing once the file agrees.
-            try:
-                from utils.yaml_config_manager import update_yaml_boolean_value
-                update_yaml_boolean_value(config_path, "DisableUpdates", True)
-            except Exception as ex:
-                logger.debug(f"Failed to ensure DisableUpdates in the SLSsteam config: {ex}")
     except OSError as e:
         logger.error(f"Startup I/O error (Config/Backup): {e}")
 

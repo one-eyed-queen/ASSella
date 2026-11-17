@@ -13,6 +13,8 @@ import logging
 import os
 import re
 import shutil
+import sys
+import threading
 import time
 import zipfile
 from pathlib import Path
@@ -26,6 +28,365 @@ from core.native_steam.steam_manifest_pinning import (
 logger = logging.getLogger(__name__)
 
 SLSSTEAM_API_PIPE = "/tmp/SLSsteam.API"
+MAX_CONFIG_WAIT_SECONDS = 10
+MAX_ACF_VERIFY_SECONDS = 10
+
+# ---------------------------------------------------------------------------
+# Shutdown coordination
+# ---------------------------------------------------------------------------
+_shutdown_flag = threading.Event()
+
+# Registry of per-install cancel events: appid -> threading.Event
+_retry_cancel_flags: Dict[str, Any] = {}
+_retry_lock = threading.Lock()
+
+
+def register_shutdown() -> None:
+    """Signal all SLS background workers to stop. Call this on app exit."""
+    _shutdown_flag.set()
+    logger.info("SLSsteam integration: shutdown signalled — all retry workers will stop")
+
+
+def _experimental_mode_enabled() -> bool:
+    """True when the user opted into delegating manifest creation to Steam natively."""
+    try:
+        from utils.settings import get_settings
+
+        return bool(get_settings().value("experimental_acf_independent", False, type=bool))
+    except Exception:
+        return False
+
+
+def _is_slssteam_available() -> bool:
+    """Check if SLSsteam API pipe exists (proxy for Steam + SLSsteam running)."""
+    if sys.platform != "linux":
+        return False
+    return os.path.exists(SLSSTEAM_API_PIPE)
+
+
+_proc_cache = {
+    "last_check": 0.0,
+    "steam_running": False,
+    "slssteam_active": False,
+}
+_PROC_CACHE_TTL = 2.0  # seconds
+
+
+def _update_proc_cache_if_needed() -> None:
+    now = time.monotonic()
+    if now - _proc_cache["last_check"] < _PROC_CACHE_TTL:
+        return
+    _proc_cache["last_check"] = now
+    _proc_cache["steam_running"] = False
+    _proc_cache["slssteam_active"] = False
+    try:
+        import subprocess as _sp
+
+        out = _sp.run(["pgrep", "-x", "steam"], capture_output=True, text=True, timeout=2).stdout or ""
+        _proc_cache["steam_running"] = len(out.strip()) > 0
+        maps = "/proc"
+        for pid_dir in os.listdir(maps):
+            if not pid_dir.isdigit():
+                continue
+            try:
+                with open(f"/proc/{pid_dir}/comm", "r", encoding="utf-8", errors="ignore") as f:
+                    if f.read().strip() != "steam":
+                        continue
+                with open(f"/proc/{pid_dir}/maps", "r", encoding="utf-8", errors="ignore") as f:
+                    if "SLSsteam.so" in f.read():
+                        _proc_cache["slssteam_active"] = True
+                        break
+            except OSError:
+                continue
+    except Exception:
+        pass
+
+
+def is_steam_process_running() -> bool:
+    """Check if the steam process is currently running on the system. Cached for 2 seconds."""
+    _update_proc_cache_if_needed()
+    return bool(_proc_cache["steam_running"])
+
+
+def is_slssteam_process_active() -> bool:
+    """Check if SLSsteam.so is loaded in Steam's memory space. Cached for 2 seconds."""
+    _update_proc_cache_if_needed()
+    return bool(_proc_cache["slssteam_active"])
+
+
+def is_sls_filewatcher_dead() -> bool:
+    """Check if SLSsteam's CFileWatcher thread crashed in the currently running Steam session.
+
+    Reads the tail (up to 64KB) of ~/.SLSsteam.log in binary mode for
+    b"Failed to read from FileWatcher". Because SLSsteam truncates ~/.SLSsteam.log
+    on each Steam launch, any occurrence indicates the watcher is dead for the
+    current session.
+
+    Returns False immediately if Steam or SLSsteam is not running or log does not exist.
+    Performance: <0.05ms execution time, zero system overhead.
+    """
+    try:
+        if not is_steam_process_running():
+            return False
+        if not (_is_slssteam_available() or is_slssteam_process_active()):
+            return False
+        log_path = _get_sls_log_path()
+        if not log_path.is_file():
+            return False
+        size = log_path.stat().st_size
+        if size == 0:
+            return False
+        with open(log_path, "rb") as f:
+            if size > 65536:
+                f.seek(size - 65536)
+            data = f.read()
+            return b"Failed to read from FileWatcher" in data
+    except Exception as e:
+        logger.debug(f"is_sls_filewatcher_dead check error: {e}")
+        return False
+
+
+def notify_sls_watcher_dead(main_window: Optional[Any] = None) -> None:
+    """Notify UI and status pager that the SLSsteam Filewatcher has crashed."""
+    warning_msg = "SLSsteam Filewatcher crashed in Steam. Restart Steam"
+    logger.warning(f"[SLSsteam] {warning_msg}")
+
+    if main_window is None:
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app:
+                for widget in app.topLevelWidgets():
+                    if widget.__class__.__name__ == "MainWindow":
+                        main_window = widget
+                        break
+        except Exception:
+            pass
+
+    if main_window is not None:
+        try:
+            if hasattr(main_window, "notify_sls_watcher_crashed_signal"):
+                main_window.notify_sls_watcher_crashed_signal.emit()
+            elif hasattr(main_window, "notify_sls_watcher_crashed"):
+                main_window.notify_sls_watcher_crashed()
+        except Exception as e:
+            logger.debug(f"Failed to notify main_window of dead watcher: {e}")
+
+
+def _get_sls_log_path() -> Path:
+    """Return the SLSsteam log file path for the current Steam installation."""
+    try:
+        from core.steam_helpers import get_steam_env
+
+        return get_steam_env().sls_log_path
+    except Exception as e:
+        logger.warning(f"_get_sls_log_path: SteamEnv unavailable ({e}), using native fallback")
+        return Path.home() / ".SLSsteam.log"
+
+
+def _get_steamapps_paths() -> List[Path]:
+    """Return all steamapps directories to search for ACF manifests."""
+    try:
+        from core.steam_helpers import get_steam_env
+
+        paths = get_steam_env().steamapps_paths
+        if paths:
+            return paths
+    except Exception:
+        pass
+    fallback = []
+    native = Path.home() / ".local" / "share" / "Steam" / "steamapps"
+    flatpak = Path.home() / ".var" / "app" / "com.valvesoftware.Steam" / "data" / "Steam" / "steamapps"
+    for p in (native, flatpak):
+        if p.is_dir():
+            fallback.append(p)
+    return fallback
+
+
+def _get_sls_log_size() -> int:
+    """Return current SLS log file size for offset-based polling."""
+    log_path = _get_sls_log_path()
+    try:
+        return log_path.stat().st_size if log_path.exists() else 0
+    except (OSError, IOError):
+        return 0
+
+
+def _slssteam_api_send(command: str) -> bool:
+    """Send a raw command to SLSsteam via the named pipe.
+
+    Returns True on success.  Returns False (never raises) on any failure —
+    including the pipe being gone because Steam/SLSsteam closed mid-write.
+    """
+    if not _is_slssteam_available():
+        return False
+    try:
+        with open(SLSSTEAM_API_PIPE, "w") as f:
+            f.write(command.strip() + "\n")
+            f.flush()
+        logger.info(f"SLSsteam API command sent: {command}")
+        return True
+    except OSError as e:
+        logger.warning(
+            f"SLSsteam API pipe write failed for '{command}': {e} "
+            "(Steam/SLSsteam may have closed — command will be retried or skipped)"
+        )
+        return False
+
+
+def _poll_sls_log_for(
+    pattern: str,
+    timeout_seconds: int = MAX_CONFIG_WAIT_SECONDS,
+    start_offset: int = 0,
+) -> bool:
+    """Poll SLSsteam log for a regex pattern in NEW content only. Returns True if found before deadline."""
+    log_path = _get_sls_log_path()
+    if not log_path.exists():
+        if _experimental_mode_enabled():
+            logger.warning(
+                f"SLSsteam log not found at {log_path}. Cannot poll for license events. Proceeding without confirmation."
+            )
+        return False
+
+    compiled = re.compile(pattern)
+    deadline = time.time() + timeout_seconds
+    start = start_offset
+
+    while time.time() < deadline:
+        if _shutdown_flag.is_set():
+            logger.debug("_poll_sls_log_for: shutdown flag set — aborting poll")
+            return False
+        try:
+            current_size = log_path.stat().st_size
+            if current_size > start:
+                with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                    f.seek(start)
+                    for line in f:
+                        if compiled.search(line):
+                            return True
+                start = current_size
+        except (OSError, IOError):
+            pass
+        time.sleep(0.3)
+
+    return False
+
+
+def _verify_acf_created(appid: str, timeout: Optional[float] = None) -> bool:
+    """Poll for ACF manifest creation by Steam across all known library paths."""
+    acf_filename = f"appmanifest_{appid}.acf"
+    steamapps_dirs = _get_steamapps_paths()
+    candidate_paths = [sa / acf_filename for sa in steamapps_dirs if sa.is_dir()]
+
+    if not candidate_paths:
+        logger.warning(
+            f"_verify_acf_created: no valid steamapps directories found to search for {appid}. "
+            "Steam may not be installed or SteamEnv detection failed."
+        )
+
+    verify_seconds = timeout if timeout is not None else MAX_ACF_VERIFY_SECONDS
+    deadline = time.time() + verify_seconds
+    while time.time() < deadline:
+        for p in candidate_paths:
+            if p.exists():
+                logger.info(f"Steam created ACF manifest for {appid} at {p}")
+                return True
+        if is_sls_filewatcher_dead():
+            logger.info(f"_verify_acf_created: SLSsteam filewatcher is dead — breaking wait early")
+            break
+        time.sleep(0.5)
+
+    searched = ", ".join(str(p) for p in candidate_paths)
+    logger.warning(
+        f"ACF manifest for {appid} not found after {verify_seconds}s. "
+        f"Searched: {searched} — Steam may create it later"
+    )
+    return False
+
+
+def _silent_background_retry_pipe(
+    appid: str,
+    library_index: int,
+    max_retries: int = 3,
+    library_path: str = "",
+    main_window: Optional[Any] = None,
+    **kwargs,
+) -> None:
+    """Start a daemon thread that retries the install pipe command if Steam was slow.
+
+    Uses exponential backoff ([3, 6, 12] seconds by default).
+    The worker stops as soon as any of the following is true:
+      • The ACF file appears on disk (success — no more retries needed).
+      • The per-install cancel event is set (uninstall_via_sls was called for this appid).
+      • The global shutdown flag is set (application is closing).
+      • SLSsteam pipe disappears or filewatcher crashes.
+      • Retries are exhausted.
+
+    In ACF-Independent mode, EXE-fingerprinter NEVER generates or writes a fallback ACF.
+    Manifest creation is delegated entirely to Steam natively.
+    """
+    if max_retries != 3:
+        backoff_intervals = [3 * (2**i) for i in range(max_retries)]
+    else:
+        backoff_intervals = [3, 6, 12]
+
+    cancel_event = threading.Event()
+    with _retry_lock:
+        # Cancel any previous retry worker for this appid before starting a new one
+        old_event = _retry_cancel_flags.get(appid)
+        if old_event is not None:
+            old_event.set()
+        _retry_cancel_flags[appid] = cancel_event
+
+    def _retry_worker() -> None:
+        try:
+            for i, wait_sec in enumerate(backoff_intervals):
+                cancelled = cancel_event.wait(timeout=wait_sec)
+                if cancelled or _shutdown_flag.is_set():
+                    logger.info(
+                        f"SLS retry worker for {appid}: "
+                        f"{'cancelled (uninstall called)' if cancelled else 'app shutdown'} — stopping"
+                    )
+                    return
+
+                if _verify_acf_created(appid, timeout=1.0):
+                    logger.info(f"Silent retry: ACF confirmed for AppID {appid} on attempt {i + 1} — done")
+                    return
+
+                if not _is_slssteam_available():
+                    logger.info(f"SLS retry worker for {appid}: SLSsteam pipe gone (Steam closed) — stopping retry worker")
+                    return
+
+                watcher_dead = is_sls_filewatcher_dead()
+                if watcher_dead:
+                    notify_sls_watcher_dead(main_window=main_window)
+                    logger.warning(f"SLS retry worker for {appid}: watcher crashed — stopping retry worker")
+                    return
+
+                logger.info(
+                    f"Silent background retry ({i + 1}/{len(backoff_intervals)}): "
+                    f"resending install|{appid}|{library_index} after {wait_sec}s backoff..."
+                )
+                _slssteam_api_send(f"install|{appid}|{library_index}")
+
+            # Final check after retry loop
+            if _verify_acf_created(appid, timeout=1.5):
+                logger.info(f"Silent retry: ACF confirmed for AppID {appid} after retry loop — done")
+                return
+
+            logger.info(
+                f"SLS retry worker for {appid}: completed {len(backoff_intervals)} retries. "
+                "Steam will discover and generate the manifest on next launch or restart."
+            )
+        finally:
+            # Clean up the registry entry so it doesn't leak
+            with _retry_lock:
+                if _retry_cancel_flags.get(appid) is cancel_event:
+                    del _retry_cancel_flags[appid]
+
+    t = threading.Thread(target=_retry_worker, daemon=True, name=f"SLSRetry-{appid}")
+    t.start()
 
 
 def check_slssteam_active() -> bool:
@@ -113,17 +474,8 @@ def resolve_library_index(dest_path: str) -> int:
 
 
 def send_sls_api(command: str) -> bool:
-    """Send command to /tmp/SLSsteam.API."""
-    try:
-        from utils.slssteam_integration import _slssteam_api_send
-        ok = _slssteam_api_send(command)
-        if ok:
-            logger.info(f"[SteamHandoff] SLS sent: {command!r}")
-            return True
-        logger.warning(f"[SteamHandoff] SLS pipe write failed or pipe unavailable for: {command!r}")
-    except Exception as e:
-        logger.warning(f"[SteamHandoff] SLS send failed: {e}")
-    return False
+    """Send command to the Steam-native install pipe (/tmp/SLSsteam.API)."""
+    return _slssteam_api_send(command)
 
 
 def deploy_bundled_plugins(plugins_dir: Path) -> bool:
@@ -371,7 +723,8 @@ def perform_steam_handoff(
 
         # Schedule smart background retry pipe to bridge the 15-20s Steam scheduler delay
         try:
-            from utils.slssteam_integration import _silent_background_retry_pipe
+            from core.native_steam.native_steam_handoff import _silent_background_retry_pipe
+
             _silent_background_retry_pipe(appid, library_index, max_retries=6, library_path=dest_path)
         except Exception as e:
             logger.debug(f"[SteamHandoff] Error scheduling background retry: {e}")

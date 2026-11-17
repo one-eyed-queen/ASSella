@@ -150,14 +150,6 @@ from utils.yaml.repair import (  # noqa: F401
     fix_slssteam_config_indentation,
 )
 
-from utils.yaml.slssteam import (  # noqa: F401
-    ensure_slssteam_api_enabled,
-    ensure_slssteam_logging_enabled,
-    ensure_slssteam_prerequisites,
-    ensure_smart_tickets_enabled,
-    is_smart_tickets_enabled,
-)
-
 from utils.yaml.tokens import (  # noqa: F401
     _fix_app_tokens_indentation,
     _get_app_tokens_section,

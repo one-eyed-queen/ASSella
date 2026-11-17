@@ -9,16 +9,9 @@ Features:
      ("Hi, Your adventure begins" + "Next →" button) on completion.
   2. Hubcap API: Minimal API key field with dynamic Paste/Validate button,
      auto-mode ISP bypass validation, and clean User/Quota/Route status.
-  3. SLSsteam Setup: Distro detection, Steam client type (Flatpak/Native),
-     fresh Steam library warning, binary detection, "Run Headcrab" terminal
-     launcher, and automatic API: yes config toggle.
-  4. at0-m Native Downloads: Toggle to enable at0-m native Steam client downloads,
-     immediate distro-aware plugin deployment (the Katamari family),
-     and Plugins: yes in config.yaml.
-  5. Preferences & Maintenance: Config fixer with live check and conditional Fix
-     button (only shown when issues detected), LAN Cache toggle, default download
-     location, default download behavior, Open Sans font selection, "Apply Recommended",
-     and "Finish & Start Exploring".
+  3. Preferences & Maintenance: Config check with live status, LAN Cache toggle,
+     default download location, default download behavior, Open Sans font
+     selection, "Apply Recommended", and "Finish & Start Exploring".
 """
 
 import logging
@@ -81,10 +74,7 @@ class CanaryWelcomeDialog(QDialog):
     """Compact frameless 640x360 onboarding slideshow matching the GIF dimensions."""
 
     _hubcap_val_signal = pyqtSignal(bool, dict, str)
-    _sls_check_signal = pyqtSignal(bool, dict)
-    _headcrab_done_signal = pyqtSignal()
     _config_check_signal = pyqtSignal(tuple)
-    _at0m_deploy_signal = pyqtSignal(bool, str)
 
     def __init__(self, parent: Optional[QWidget] = None, manual: bool = False):
         super().__init__(parent)
@@ -112,10 +102,7 @@ class CanaryWelcomeDialog(QDialog):
 
         # Connect signals
         self._hubcap_val_signal.connect(self._on_hubcap_validated)
-        self._sls_check_signal.connect(self._on_sls_check_result)
-        self._headcrab_done_signal.connect(self._on_headcrab_finished)
         self._config_check_signal.connect(self._on_config_check_result)
-        self._at0m_deploy_signal.connect(self._on_at0m_deploy_done)
 
         self._init_ui()
 
@@ -257,18 +244,14 @@ class CanaryWelcomeDialog(QDialog):
         self.stack = QStackedWidget(self.outer_frame)
         self.stack.setFixedSize(638, 358)
 
-        # 5 Slides
+        # 3 Slides
         self.slide_awakening = self._build_slide_awakening()
         self.slide_hubcap = self._build_slide_hubcap()
-        self.slide_sls = self._build_slide_sls()
-        self.slide_at0m = self._build_slide_at0m()
         self.slide_preferences = self._build_slide_preferences()
 
         self.stack.addWidget(self.slide_awakening)    # 0
         self.stack.addWidget(self.slide_hubcap)       # 1
-        self.stack.addWidget(self.slide_sls)          # 2
-        self.stack.addWidget(self.slide_at0m)         # 3
-        self.stack.addWidget(self.slide_preferences)  # 4
+        self.stack.addWidget(self.slide_preferences)  # 2
 
         frame_layout.addWidget(self.stack)
         root_layout.addWidget(self.outer_frame)
@@ -286,7 +269,7 @@ class CanaryWelcomeDialog(QDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
-        steps = ["Awakening", "Hubcap API", "SLSsteam", "at0-m", "Preferences"]
+        steps = ["Awakening", "Hubcap API", "Preferences"]
         stepper_layout = QHBoxLayout()
         stepper_layout.setSpacing(8)
 
@@ -680,544 +663,12 @@ class CanaryWelcomeDialog(QDialog):
             self.lbl_key_status.setText(f"Validation failed: {error_msg}")
             self.lbl_key_status.setStyleSheet(f"color: {error_color}; font-size: 9pt;")
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Slide 3: SLSsteam Setup Screen (Enhanced & Well-Fitted Layout)
-    # ──────────────────────────────────────────────────────────────────────────
-
-    def _build_slide_sls(self) -> QWidget:
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(24, 14, 24, 14)
-        layout.setSpacing(10)
-
-        layout.addWidget(self._create_header_bar(current_step=2))
-
-        t_lbl = QLabel("SLSsteam Setup & Environment")
-        t_lbl.setStyleSheet(f"font-size: 14pt; font-weight: bold; color: {self.accent_color};")
-        layout.addWidget(t_lbl)
-
-        # 2 Rich Cards side-by-side
-        cols = QHBoxLayout()
-        cols.setSpacing(16)
-
-        # Card 1: Linux & Steam System
-        card1 = QFrame()
-        card1.setObjectName("WelcomeCard1")
-        card1.setStyleSheet(f"""
-            QFrame#WelcomeCard1 {{
-                background-color: {self.card_bg};
-                border: 1px solid {self.card_border};
-                border-radius: 8px;
-            }}
-            QLabel {{
-                border: none;
-                background: transparent;
-            }}
-        """)
-        c1 = QVBoxLayout(card1)
-        c1.setContentsMargins(16, 14, 16, 14)
-        c1.setSpacing(8)
-
-        c1_title = QLabel("Linux & Steam System")
-        c1_title.setStyleSheet("font-size: 10.5pt; font-weight: bold; color: #FFFFFF;")
-        c1.addWidget(c1_title)
-
-        distro_name = get_linux_distro()
-        self.lbl_distro = QLabel(f"Distro: {distro_name}")
-        self.lbl_distro.setStyleSheet("font-size: 9.5pt; color: rgba(255,255,255,0.9);")
-        c1.addWidget(self.lbl_distro)
-
-        from core.steam_helpers import get_steam_env
-        from utils.slssteam_integration import is_steam_process_running
-        env = get_steam_env()
-        steam_type = "Flatpak" if env.is_flatpak else "Native"
-        steam_detected = env.steam_found()
-        steam_running = is_steam_process_running()
-
-        self.lbl_steam_type = QLabel(f"Steam Client: {steam_type}" if steam_detected else "Steam Client: Not Detected")
-        self.lbl_steam_type.setStyleSheet("font-size: 9.5pt; color: rgba(255,255,255,0.9);")
-        c1.addWidget(self.lbl_steam_type)
-
-        self.lbl_steam_process = QLabel(f"Steam Process: {'Running' if steam_running else 'Stopped'}")
-        p_color = self.semantic.get("success", "#81c784") if steam_running else self.semantic.get("warn", "#ffb74d")
-        self.lbl_steam_process.setStyleSheet(f"font-size: 9pt; color: {p_color};")
-        c1.addWidget(self.lbl_steam_process)
-
-        self.lbl_steam_notice = QLabel(
-            "Notice: Fresh Steam install detected. Download any free game to initialize library paths before proceeding."
-        )
-        self.lbl_steam_notice.setWordWrap(True)
-        self.lbl_steam_notice.setStyleSheet(f"font-size: 8pt; color: {self.semantic.get('warn', '#ffb74d')};")
-        self.lbl_steam_notice.setVisible(not steam_detected)
-        c1.addWidget(self.lbl_steam_notice)
-
-        c1.addStretch()
-        cols.addWidget(card1, 1)
-
-        # Card 2: SLSsteam Integration Engine
-        card2 = QFrame()
-        card2.setObjectName("WelcomeCard2")
-        card2.setStyleSheet(f"""
-            QFrame#WelcomeCard2 {{
-                background-color: {self.card_bg};
-                border: 1px solid {self.card_border};
-                border-radius: 8px;
-            }}
-            QLabel {{
-                border: none;
-                background: transparent;
-            }}
-        """)
-        c2 = QVBoxLayout(card2)
-        c2.setContentsMargins(16, 14, 16, 14)
-        c2.setSpacing(8)
-
-        c2_title = QLabel("SLSsteam Integration Engine")
-        c2_title.setStyleSheet("font-size: 10.5pt; font-weight: bold; color: #FFFFFF;")
-        c2.addWidget(c2_title)
-
-        self.lbl_sls_status = QLabel("Checking SLSsteam installation...")
-        self.lbl_sls_status.setStyleSheet("font-size: 9.5pt;")
-        c2.addWidget(self.lbl_sls_status)
-
-        self.lbl_cmd_hint = QLabel("curl -fsSL headcrab.pages.dev | bash")
-        self.lbl_cmd_hint.setStyleSheet("font-size: 8.5pt; color: rgba(255,255,255,0.55); font-family: monospace;")
-        c2.addWidget(self.lbl_cmd_hint)
-
-        self.btn_run_headcrab = QPushButton("Run Headcrab Installer")
-        self.btn_run_headcrab.setFixedHeight(34)
-        self.btn_run_headcrab.setStyleSheet(self._btn_secondary_style())
-        self.btn_run_headcrab.clicked.connect(self._run_headcrab_installer)
-        c2.addWidget(self.btn_run_headcrab)
-
-        self.btn_recheck_sls = QPushButton("Check Again")
-        self.btn_recheck_sls.setFixedHeight(34)
-        self.btn_recheck_sls.setStyleSheet(self._btn_secondary_style())
-        self.btn_recheck_sls.clicked.connect(self._check_sls_installation)
-        c2.addWidget(self.btn_recheck_sls)
-
-        self.lbl_api_toggled = QLabel("")
-        self.lbl_api_toggled.setStyleSheet(f"font-size: 8.5pt; color: {self.accent_color};")
-        c2.addWidget(self.lbl_api_toggled)
-
-        c2.addStretch()
-        cols.addWidget(card2, 1)
-
-        layout.addLayout(cols)
-        layout.addStretch()
-
-        # Bottom navigation
-        nav_row = QHBoxLayout()
-        nav_row.setSpacing(12)
-
-        btn_back = QPushButton("← Back")
-        btn_back.setFixedHeight(36)
-        btn_back.setStyleSheet(self._btn_secondary_style())
-        btn_back.clicked.connect(lambda: self.stack.setCurrentIndex(1))
-        nav_row.addWidget(btn_back)
-
-        btn_skip = QPushButton("Skip for Now")
-        btn_skip.setFixedHeight(36)
-        btn_skip.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                border: none;
-                color: rgba(255, 255, 255, 0.5);
-                font-size: 8.5pt;
-                padding: 0 12px;
-            }
-            QPushButton:hover {
-                color: rgba(255, 255, 255, 0.85);
-            }
-        """)
-        btn_skip.clicked.connect(lambda: self.stack.setCurrentIndex(3))
-        nav_row.addWidget(btn_skip)
-
-        nav_row.addStretch()
-
-        btn_next = QPushButton("Next →")
-        btn_next.setFixedSize(115, 36)
-        btn_next.setStyleSheet(self._btn_primary_style())
-        btn_next.clicked.connect(lambda: self.stack.setCurrentIndex(3))
-        nav_row.addWidget(btn_next)
-        layout.addLayout(nav_row)
-
-        QTimer.singleShot(150, self._check_sls_installation)
-
-        return widget
-
-    def _check_sls_installation(self) -> None:
-        self.lbl_sls_status.setText("Checking SLSsteam installation...")
-        def _worker():
-            try:
-                from core.steam_helpers import get_steam_env
-                from utils.slssteam_integration import check_slssteam_binary_is_latest
-                env = get_steam_env()
-                installed = env.sls_installed()
-                ver = check_slssteam_binary_is_latest() if installed else {"status": "no_local"}
-                self._sls_check_signal.emit(installed, ver)
-            except Exception as e:
-                self._sls_check_signal.emit(False, {"status": "error", "error": str(e)})
-
-        threading.Thread(target=_worker, daemon=True).start()
-
-    @pyqtSlot(bool, dict)
-    def _on_sls_check_result(self, installed: bool, ver: dict) -> None:
-        success_color = self.semantic.get("success", "#81c784")
-        warn_color = self.semantic.get("warn", "#ffb74d")
-        error_color = self.semantic.get("error", "#e57373")
-
-        if installed:
-            ver_status = ver.get("status", "")
-            tag = ver.get("release_tag", "")
-            tag_str = f" ({tag})" if tag else ""
-
-            if ver_status == "outdated":
-                self.lbl_sls_status.setText(f"SLSsteam is installed but outdated{tag_str}.")
-                self.lbl_sls_status.setStyleSheet(f"color: {warn_color}; font-size: 9.5pt;")
-                self.lbl_cmd_hint.show()
-                self.btn_run_headcrab.show()
-                self.btn_recheck_sls.show()
-            else:
-                self.lbl_sls_status.setText(f"SLSsteam is installed and ready. Go ahead!{tag_str}")
-                self.lbl_sls_status.setStyleSheet(f"color: {success_color}; font-size: 9.5pt; font-weight: 500;")
-                self.lbl_cmd_hint.hide()
-                self.btn_run_headcrab.hide()
-                self.btn_recheck_sls.show()
-
-            self._ensure_api_in_config()
-        else:
-            self.lbl_sls_status.setText("SLSsteam is not detected.")
-            self.lbl_sls_status.setStyleSheet(f"color: {error_color}; font-size: 9.5pt;")
-            self.lbl_cmd_hint.show()
-            self.btn_run_headcrab.show()
-            self.btn_recheck_sls.show()
-
-    def _ensure_api_in_config(self) -> None:
-        try:
-            from core.steam_helpers import get_steam_env
-            from utils.yaml_config_manager import update_yaml_boolean_value
-            env = get_steam_env()
-            if env.sls_config_path.exists():
-                update_yaml_boolean_value(env.sls_config_path, "API", True)
-                self.settings.setValue("experimental_acf_independent", True)
-                self.settings.setValue("sls_config_management", True)
-                self.settings.setValue("prompt_steam_restart", False)
-                self.settings.sync()
-                self.lbl_api_toggled.setText("✓ API: yes automatically enabled in config.yaml")
-        except Exception as e:
-            logger.debug(f"Failed to auto-toggle API: yes: {e}")
-
-    def _run_headcrab_installer(self) -> None:
-        self.btn_run_headcrab.setEnabled(False)
-        self.btn_run_headcrab.setText("Running in Terminal...")
-
-        cmd = "curl -fsSL headcrab.pages.dev | bash; echo ''; echo 'Press Enter to finish...'; read"
-        terminals = [
-            ["konsole", "-e", "bash", "-c", cmd],
-            ["gnome-terminal", "--", "bash", "-c", cmd],
-            ["alacritty", "-e", "bash", "-c", cmd],
-            ["kitty", "bash", "-c", cmd],
-            ["xterm", "-e", "bash", "-c", cmd],
-            ["xdg-terminal-exec", "bash", "-c", cmd],
-        ]
-
-        def _runner():
-            proc = None
-            for t in terminals:
-                bin_path = shutil.which(t[0])
-                if bin_path:
-                    try:
-                        proc = subprocess.Popen([bin_path] + t[1:])
-                        break
-                    except Exception:
-                        pass
-            if proc is None:
-                proc = subprocess.Popen(["bash", "-c", "curl -fsSL headcrab.pages.dev | bash"])
-
-            if proc:
-                proc.wait()
-
-            self._headcrab_done_signal.emit()
-
-        threading.Thread(target=_runner, daemon=True).start()
-
-    @pyqtSlot()
-    def _on_headcrab_finished(self) -> None:
-        self.btn_run_headcrab.setEnabled(True)
-        self.btn_run_headcrab.setText("Run Headcrab Installer")
-        self._check_sls_installation()
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # Slide 4: at0-m Native Steam Client Downloads
-    # ──────────────────────────────────────────────────────────────────────────
-
-    def _build_slide_at0m(self) -> QWidget:
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(24, 14, 24, 14)
-        layout.setSpacing(10)
-
-        layout.addWidget(self._create_header_bar(current_step=3))
-
-        t_lbl = QLabel("at0-m Native Steam Client Downloads")
-        t_lbl.setStyleSheet(f"font-size: 14pt; font-weight: bold; color: {self.accent_color};")
-        layout.addWidget(t_lbl)
-
-        sub_lbl = QLabel(
-            "With atom you can download using native steam client. you can configure this in settings - at0m section later."
-        )
-        sub_lbl.setWordWrap(True)
-        sub_lbl.setStyleSheet("color: rgba(255, 255, 255, 0.7); font-size: 9pt;")
-        layout.addWidget(sub_lbl)
-
-        # Toggle Card
-        card = QFrame()
-        card.setObjectName("WelcomeAt0mCard")
-        card.setStyleSheet(f"""
-            QFrame#WelcomeAt0mCard {{
-                background-color: {self.card_bg};
-                border: 1px solid {self.card_border};
-                border-radius: 8px;
-            }}
-            QLabel {{
-                border: none;
-                background: transparent;
-            }}
-        """)
-        c_layout = QVBoxLayout(card)
-        c_layout.setContentsMargins(18, 16, 18, 16)
-        c_layout.setSpacing(10)
-
-        is_enabled = self.settings.value("enable_at0m", self.settings.value("enable_vapor", False, type=bool), type=bool)
-        
-        toggle_row = QHBoxLayout()
-        toggle_row.setSpacing(12)
-        toggle_row.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-
-        self.toggle_enable_at0m = SwitchToggle(
-            checked=is_enabled,
-            active_color="#4CAF50",
-            inactive_color="#374151",
-            width=44,
-            height=22,
-            parent=self,
-        )
-        self.chk_enable_at0m = self.toggle_enable_at0m  # Compatibility alias
-
-        lbl_toggle = QLabel("Enable at0-m (Native Steam Client Downloads)")
-        lbl_toggle.setStyleSheet("font-size: 10.5pt; font-weight: bold; color: #FFFFFF;")
-        lbl_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
-        lbl_toggle.mousePressEvent = lambda _ev: self.toggle_enable_at0m.setChecked(not self.toggle_enable_at0m.isChecked())
-
-        self.lbl_at0m_badge = QLabel("ENABLED" if is_enabled else "DISABLED")
-        self.lbl_at0m_badge.setStyleSheet(self._at0m_badge_style(is_enabled))
-
-        toggle_row.addWidget(self.toggle_enable_at0m)
-        toggle_row.addWidget(lbl_toggle)
-        toggle_row.addWidget(self.lbl_at0m_badge)
-        toggle_row.addStretch()
-        c_layout.addLayout(toggle_row)
-
-        self.toggle_enable_at0m.toggled.connect(self._on_at0m_toggled)
-
-        self.lbl_at0m_feedback = QLabel("")
-        self.lbl_at0m_feedback.setStyleSheet(f"font-size: 9pt; color: {self.semantic.get('success', '#81c784')}; border: none; background: transparent;")
-        self.lbl_at0m_feedback.hide()
-        c_layout.addWidget(self.lbl_at0m_feedback)
-
-        lbl_desc = QLabel(
-            "When enabled, essential required plugins are deployed to your SLSsteam plugins "
-            "directory and Plugins: yes is set in config.yaml. You can configure additional plugins later in Settings → at0-m / Plugins."
-        )
-        lbl_desc.setWordWrap(True)
-        lbl_desc.setStyleSheet("color: rgba(255, 255, 255, 0.6); font-size: 8.5pt; border: none; background: transparent;")
-        c_layout.addWidget(lbl_desc)
-
-        layout.addWidget(card)
-        layout.addStretch()
-
-        # Bottom navigation
-        nav_row = QHBoxLayout()
-        nav_row.setSpacing(12)
-
-        btn_back = QPushButton("← Back")
-        btn_back.setFixedHeight(36)
-        btn_back.setStyleSheet(self._btn_secondary_style())
-        btn_back.clicked.connect(lambda: self.stack.setCurrentIndex(2))
-        nav_row.addWidget(btn_back)
-
-        btn_skip = QPushButton("Skip for Now")
-        btn_skip.setFixedHeight(36)
-        btn_skip.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                border: none;
-                color: rgba(255, 255, 255, 0.5);
-                font-size: 8.5pt;
-                padding: 0 12px;
-            }
-            QPushButton:hover {
-                color: rgba(255, 255, 255, 0.85);
-            }
-        """)
-        btn_skip.clicked.connect(lambda: self._advance_to_preferences())
-        nav_row.addWidget(btn_skip)
-
-        nav_row.addStretch()
-
-        btn_next = QPushButton("Next →")
-        btn_next.setFixedSize(115, 36)
-        btn_next.setStyleSheet(self._btn_primary_style())
-        btn_next.clicked.connect(lambda: self._advance_to_preferences())
-        nav_row.addWidget(btn_next)
-        layout.addLayout(nav_row)
-
-        return widget
-
-    def _at0m_badge_style(self, enabled: bool) -> str:
-        if enabled:
-            return (
-                "font-size: 8pt; font-weight: bold; color: #81c784; "
-                "background-color: rgba(76, 175, 80, 0.16); "
-                "border: 1px solid rgba(76, 175, 80, 0.4); "
-                "border-radius: 4px; padding: 2px 7px;"
-            )
-        return (
-            "font-size: 8pt; font-weight: bold; color: rgba(255, 255, 255, 0.5); "
-            "background-color: rgba(255, 255, 255, 0.06); "
-            "border: 1px solid rgba(255, 255, 255, 0.15); "
-            "border-radius: 4px; padding: 2px 7px;"
-        )
-
-    # at0-m toggle: on = set Plugins: yes and deploy the plugin family (from
-    # R2, or the plugins packed with EXE-fingerprinter when R2 is unreachable); off =
-    # put the plugins folder and config.yaml back as they were before.
-
-    def _at0m_feedback(self, text: str, error: bool = False) -> None:
-        color = self.semantic.get("error", "#E57373") if error else self.semantic.get("success", "#81c784")
-        self.lbl_at0m_feedback.setStyleSheet(f"font-size: 9pt; color: {color}; border: none; background: transparent;")
-        self.lbl_at0m_feedback.setText(text)
-        self.lbl_at0m_feedback.show()
-
-    def _set_at0m_state(self, enabled: bool) -> None:
-        self.settings.setValue("enable_at0m", enabled)
-        self.settings.setValue("enable_vapor", enabled)
-        self.settings.sync()
-        if hasattr(self, "lbl_at0m_badge"):
-            self.lbl_at0m_badge.setText("ENABLED" if enabled else "DISABLED")
-            self.lbl_at0m_badge.setStyleSheet(self._at0m_badge_style(enabled))
-        if self.toggle_enable_at0m.isChecked() != enabled:
-            self.toggle_enable_at0m.blockSignals(True)
-            self.toggle_enable_at0m.setChecked(enabled)
-            self.toggle_enable_at0m.blockSignals(False)
-
-    def _take_at0m_snapshot(self, cfg_path: Path) -> dict:
-        from utils.yaml_config_manager import get_sls_plugins_dirs
-
-        snap = {"config": (cfg_path, cfg_path.read_bytes()), "plugins": {}}
-        for d in get_sls_plugins_dirs():
-            files = {}
-            if d.is_dir():
-                for f in d.iterdir():
-                    if f.is_file() and (f.name.endswith(".lua") or f.name.endswith(".lua.bak")):
-                        files[f.name] = f.read_bytes()
-            snap["plugins"][d] = (d.is_dir(), files)
-        return snap
-
-    def _restore_at0m_snapshot(self) -> None:
-        snap = getattr(self, "_at0m_snapshot", None)
-        if not snap:
-            return
-        for d, (existed, files) in snap["plugins"].items():
-            if not d.is_dir():
-                continue
-            for f in list(d.iterdir()):
-                if f.is_file() and (f.name.endswith(".lua") or f.name.endswith(".lua.bak")) and f.name not in files:
-                    f.unlink()
-            for name, data in files.items():
-                target = d / name
-                if not target.is_file() or target.read_bytes() != data:
-                    target.write_bytes(data)
-            if not existed and not any(d.iterdir()):
-                d.rmdir()
-        cfg_path, data = snap["config"]
-        if cfg_path.is_file():
-            with open(cfg_path, "wb") as f:  # in place: SLSsteam watches this inode
-                f.write(data)
-        self._at0m_snapshot = None
-
-    def _on_at0m_toggled(self, checked: bool) -> None:
-        if not checked:
-            try:
-                self._restore_at0m_snapshot()
-                self._at0m_feedback("at0-m disabled. Plugins and config.yaml were put back as they were.")
-            except Exception as e:
-                logger.warning(f"[Onboarding] Could not revert at0-m setup: {e}")
-                self._at0m_feedback(f"at0-m disabled, but undoing the setup failed: {e}", error=True)
-            self._set_at0m_state(False)
-            return
-
-        from core.steam_helpers import get_steam_env
-
-        cfg_path = get_steam_env().sls_config_path
-        if not cfg_path.exists():
-            self._set_at0m_state(False)
-            self._at0m_feedback(
-                "SLSsteam isn't set up yet (no config.yaml), so at0-m can't be enabled. "
-                "Install SLSsteam first, then turn this on.",
-                error=True,
-            )
-            return
-
-        try:
-            self._at0m_snapshot = self._take_at0m_snapshot(cfg_path)
-        except Exception as e:
-            self._set_at0m_state(False)
-            self._at0m_feedback(f"Could not read the SLSsteam folders: {e}", error=True)
-            return
-
-        self._set_at0m_state(True)
-        self.toggle_enable_at0m.setEnabled(False)
-        self._at0m_feedback("Installing plugins...")
-
-        def _work():
-            try:
-                from utils.yaml_config_manager import deploy_all_sls_plugins, update_yaml_boolean_value
-
-                update_yaml_boolean_value(cfg_path, "Plugins", True)
-                ok, msgs = deploy_all_sls_plugins(essential_only=True)
-                problems = "" if ok else "\n".join(str(m) for m in msgs if "fail" in str(m).lower() or "could not" in str(m).lower())
-                self._at0m_deploy_signal.emit(ok, problems)
-            except Exception as e:
-                self._at0m_deploy_signal.emit(False, str(e))
-
-        threading.Thread(target=_work, daemon=True).start()
-
-    @pyqtSlot(bool, str)
-    def _on_at0m_deploy_done(self, ok: bool, problems: str) -> None:
-        self.toggle_enable_at0m.setEnabled(True)
-        if ok:
-            self._at0m_feedback("Essential plugins installed and Plugins: yes set in config.yaml.")
-            return
-        # Neither R2 nor the packed plugins worked: undo and say why.
-        try:
-            self._restore_at0m_snapshot()
-        except Exception as e:
-            logger.warning(f"[Onboarding] Could not revert after failed deploy: {e}")
-        self._set_at0m_state(False)
-        self._at0m_feedback(
-            "Could not install the plugins (the plugin server was unreachable and the copies packed with "
-            f"EXE-fingerprinter could not be used), so at0-m was left off.\n{problems}".rstrip(),
-            error=True,
-        )
-
     def _advance_to_preferences(self) -> None:
-        self.stack.setCurrentIndex(4)
+        self.stack.setCurrentIndex(2)
         self._run_config_check_async()
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Slide 5: Advanced Preferences & Config Fixer (Refined & Glowed-Up!)
+    # Slide 3: Advanced Preferences & Config Check (Refined & Glowed-Up!)
     # ──────────────────────────────────────────────────────────────────────────
 
     def _build_slide_preferences(self) -> QWidget:
@@ -1244,7 +695,7 @@ class CanaryWelcomeDialog(QDialog):
         c1_title.setStyleSheet("font-size: 10.5pt; font-weight: bold; color: #FFFFFF;")
         c1.addWidget(c1_title)
 
-        self.lbl_config_status = QLabel("SLS Config: Checking...")
+        self.lbl_config_status = QLabel("Config: Checking...")
         self.lbl_config_status.setStyleSheet("font-size: 9pt; color: #FFFFFF;")
         c1.addWidget(self.lbl_config_status)
 
@@ -1374,11 +825,12 @@ class CanaryWelcomeDialog(QDialog):
         return widget
 
     def _run_config_check_async(self) -> None:
-        self.lbl_config_status.setText("SLS Config: Checking...")
+        self.lbl_config_status.setText("Config: Checking...")
         def _worker():
             try:
-                from utils.assfixer import check_config_status
-                res = check_config_status()
+                from utils.paths import Paths
+                ok = Paths.depot_downloader_dll().exists()
+                res = (True, "Download backend ready" if ok else "Download backend missing", [])
             except Exception as e:
                 res = (False, f"Check failed: {e}", [])
             self._config_check_signal.emit(res)
@@ -1391,26 +843,18 @@ class CanaryWelcomeDialog(QDialog):
         success_color = self.semantic.get("success", "#81c784")
         warn_color = self.semantic.get("warn", "#ffb74d")
         if not needs_repair:
-            self.lbl_config_status.setText("SLS Config: Healthy & Up to date")
+            self.lbl_config_status.setText("Config: Healthy & Up to date")
             self.lbl_config_status.setStyleSheet(f"color: {success_color}; font-size: 9pt; font-weight: 500;")
             self.btn_run_fix.hide()
         else:
-            self.lbl_config_status.setText(f"SLS Config: {status_msg}")
+            self.lbl_config_status.setText(f"Config: {status_msg}")
             self.lbl_config_status.setStyleSheet(f"color: {warn_color}; font-size: 9pt;")
             self.btn_run_fix.show()
 
     def _run_config_repair(self) -> None:
         self.btn_run_fix.setEnabled(False)
-        self.btn_run_fix.setText("Fixing...")
-        def _worker():
-            try:
-                from utils.assfixer import repair_and_sync_config, check_config_status
-                repair_and_sync_config()
-                res = check_config_status()
-            except Exception as e:
-                res = (False, str(e), [])
-            self._config_check_signal.emit(res)
-        threading.Thread(target=_worker, daemon=True).start()
+        self.btn_run_fix.setText("Checking...")
+        self._run_config_check_async()
 
     def _apply_recommended_defaults(self) -> None:
         self.chk_lan_cache.setChecked(True)
@@ -1418,7 +862,7 @@ class CanaryWelcomeDialog(QDialog):
         self.combo_location.setCurrentIndex(0)  # Ask every time
         self.combo_font.setCurrentIndex(0)      # Open Sans
 
-        self._run_config_repair()
+        self._run_config_check_async()
 
     def _save_and_finish(self) -> None:
         self.settings.setValue("use_lancache", self.chk_lan_cache.isChecked())

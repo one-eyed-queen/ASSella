@@ -40,7 +40,6 @@ from utils.yaml_config_manager import (
     ensure_plugins_enabled,
     _get_section_bounds,
 )
-from utils.sls_bridge import SLSBridge
 from utils.plugin_games import (
     SHARED_REDISTS,
     build_depot_comment,
@@ -64,6 +63,69 @@ class _WorkerBridge(QObject):
 
 class _EnrichmentBridge(QObject):
     enriched = pyqtSignal()
+
+
+def _installed_depot_ids(appid: str) -> Set[str]:
+    """The depot ids this appid actually has installed.
+
+    The library scan knows them, but the scan may not have run yet, so the
+    appmanifest on disk is the fallback.
+    """
+    appid_str = str(appid)
+    try:
+        from utils.games_cache import get_games_cache
+        for g in get_games_cache().get_games() or []:
+            if str(g.get("appid", "")) != appid_str:
+                continue
+            installed = g.get("installed_depots") or {}
+            if isinstance(installed, dict):
+                return {str(d) for d in installed.keys()}
+            break
+    except Exception as e:
+        logger.debug(f"[DepotsTab] Could not read the installed depots for {appid_str}: {e}")
+
+    try:
+        from utils.steam_acf import find_appmanifest_path, parse_acf_file
+
+        acf_path = find_appmanifest_path({"appid": appid_str}, appid_str)
+        if acf_path:
+            parsed = parse_acf_file(acf_path)
+            installed = parsed.get("AppState", {}).get("InstalledDepots", {}) or {}
+            return {str(d) for d in installed.keys()}
+    except Exception as e:
+        logger.debug(f"[DepotsTab] Could not read the appmanifest for {appid_str}: {e}")
+    return set()
+
+
+def _detect_install_platform(appid: str, depots_dict: Dict[str, dict]) -> Optional[str]:
+    """The platform the user has installed: "windows", "linux" or "macos".
+
+    Steam ships one depot per platform for multi-platform titles. A Proton
+    install only ever uses the Windows depot, so counting the Linux depot as
+    missing keeps the game in key-pending forever.
+    """
+    installed = _installed_depot_ids(appid)
+    if not installed:
+        return None
+
+    platforms: Set[str] = set()
+    for did in installed:
+        ddata = depots_dict.get(did)
+        if not isinstance(ddata, dict):
+            continue
+        parts = [p.strip().lower() for p in str(ddata.get("oslist") or "").split(",") if p.strip()]
+        if len(parts) != 1:
+            continue  # a depot that serves several platforms tells us nothing
+        if parts[0] == "windows":
+            platforms.add("windows")
+        elif parts[0] == "linux":
+            platforms.add("linux")
+        elif parts[0] in ("macos", "macosx", "osx"):
+            platforms.add("macos")
+
+    if len(platforms) == 1:
+        return platforms.pop()
+    return None
 
 
 def _format_enriched_depot_desc(
@@ -1117,8 +1179,7 @@ def build_depots_panel(dialog, mode: str = "details", on_registered=None) -> QWi
                 missing_depots_map[mid] = {"status": m_stat, "tag": m_tag, "tooltip": m_tip}
 
         try:
-            from managers.at0m_update_checker import At0mUpdateChecker
-            install_platform = At0mUpdateChecker()._detect_install_platform(appid_str, cached_app_depots)
+            install_platform = _detect_install_platform(appid_str, cached_app_depots)
         except Exception:
             install_platform = None
 
@@ -2262,7 +2323,6 @@ def build_depots_panel(dialog, mode: str = "details", on_registered=None) -> QWi
             except Exception as e:
                 logger.debug(f"[DepotsTab] Error updating plugin library on sync: {e}")
 
-            SLSBridge.notify_reload()
             parts = []
             if added_count:
                 parts.append(f"{added_count} added")
@@ -2318,7 +2378,6 @@ def build_depots_panel(dialog, mode: str = "details", on_registered=None) -> QWi
         except Exception as e:
             logger.error(f"[DepotsTab] Could not record AT0-M DLC setup for {appid_str}: {e}", exc_info=True)
 
-        SLSBridge.notify_reload()
         summary = {
             "dlcs": len(selected_dlc_apps),
             "depots": len(reg_depots),
@@ -2450,7 +2509,6 @@ def build_depots_panel(dialog, mode: str = "details", on_registered=None) -> QWi
                                     batch_config_edit,
                                     SHARED_REDISTS,
                                 )
-                                from utils.sls_bridge import SLSBridge
                                 from utils.plugin_games import load_plugin_library, save_plugin_library
 
                                 cfg_path = get_user_config_path()

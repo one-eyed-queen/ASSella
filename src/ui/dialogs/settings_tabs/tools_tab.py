@@ -181,14 +181,12 @@ def create_tools_tab(dialog) -> QWidget:
     export_logs_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     export_logs_btn.setStyleSheet(btn_style)
     export_logs_btn.clicked.connect(lambda: export_diagnostic_logs(dialog))
-    export_logs_btn.setToolTip("Bundle recent EXE-fingerprinter logs, SLSsteam logs, config.yaml, and plugin details into a ZIP archive.")
+    export_logs_btn.setToolTip("Bundle recent EXE-fingerprinter logs and a short system summary into a ZIP archive.")
     btn_row.addWidget(export_logs_btn)
 
     btn_row.addStretch()
     log_layout.addLayout(btn_row)
     layout.addWidget(log_card)
-
-    layout.addWidget(create_sls_logging_card(dialog))
 
     # Optional components (Goldberg / Steamless / SLScheevo) are no longer
     # bundled - this is the one place they can be downloaded or updated.
@@ -199,104 +197,14 @@ def create_tools_tab(dialog) -> QWidget:
     return tab
 
 
-def create_sls_logging_card(dialog):
-    """SLSsteam logging: LogLevels and ExtendedLogging, read from and written
-    straight to config.yaml (the file is the source of truth)."""
-    from PyQt6.QtWidgets import QLabel as _QLabel
-
-    from ui.dialogs.settings_tabs.sls_advanced_tab import SlsConfigBinder
-    from utils.helpers import Material3Switch
-    from utils.yaml.sls_settings import LOG_LEVEL_PRESETS, LOGGING_SETTINGS
-
-    card, lay = dialog._create_card_frame("SLSsteam Logging")
-    lay.setSpacing(12)
-    binder = SlsConfigBinder(card)
-    dialog.sls_logging_binder = binder
-    muted = "color: rgba(255, 255, 255, 0.55); font-size: 8.5pt; background: transparent;"
-
-    if not binder.path.exists():
-        note = _QLabel("SLSsteam's config.yaml was not found, so its logging can't be changed here.")
-        note.setWordWrap(True)
-        note.setStyleSheet(muted)
-        lay.addWidget(note)
-        return card
-
-    def _row(title: str, hint: str, control, status):
-        row = QHBoxLayout()
-        row.setSpacing(12)
-        t = _QLabel(title)
-        t.setStyleSheet("color: #FFFFFF; font-size: 9.5pt; font-weight: 500; background: transparent;")
-        t.setToolTip(hint)
-        row.addWidget(t, 1)
-        row.addWidget(status, 0, Qt.AlignmentFlag.AlignVCenter)
-        row.addWidget(control, 0, Qt.AlignmentFlag.AlignVCenter)
-        lay.addLayout(row)
-
-    # Log level: presets of the LogLevels bit flags; anything else shows as Custom.
-    level_combo = ModernComboBox()
-    level_combo.setFixedWidth(220)
-    for name, value in LOG_LEVEL_PRESETS:
-        level_combo.addItem(f"{name}  (0x{value:x})", value)
-    level_status = _QLabel("")
-    dialog.sls_log_level_combo = level_combo
-
-    def _show_level(v):
-        try:
-            value = int(v) if v is not None else 0x3F
-        except (TypeError, ValueError):
-            value = 0x3F
-        level_combo.blockSignals(True)
-        idx = level_combo.findData(value)
-        if idx < 0:
-            custom = level_combo.findText("Custom", Qt.MatchFlag.MatchStartsWith)
-            if custom >= 0:
-                level_combo.removeItem(custom)
-            level_combo.addItem(f"Custom  (0x{value:x})", value)
-            idx = level_combo.count() - 1
-        level_combo.setCurrentIndex(idx)
-        level_combo.blockSignals(False)
-
-    level_combo.currentIndexChanged.connect(
-        lambda i: binder.write("LogLevels", level_combo.itemData(i)) if i >= 0 else None
-    )
-    binder.bind(LOGGING_SETTINGS["LogLevels"], _show_level, level_status)
-    _row(
-        "Log level",
-        "What SLSsteam writes to ~/.SLSsteam.log. Trace, Once and Debug only appear in debug builds.",
-        level_combo,
-        level_status,
-    )
-
-    ext_switch = Material3Switch(checked=False, accent_color=dialog.accent_color)
-    ext_status = _QLabel("")
-    dialog.sls_extended_logging_switch = ext_switch
-
-    def _show_ext(v):
-        ext_switch.blockSignals(True)
-        ext_switch.setChecked(bool(v))
-        ext_switch.blockSignals(False)
-
-    ext_switch.toggled.connect(lambda checked: binder.write("ExtendedLogging", checked))
-    binder.bind(LOGGING_SETTINGS["ExtendedLogging"], _show_ext, ext_status)
-    _row(
-        "Extended logging",
-        "Logs every Steamworks call. Makes the log very large; only for debugging.",
-        ext_switch,
-        ext_status,
-    )
-
-    binder.reload()
-    return card
-
-
 def export_diagnostic_logs(dialog) -> None:
-    """Bundle latest 2 EXE-fingerprinter logs, SLSsteam log, config.yaml, and plugins info into a ZIP archive."""
+    """Bundle the recent app logs and a short system summary into a ZIP archive."""
+    import platform
     import zipfile
     from datetime import datetime
     from utils.logger import get_base_path
-    from utils.slssteam_integration import _get_sls_log_path
-    from utils.yaml_config_manager import get_user_config_path
-    from managers.katamari_config_manager import get_sls_config_dir, get_katamari_conf_path
+    from utils.paths import Paths
+    from utils.version import app_version
 
     # Flush current log handlers so in-memory logs are committed to disk
     for handler in logging.getLogger().handlers:
@@ -333,47 +241,36 @@ def export_diagnostic_logs(dialog) -> None:
                     zf.write(log_file, arcname=f"logs/{log_file.name}")
                     collected.append(f"EXE-fingerprinter Log: {log_file.name}")
 
-            # 2. SLSsteam log from user home
-            try:
-                sls_log = _get_sls_log_path()
-                if sls_log.exists():
-                    zf.write(sls_log, arcname=f"slssteam/{sls_log.name}")
-                    collected.append(f"SLSsteam Log: {sls_log.name}")
-            except Exception as e:
-                logger.debug(f"[ExportDiag] Error collecting SLS log: {e}")
+            # 2. A short summary: versions, platform, backend path, settings that
+            #    change behaviour. No tokens, passwords or API keys.
+            dll = Paths.depot_downloader_dll()
+            dotnet = shutil.which("dotnet") or "(not on PATH)"
+            interesting = [
+                "accent_color", "background_color", "log_filter_level",
+                "hide_macos_depots", "hide_android_depots", "generate_achievements",
+                "auto_run_steamless_post_install", "isp_bypass_mode",
+                "enable_workshop_downloader",
+            ]
+            summary = [
+                f"EXE-fingerprinter {app_version}",
+                f"Platform: {platform.platform()} ({platform.machine()})",
+                f"Python: {sys.version.split()[0]}",
+                f"Executable: {sys.executable}",
+                f"DepotDownloader backend: {dll} (exists={dll.exists()})",
+                f"dotnet: {dotnet}",
+                "",
+                "Settings:",
+            ]
+            for key in interesting:
+                summary.append(f"  {key} = {dialog.settings.value(key, '')!r}")
+            zf.writestr("system.txt", "\n".join(summary) + "\n")
+            collected.append("System summary")
 
-            # 3. SLSsteam config.yaml
-            try:
-                cfg_path = get_user_config_path()
-                if cfg_path.exists():
-                    zf.write(cfg_path, arcname="slssteam/config.yaml")
-                    collected.append("SLSsteam Config: config.yaml")
-            except Exception as e:
-                logger.debug(f"[ExportDiag] Error collecting config.yaml: {e}")
-
-            # 4. Plugins directory listing & katamari.conf.lua
-            try:
-                sls_cfg_dir = get_sls_config_dir()
-                plugins_dir = sls_cfg_dir / "plugins"
-                plugin_names = []
-                if plugins_dir.is_dir():
-                    plugin_names = sorted([p.name for p in plugins_dir.iterdir() if not p.name.startswith(".")])
-                plugins_listing = "SLSsteam Installed Plugins:\n" + ("\n".join(plugin_names) if plugin_names else "(none)") + "\n"
-                zf.writestr("slssteam/plugins_list.txt", plugins_listing)
-                collected.append(f"Plugins List ({len(plugin_names)} items)")
-
-                kat_conf = get_katamari_conf_path()
-                if kat_conf.exists():
-                    zf.write(kat_conf, arcname="slssteam/katamari.conf.lua")
-                    collected.append("Katamari Config: katamari.conf.lua")
-            except Exception as e:
-                logger.debug(f"[ExportDiag] Error collecting plugins list: {e}")
-
-        summary = "\n• " + "\n• ".join(collected) if collected else "No files collected."
+        summary_text = "\n• " + "\n• ".join(collected) if collected else "No files collected."
         ThemedMessageBox.information(
             dialog,
             "Diagnostics Exported",
-            f"Diagnostic log archive successfully saved to:\n{save_path}\n\nContents:{summary}",
+            f"Diagnostic log archive successfully saved to:\n{save_path}\n\nContents:{summary_text}",
         )
     except Exception as e:
         logger.error(f"Failed to export diagnostic archive: {e}", exc_info=True)
@@ -533,123 +430,3 @@ def update_achievements_button_state(dialog) -> None:
     if hasattr(dialog, "configure_achievements_btn") and dialog.configure_achievements_btn:
         is_enabled = dialog.achievements_checkbox.isChecked() if dialog.achievements_checkbox else False
         dialog.configure_achievements_btn.setEnabled(is_enabled)
-
-
-def update_asshead_status_ui(dialog) -> None:
-    if not hasattr(dialog, "asshead_status_label") or not dialog.asshead_status_label:
-        return
-
-
-def open_sls_config(dialog) -> None:
-    from utils.assfixer import DEFAULT_CONFIG_PATH
-    if not DEFAULT_CONFIG_PATH.exists():
-        ThemedMessageBox.warning(dialog, "Open Config", "SLSsteam config.yaml does not exist.")
-        return
-
-    try:
-        opened = QDesktopServices.openUrl(QUrl.fromLocalFile(str(DEFAULT_CONFIG_PATH)))
-        if not opened:
-            webbrowser.open(DEFAULT_CONFIG_PATH.as_uri())
-    except Exception as e:
-        ThemedMessageBox.critical(dialog, "Error", f"Failed to open config.yaml:\n{e}")
-
-
-def restore_sls_backup(dialog) -> None:
-    from utils.assfixer import restore_latest_backup, DEFAULT_CONFIG_PATH
-
-    reply = ThemedMessageBox.question(
-        dialog, "Restore Backup",
-        "Are you sure you want to restore the latest backup? This will overwrite your current config.yaml.",
-        ThemedMessageBox.StandardButton.Yes | ThemedMessageBox.StandardButton.No,
-        ThemedMessageBox.StandardButton.No
-    )
-    if reply != ThemedMessageBox.StandardButton.Yes:
-        return
-
-    success, msg, bak_path = restore_latest_backup(DEFAULT_CONFIG_PATH)
-    if success:
-        import utils.assfixer
-        utils.assfixer.boot_status = "checking"
-
-        def run_check():
-            utils.assfixer.run_boot_config_check()
-            QMetaObject.invokeMethod(dialog, "_update_asshead_status_ui", Qt.ConnectionType.QueuedConnection)
-            if dialog.main_window and hasattr(dialog.main_window, "refresh_system_status"):
-                QMetaObject.invokeMethod(dialog.main_window, "refresh_system_status", Qt.ConnectionType.QueuedConnection)
-
-        threading.Thread(target=run_check, daemon=True).start()
-        ThemedMessageBox.information(dialog, "Restore Backup", msg)
-    else:
-        ThemedMessageBox.critical(dialog, "Restore Backup Error", msg)
-
-
-def run_asshead_fixer(dialog) -> None:
-    from utils.assfixer import run_asshead_migration, DEFAULT_CONFIG_PATH
-
-    dialog.run_asshead_btn.setEnabled(False)
-    dialog.asshead_status_label.setText("Status: Running fixer...")
-    dialog.asshead_status_label.setStyleSheet("color: #888888;")
-
-    success, msg, bak_path = run_asshead_migration(DEFAULT_CONFIG_PATH)
-    dialog.run_asshead_btn.setEnabled(True)
-
-    if success:
-        import utils.assfixer
-        utils.assfixer.boot_status = "optimal"
-        utils.assfixer.boot_issues = []
-
-        update_asshead_status_ui(dialog)
-        if dialog.main_window and hasattr(dialog.main_window, "refresh_system_status"):
-            dialog.main_window.refresh_system_status()
-
-        detail_msg = msg
-        if bak_path:
-            detail_msg += f"\n\nA backup of your previous config has been saved to:\n{bak_path}"
-        ThemedMessageBox.information(dialog, "ASShead Config Fixer", detail_msg)
-    else:
-        update_asshead_status_ui(dialog)
-        if dialog.main_window and hasattr(dialog.main_window, "refresh_system_status"):
-            dialog.main_window.refresh_system_status()
-        ThemedMessageBox.critical(dialog, "ASShead Config Fixer Error", f"Failed to fix configuration:\n{msg}")
-
-
-def run_denuvo_sync(dialog) -> None:
-    if not hasattr(dialog, "run_denuvo_sync_btn") or not dialog.run_denuvo_sync_btn:
-        return
-    dialog.run_denuvo_sync_btn.setEnabled(False)
-    dialog.asshead_status_label.setText("Status: Syncing Denuvo games...")
-    dialog.asshead_status_label.setStyleSheet("color: #ffaa00;")
-
-    from core.ratings import sync_denuvo_cache_and_config
-
-    def do_sync():
-        res = sync_denuvo_cache_and_config(main_window=dialog.main_window, force=True)
-        dialog._last_denuvo_sync_result = res
-        QMetaObject.invokeMethod(dialog, "_on_denuvo_sync_finished", Qt.ConnectionType.QueuedConnection)
-
-    threading.Thread(target=do_sync, daemon=True).start()
-
-
-def on_denuvo_sync_finished(dialog) -> None:
-    res = getattr(dialog, "_last_denuvo_sync_result", {"success": False, "error": "Unknown error"})
-    if hasattr(dialog, "run_denuvo_sync_btn") and dialog.run_denuvo_sync_btn:
-        dialog.run_denuvo_sync_btn.setEnabled(True)
-    update_asshead_status_ui(dialog)
-
-    if res.get("success"):
-        count = res.get("count", 0)
-        if dialog.main_window and hasattr(dialog.main_window, "refresh_system_status"):
-            dialog.main_window.refresh_system_status()
-        ThemedMessageBox.information(
-            dialog,
-            "Denuvo Sync",
-            f"Successfully synced Denuvo games to your SLSsteam configuration.\nBlocked games count: {count}"
-        )
-    else:
-        if dialog.main_window and hasattr(dialog.main_window, "refresh_system_status"):
-            dialog.main_window.refresh_system_status()
-        ThemedMessageBox.critical(
-            dialog,
-            "Denuvo Sync Error",
-            f"Denuvo Sync failed:\n{res.get('error')}"
-        )

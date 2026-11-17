@@ -3,7 +3,7 @@ import os
 import sys
 from typing import Any, Optional, Tuple
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QSize
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QSize
 from PyQt6.QtGui import QColor, QFont, QMovie, QPainter
 from PyQt6.QtWidgets import (
     QDialog,
@@ -22,7 +22,6 @@ from PyQt6.QtWidgets import (
 from ui.dialogs.themed_message_box import ThemedMessageBox
 
 from ui.dialogs.dialog_helpers import create_standard_buttons
-from ui.dialogs.settings_sls import create_sls_tab
 import ui.dialogs.settings_tabs as tabs
 from ui.dialogs.settings_tabs import (
     MorrenusStatsWidget,
@@ -37,15 +36,8 @@ logger = logging.getLogger(__name__)
 class SettingsDialog(QDialog):
     """Dialog for configuring application settings."""
 
-    assfixer_done_signal = pyqtSignal(tuple)
-    assfixer_repair_done_signal = pyqtSignal(tuple)
-    sls_version_check_signal = pyqtSignal(dict)
-
     def __init__(self, parent: Optional[QWidget] = None, initial_tab: Optional[str] = None):
         super().__init__(parent)
-        self.assfixer_done_signal.connect(self._handle_assfixer_check_done)
-        self.assfixer_repair_done_signal.connect(self._handle_assfixer_repair_done)
-        self.sls_version_check_signal.connect(self._handle_sls_version_check_done)
         self._initial_tab = initial_tab
         self.setWindowTitle("Settings")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
@@ -70,7 +62,6 @@ class SettingsDialog(QDialog):
         self.refined_update_check_checkbox = None
         self.update_provider_combo = None
         self.isp_bypass_hubcap_checkbox = None
-        self.experimental_acf_independent_checkbox = None
         self.fakeappid_db_integration_checkbox = None
         self.remote_web_ui_checkbox = None
         self.max_downloads_spinbox = None
@@ -83,13 +74,8 @@ class SettingsDialog(QDialog):
         self.ignore_steam_demos_checkbox = None
         self.achievements_checkbox = None
         self.auto_apply_goldberg_checkbox = None
-        self.sls_mode_checkbox = None
-        self.sls_config_management_checkbox = None
         self.prompt_steam_restart_checkbox = None
         self.block_steam_updates_checkbox = None
-        self.download_slssteam_button = None
-        self.slssteam_status_label = None
-        self.slssteam_hash_warning_label = None
         self.ignore_online_fixes_checkbox = None
         self.accent_color_button = None
         self.accent_reset_button = None
@@ -106,11 +92,6 @@ class SettingsDialog(QDialog):
         self.auto_tune_checkbox = None
         self.workshop_auto_tune_checkbox = None
         self.workshop_cell_id_input = None
-        self.enable_vapor_checkbox = None
-        self.vapor_disable_updates_checkbox = None
-        self.vapor_download_action_combo = None
-        self.vapor_start_immediate_checkbox = None
-        self.vapor_start_mode_combo = None
         from utils.helpers import create_font_from_settings
         self.current_font = create_font_from_settings(self.settings)
         self.morrenus_stats_widget = None
@@ -166,7 +147,6 @@ class SettingsDialog(QDialog):
         self._original_font_style = self.settings.value("font-style", "Normal", type=str)
         self._original_material_preset = self.settings.value("material_preset", "ocean", type=str)
         self._original_update_interval = self.settings.value("update_check_interval_minutes", 45, type=int)
-        self._original_experimental_acf = self.settings.value("experimental_acf_independent", False, type=bool)
         # These two are written the moment the user flips them, so a Cancel has
         # to put the stored values back.
         self._original_enable_workshop_downloader = self.settings.value(
@@ -498,16 +478,10 @@ class SettingsDialog(QDialog):
         add("Downloads", lambda: tabs.create_downloads_tab(self))
         add("Advanced", lambda: tabs.create_advanced_tab(self))
         add("Integrations", lambda: tabs.create_morrenus_tab(self))
-        add("SLS", lambda: create_sls_tab(self))
-        add("at0-m", lambda: tabs.create_at0m_tab(self))
         add("Companions", self._build_companions_tab)
         add("Health", lambda: tabs.create_health_tab(self))
         add("Tools", lambda: tabs.create_tools_tab(self))
         add("Theme", lambda: tabs.create_style_tab(self))
-
-        # Modular Settings tab unlocked via Konami cheat code
-        if self.settings.value("konami_settings_unlocked", False, type=bool):
-            add("Testing", lambda: tabs.create_mrc_settings_tab(self))
 
         # LuaTools Settings tab unlocked via search secret keyword
         if self.settings.value("luatools_unlocked", False, type=bool):
@@ -520,46 +494,6 @@ class SettingsDialog(QDialog):
         """Wiring that needs widgets from a page, run once that page exists."""
         try:
             self._update_achievements_button_state()
-        except Exception as _silent_err:
-            logger.debug("[settings] _after_page_built: ignored %s", _silent_err, exc_info=False)
-        if self.experimental_acf_independent_checkbox is None or getattr(self, "_acf_gate_done", False):
-            return
-        self._acf_gate_done = True
-
-        # Sanity check: Check SLS requirements to enable/disable experimental_acf_independent_checkbox
-        try:
-            from utils.yaml_config_manager import get_user_config_path
-            from ui.dialogs.settings_sls import get_sls_paths
-            from utils.helpers import is_arm64
-            config_path = get_user_config_path()
-            sls_paths = get_sls_paths()
-
-            sls_detected = config_path.exists() and sls_paths.get("detected", False) and not is_arm64()
-
-            if self.experimental_acf_independent_checkbox is not None:
-                if is_arm64():
-                    self.experimental_acf_independent_checkbox.setChecked(False)
-                    self.experimental_acf_independent_checkbox.setEnabled(False)
-                    self.experimental_acf_independent_checkbox.setToolTip("Disabled: SLSsteam is unavailable on ARM64 architecture.")
-                elif not sls_detected:
-                    self.experimental_acf_independent_checkbox.setChecked(False)
-                    self.experimental_acf_independent_checkbox.setEnabled(False)
-                    tooltip_msg = "Disabled: SLSsteam config.yaml or SLSsteam installation not detected."
-                    if not config_path.exists():
-                        tooltip_msg = "Disabled: SLSsteam config.yaml not found."
-                    elif not sls_paths.get("detected", False):
-                        tooltip_msg = "Disabled: SLSsteam installation not detected."
-                    self.experimental_acf_independent_checkbox.setToolTip(tooltip_msg)
-                else:
-                    self.experimental_acf_independent_checkbox.setEnabled(True)
-        except Exception as e:
-            logger.warning(f"Error checking SLS requirements: {e}")
-
-        # Apply initial state
-        try:
-            if (self.experimental_acf_independent_checkbox is not None
-                    and self.experimental_acf_independent_checkbox.isChecked()):
-                self._on_experimental_acf_toggled(True)
         except Exception as _silent_err:
             logger.debug("[settings] _after_page_built: ignored %s", _silent_err, exc_info=False)
 
@@ -626,25 +560,6 @@ class SettingsDialog(QDialog):
     def _handle_gateway_test_done(self, data) -> None:
         tabs.handle_gateway_test_done(self, data)
 
-    @pyqtSlot(tuple)
-    def _handle_assfixer_check_done(self, result) -> None:
-        tabs.handle_assfixer_check_done(self, result)
-
-    @pyqtSlot(object)
-    def _handle_assfixer_repair_done(self, result) -> None:
-        tabs.handle_assfixer_repair_done(self, result)
-
-    @pyqtSlot(dict)
-    def _handle_sls_version_check_done(self, result: dict) -> None:
-        tabs.handle_sls_version_check_done(self, result)
-
-    @pyqtSlot()
-    def _on_denuvo_sync_finished(self) -> None:
-        tabs.on_denuvo_sync_finished(self)
-
-    def _update_asshead_status_ui(self) -> None:
-        tabs.update_asshead_status_ui(self)
-
     def _update_achievements_button_state(self) -> None:
         tabs.update_achievements_button_state(self)
 
@@ -654,20 +569,8 @@ class SettingsDialog(QDialog):
     def _on_isp_gateway_changed(self, index: int) -> None:
         tabs.on_isp_gateway_changed(self, index)
 
-    def _on_experimental_acf_toggled(self, state) -> None:
-        tabs.on_experimental_acf_toggled(self, state)
-
     def _on_clear_update_cache_clicked(self) -> None:
         tabs.on_clear_update_cache_clicked(self)
-
-    def goldberg_checked_warning(self) -> None:
-        tabs.goldberg_checked_warning(self)
-
-    def goldberg_checked_warning_from_mode(self, mode_type) -> None:
-        tabs.goldberg_checked_warning_from_mode(self, mode_type)
-
-    def goldberg_warning_box(self, checkbox, warning: str) -> bool:
-        return tabs.goldberg_warning_box(self, checkbox, warning)
 
     def uninstall_exe_fingerprinter(self) -> None:
         tabs.uninstall_exe_fingerprinter(self)
@@ -732,18 +635,6 @@ class SettingsDialog(QDialog):
 
     def run_steamless_aio_manually(self) -> None:
         tabs.run_steamless_aio_manually(self)
-
-    def run_asshead_fixer(self) -> None:
-        tabs.run_asshead_fixer(self)
-
-    def run_denuvo_sync(self) -> None:
-        tabs.run_denuvo_sync(self)
-
-    def open_sls_config(self) -> None:
-        tabs.open_sls_config(self)
-
-    def restore_sls_backup(self) -> None:
-        tabs.restore_sls_backup(self)
 
     # ── Static Helper Methods for Backward Compatibility ──────────────────
     @staticmethod
@@ -813,7 +704,6 @@ class SettingsDialog(QDialog):
                 self.service_poll_timer.stop()
             self._save_general_settings()
             self._save_download_settings()
-            self._save_vapor_settings()
             self._save_style_settings()
             self.settings.sync()
             logger.info("All settings saved on close.")
@@ -932,13 +822,6 @@ class SettingsDialog(QDialog):
             logger.debug("[settings] _save_general_settings: ignored %s", _silent_err, exc_info=False)
 
     def _save_download_settings(self) -> None:
-        if self.sls_mode_checkbox is not None:
-            self.settings.setValue("slssteam_mode", self.sls_mode_checkbox.isChecked())
-        if hasattr(self, "sls_config_management_checkbox") and self.sls_config_management_checkbox is not None:
-            self.settings.setValue(
-                "sls_config_management",
-                self.sls_config_management_checkbox.isChecked(),
-            )
         if hasattr(self, "dl_location_combo") and self.dl_location_combo is not None:
             data = self.dl_location_combo.currentData() or ""
             if data != "custom":
@@ -1160,75 +1043,6 @@ class SettingsDialog(QDialog):
                     TorManager.stop_tor()
                 except Exception as _silent_err:
                     logger.debug("[settings] _save_download_settings: ignored %s", _silent_err, exc_info=False)
-
-        if hasattr(self, "experimental_acf_independent_checkbox") and self.experimental_acf_independent_checkbox is not None:
-            is_enabled = self.experimental_acf_independent_checkbox.isChecked()
-            old_acf = getattr(self, "_original_experimental_acf", None)
-            self.settings.setValue("experimental_acf_independent", is_enabled)
-            if is_enabled and (old_acf is None or is_enabled != old_acf):
-                try:
-                    from utils.yaml_config_manager import ensure_slssteam_prerequisites
-                    ensure_slssteam_prerequisites()
-                except Exception as _silent_err:
-                    logger.debug("[settings] _save_download_settings: ignored %s", _silent_err, exc_info=False)
-
-    def _save_vapor_settings(self) -> None:
-        """Save all at0-m / Vapor settings."""
-        cb = getattr(self, "enable_at0m_checkbox", None) or getattr(self, "enable_vapor_checkbox", None)
-        if cb is not None:
-            val = cb.isChecked()
-            self.settings.setValue("enable_at0m", val)
-            self.settings.setValue("enable_vapor", val)
-            self.settings.setValue("use_native_steam_download", val)
-            try:
-                from utils.yaml_config_manager import (
-                    get_user_config_path,
-                    update_yaml_boolean_value,
-                )
-                cfg = get_user_config_path()
-                update_yaml_boolean_value(cfg, "Plugins", val)
-            except Exception as e:
-                logger.debug(f"Error syncing SLS Plugins setting: {e}")
-
-        du_cb = getattr(self, "at0m_disable_updates_checkbox", None) or getattr(self, "vapor_disable_updates_checkbox", None)
-        if du_cb is not None:
-            val = du_cb.isChecked()
-            self.settings.setValue("at0m_disable_updates", val)
-            self.settings.setValue("vapor_disable_updates", val)
-            try:
-                from utils.yaml_config_manager import (
-                    get_user_config_path,
-                    update_yaml_boolean_value,
-                )
-                cfg = get_user_config_path()
-                update_yaml_boolean_value(cfg, "DisableUpdates", val)
-            except Exception as e:
-                logger.warning(f"Error syncing SLS DisableUpdates setting: {e}")
-
-        act_combo = getattr(self, "at0m_download_action_combo", None) or getattr(self, "vapor_download_action_combo", None)
-        if act_combo is not None:
-            action = act_combo.currentData() or "ask"
-            self.settings.setValue("at0m_default_download_action", action)
-            self.settings.setValue("vapor_default_download_action", action)
-            self.settings.setValue("native_steam_default_action", action)
-
-        dlc_act_combo = getattr(self, "at0m_dlc_action_combo", None)
-        if dlc_act_combo is not None:
-            dlc_action = dlc_act_combo.currentData() or "ask"
-            self.settings.setValue("at0m_default_dlc_action", dlc_action)
-
-        start_combo = getattr(self, "at0m_start_mode_combo", None) or getattr(self, "vapor_start_mode_combo", None)
-        if start_combo is not None:
-            start_act = start_combo.currentData() or "immediate"
-            self.settings.setValue("at0m_start_download_action", start_act)
-            self.settings.setValue("vapor_start_download_action", start_act)
-            self.settings.setValue("at0m_start_download_immediately", start_act == "immediate")
-            self.settings.setValue("vapor_start_download_immediately", start_act == "immediate")
-        elif hasattr(self, "vapor_start_immediate_checkbox") and self.vapor_start_immediate_checkbox is not None:
-            self.settings.setValue(
-                "vapor_start_download_immediately",
-                self.vapor_start_immediate_checkbox.isChecked(),
-            )
 
     def _save_style_settings(self) -> bool:
         return tabs.save_style_settings(self)

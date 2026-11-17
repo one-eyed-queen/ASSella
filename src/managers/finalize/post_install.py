@@ -716,25 +716,20 @@ class PostInstallMixin:
 
         # 2. If ACF-Independent mode is active, delegate manifest creation entirely to Steam natively.
         #    Exception: pinned/older builds must use the fallback ACF writer so the pinned buildid
-        #    is preserved — the SLS pipe triggers Steam to fetch the latest PICS data, which would
+        #    is preserved — the Steam install trigger fetches the latest PICS data, which would
         #    overwrite the pinned buildid and potentially queue an unwanted auto-update.
         try:
-            from utils.slssteam_integration import (
-                install_via_sls,
-                _experimental_mode_enabled,
-                _is_slssteam_available,
-                warn_sls_unavailable,
-                is_sls_filewatcher_dead,
-            )
-            if _experimental_mode_enabled():
-                is_pinned = False
-                if appid and appid not in ("0", "N/A", "unknown"):
-                    try:
-                        from utils.settings import get_settings as _gs
-                        is_pinned = _gs().value(f"pin_build/{appid}", False, type=bool)
-                    except Exception:
-                        pass
+            from utils.settings import get_settings
 
+            experimental_mode = get_settings().value("experimental_acf_independent", False, type=bool)
+            is_pinned = False
+            if appid and appid not in ("0", "N/A", "unknown"):
+                try:
+                    is_pinned = get_settings().value(f"pin_build/{appid}", False, type=bool)
+                except Exception:
+                    pass
+
+            if experimental_mode:
                 if is_pinned:
                     logger.info(
                         f"ACF-Independent Mode active but build is pinned for {appid} — "
@@ -744,32 +739,34 @@ class PostInstallMixin:
                 else:
                     logger.info("ACF-Independent Mode is active. Delegating manifest creation to Steam natively.")
 
-                    # Precondition check: warn the user if SLSsteam filewatcher is dead or SLSsteam is not running
-                    if is_sls_filewatcher_dead():
-                        warning_msg = "SLSsteam Filewatcher crashed in Steam. Restart Steam"
-                        logger.warning(f"WARNING: {warning_msg}")
-                        if hasattr(self.main_window, "notify_sls_watcher_crashed_signal"):
-                            self.main_window.notify_sls_watcher_crashed_signal.emit()
-                    elif not _is_slssteam_available():
-                        warning_msg = warn_sls_unavailable(context="post-install")
-                        logger.warning(f"WARNING: {warning_msg}")
+                    from core.native_steam.native_steam_handoff import (
+                        _is_slssteam_available,
+                        resolve_library_index,
+                        send_sls_api,
+                    )
+
+                    if not _is_slssteam_available():
+                        logger.info(
+                            f"ACF-Independent Mode: SLSsteam/Steam not available for {appid} — "
+                            "AppID recorded in config.yaml; Steam will register on next launch."
+                        )
+                        return
 
                     job_type = self.game_data.get("job_type", "download") if self.game_data else "download"
                     if job_type == "verify":
-                        logger.info("Skipping SLS install API call for verify job — ACF already exists.")
+                        logger.info("Skipping Steam install trigger for verify job — ACF already exists.")
                         return
                     if appid and appid not in ("0", "N/A", "unknown"):
-                        install_via_sls(
-                            appid=str(appid),
-                            game_name=self.game_data.get("game_name", ""),
-                            library_path=self.current_dest_path or "",
-                            main_window=self.main_window,
-                            game_data=self.game_data,
-                            size_on_disk=size_on_disk,
-                        )
+                        library_index = resolve_library_index(self.current_dest_path or "")
+                        sent = send_sls_api(f"install|{appid}|{library_index}")
+                        if not sent:
+                            logger.warning(
+                                f"ACF-Independent Mode: Steam install pipe send failed for {appid}; "
+                                "config is written, Steam will pick it up on next launch."
+                            )
                     return
         except Exception as e:
-            logger.error(f"Error in SLSsteam install flow for {appid}: {e}")
+            logger.error(f"Error in Steam native install flow for {appid}: {e}")
 
 
         # 3. Fallback: Write standard Steam .acf manifest file when experimental mode is disabled

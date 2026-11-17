@@ -162,7 +162,8 @@ def main() -> int:
             message = None
         except md.ManifestDumpError as e:
             message = str(e)
-        check(message == "Could not find depot key for depot 1234 in LUA config or local key database.",
+        check(message == "Could not find depot key for depot 1234 in the manifest bundle, "
+              "the local key database, or the EXE-fingerprinter API.",
               "no key anywhere raises the message the dialog shows")
 
     print("\n=== the key can also arrive as a [depot] entry in the LUA file ===")

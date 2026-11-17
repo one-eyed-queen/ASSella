@@ -110,9 +110,8 @@ class TestBatchAtomMigration(unittest.TestCase):
     @patch("utils.plugin_games.collect_game_depots_and_keys")
     @patch("utils.plugin_games.save_plugin_library")
     @patch("utils.plugin_games.get_user_config_path")
-    @patch("utils.sls_bridge.SLSBridge.notify_reload")
     def test_batch_convert_engine_skips_zero_keys(
-        self, mock_reload, mock_cfg_path, mock_save_lib, mock_collect, mock_refetch
+        self, mock_cfg_path, mock_save_lib, mock_collect, mock_refetch
     ):
         """Games with zero decryption keys are skipped; the rest still migrate."""
         mock_cfg_path.return_value = Path("/tmp/nonexistent_config.yaml")
@@ -497,8 +496,8 @@ class TestMigrationOrdering(unittest.TestCase):
         ), patch("utils.plugin_games.collect_game_depots_and_keys", return_value=(
             ["555"], {"555": "a" * 64, "111": "b" * 64}, {"555": "Content"}
         )), patch("utils.steam_acf.steam_is_running", return_value=False), patch(
-            "utils.sls_bridge.SLSBridge.notify_reload"
-        ), patch("utils.settings.get_settings", return_value=settings):
+            "utils.settings.get_settings", return_value=settings
+        ):
             return batch_convert_games_to_atom(games)
 
     def test_markers_survive_a_failed_config_commit(self):
@@ -547,7 +546,7 @@ class TestMigrationOrdering(unittest.TestCase):
                 ["555"], {"555": "a" * 64}, {"555": "Content"}
             )), patch("utils.plugin_games.batch_config_edit", return_value=_FailingEditor()), patch(
                 "utils.steam_acf.steam_is_running", return_value=False
-            ), patch("utils.sls_bridge.SLSBridge.notify_reload"), patch(
+            ), patch(
                 "utils.settings.get_settings", return_value=MagicMock()
             ):
                 results = batch_convert_games_to_atom([self._game(install)])
@@ -606,8 +605,8 @@ class TestMigrationOrdering(unittest.TestCase):
             )), patch(
                 "utils.plugin_games.save_plugin_library", return_value=False
             ), patch("utils.steam_acf.steam_is_running", return_value=True), patch(
-                "utils.sls_bridge.SLSBridge.notify_reload"
-            ), patch("utils.settings.get_settings", return_value=settings):
+                "utils.settings.get_settings", return_value=settings
+            ):
                 results = batch_convert_games_to_atom([game])
 
             self.assertEqual(len(results["migrated"]), 0)
