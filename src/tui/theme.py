@@ -1,12 +1,11 @@
 """Textual themes for EXE-fingerprinter.
 
-* ``rice``    — the default on any terminal with truecolor, matches the
-  desktop's near-black canvas with warm orange accents.
-* ``minimal`` — greyscale; automatically picked on dumb / NO_COLOR terminals.
+Colour palette ported from paws (its owner's project): near-black navy with
+blue/cyan accents. Three variants ship:
 
-Colour-blind mode replaces red/green signalling with blue/orange. Textual
-handles the actual terminal details (alternate screen, cursor, repaints) so
-this module only ships palette definitions and the detection helpers.
+* ``rice``    — the paws palette; default on any terminal with truecolor.
+* ``minimal`` — greyscale; automatically picked on dumb / NO_COLOR terminals.
+* colour-blind swaps red/green signalling for a blue/orange pair.
 """
 
 from __future__ import annotations
@@ -17,17 +16,17 @@ from textual.theme import Theme
 
 RICE = Theme(
     name="rice",
-    primary="#ffb86b",
-    secondary="#ff8fb3",
-    accent="#ffd76b",
-    warning="#ffd76b",
-    error="#ff8f8f",
-    success="#a8d08d",
-    foreground="#f0e6d2",
-    background="#0d0b09",
-    surface="#15110d",
-    panel="#15110d",
-    boost="#241f18",
+    primary="#4066ff",
+    secondary="#9b4dff",
+    accent="#00d0ff",
+    warning="#ffb84d",
+    error="#ff4da6",
+    success="#3ddc97",
+    foreground="#dbe4ff",
+    background="#0a1020",
+    surface="#101a30",
+    panel="#0c1424",
+    boost="#1a2547",
     dark=True,
 )
 
@@ -47,7 +46,8 @@ MINIMAL = Theme(
     dark=True,
 )
 
-# Blue/orange signalling pair that survives deuteranopia and protanopia.
+# Blue/orange signalling pair that survives deuteranopia and protanopia,
+# on the same navy background as the rice palette.
 COLOUR_BLIND = Theme(
     name="colour-blind",
     primary="#6cb4ff",
@@ -56,11 +56,11 @@ COLOUR_BLIND = Theme(
     warning="#ffb84d",
     error="#ff9d5c",
     success="#6cb4ff",
-    foreground="#f0e6d2",
-    background="#0d0b09",
-    surface="#15110d",
-    panel="#15110d",
-    boost="#241f18",
+    foreground="#dbe4ff",
+    background="#0a1020",
+    surface="#101a30",
+    panel="#0c1424",
+    boost="#1a2547",
     dark=True,
 )
 

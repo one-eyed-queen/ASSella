@@ -63,19 +63,100 @@ def _subtitle_text(api_mode: bool) -> str:
     return "Fingerprint a Steam game, then download just its Windows executables."
 
 
-def _app_logo() -> Optional[str]:
-    """Path to the SFW logo for the splash banner (textual-image if supported)."""
-    from utils.helpers import get_base_path
+def _hero_path() -> str:
+    return str(Path(__file__).resolve().parent.parent.parent / "assets" / "paws-bg.png")
 
-    repo_root = Path(__file__).resolve().parent.parent.parent
-    for candidate in (
-        repo_root / "exe_fingerprinter_logo.png",
-        Path(get_base_path()) / "exe_fingerprinter_logo.png",
-        Path(get_base_path()) / "res" / "logo" / "exe_fingerprinter_logo.png",
-    ):
-        if candidate.exists():
-            return str(candidate)
-    return None
+
+def _image_widget():
+    try:
+        from textual_image.widget import Image
+
+        return Image
+    except Exception:
+        return None
+
+
+# ── home screen ───────────────────────────────────────────────────────────
+
+class HomeScreen(Screen):
+    """Menu-driven landing page — the paws-style entry screen."""
+
+    BINDINGS = [
+        ("ctrl+q", "quit", "quit"),
+        ("/", "search", "search"),
+        ("f2", "settings", "settings"),
+    ]
+
+    MENU = [
+        ("search", "Search & fingerprint"),
+        ("settings", "Settings (API keys · theme)"),
+        ("about", "About"),
+        ("quit", "Quit"),
+    ]
+
+    def compose(self) -> ComposeResult:
+        yield Static("EXE-fingerprinter", id="app-header")
+        yield Static("Fingerprint a Steam game, then download just its .exe files.", id="app-subtitle")
+        with Horizontal(id="home-body"):
+            menu = OptionList(id="home-menu")
+            yield menu
+            hero = _image_widget()
+            if hero is not None:
+                yield hero(_hero_path(), id="hero")
+        yield Static("Enter open · / search · f2 settings · ctrl+q quit", id="footer")
+
+    def on_mount(self) -> None:
+        menu = self.query_one("#home-menu", OptionList)
+        menu.add_options([Option(label) for _key, label in self.MENU])
+        menu.highlighted = 0
+        menu.focus()
+
+    def _open(self, index: int) -> None:
+        key = self.MENU[index][0]
+        if key == "search":
+            self.app.push_screen(SearchScreen())
+        elif key == "settings":
+            self.app.push_screen(SettingsScreen())
+        elif key == "about":
+            self.app.push_screen(AboutScreen())
+        elif key == "quit":
+            self.app.exit()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        self._open(event.option_index)
+
+    def action_search(self) -> None:
+        self.app.push_screen(SearchScreen())
+
+    def action_settings(self) -> None:
+        self.app.push_screen(SettingsScreen())
+
+    def action_quit(self) -> None:
+        self.app.exit()
+
+    def action_home(self) -> None:
+        self.app.pop_screen()
+
+
+class AboutScreen(Screen):
+    BINDINGS = [("escape", "back", "back")]
+
+    def compose(self) -> ComposeResult:
+        yield Static("About", id="app-header")
+        yield Static(
+            "EXE-fingerprinter 3.0.0\n\n"
+            "A TUI that fingerprints a Steam game's base-game Windows depots\n"
+            "and downloads just the executable files — nothing else.\n\n"
+            "Depot keys come from your local key database, the private API,\n"
+            "or Hubcap. Search merges Steam Store, SteamDB, Hubcap and the API.\n\n"
+            "SFW assets only. Unofficial — not affiliated with Valve or Steam.\n\n"
+            "Esc back",
+            id="about-text",
+        )
+        yield Static("Esc back", id="footer")
+
+    def action_back(self) -> None:
+        self.app.pop_screen()
 
 
 # ── search screen ─────────────────────────────────────────────────────────
@@ -85,19 +166,12 @@ class SearchScreen(Screen):
         ("ctrl+q", "quit", "quit"),
         ("f2", "settings", "settings"),
         ("/", "focus_search", "search"),
+        ("escape", "home", "home"),
     ]
 
     def compose(self) -> ComposeResult:
         yield Static(_header_text(self._is_api_mode()), id="app-header")
         yield Static(_subtitle_text(self._is_api_mode()), id="app-subtitle")
-        logo = _app_logo()
-        if logo:
-            try:
-                from textual_image.widget import Image
-
-                yield Image(logo, id="logo")
-            except Exception:
-                pass
         yield Input(placeholder="AppID or game name…", id="search-input")
         yield Static("Search by AppID or name — Enter searches, ↑↓ moves, Enter opens.", id="search-hint")
         yield OptionList(id="results")
@@ -107,6 +181,9 @@ class SearchScreen(Screen):
         return "--api" in self.app.argv or "--api-mode" in self.app.argv
 
     def on_mount(self) -> None:
+        from textual.widgets import Input, OptionList
+
+        self.query_one("#search-input", Input).value = ""
         self.query_one("#search-input", Input).focus()
         self._results: List[Dict[str, Any]] = []
 
@@ -118,6 +195,9 @@ class SearchScreen(Screen):
 
     def action_quit(self) -> None:
         self.app.exit()
+
+    def action_home(self) -> None:
+        self.app.pop_screen()
 
     @work(thread=True, exclusive=True, group="search")
     def _search(self, query: str) -> None:
@@ -312,20 +392,32 @@ class SettingsScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Static("Settings", id="app-header")
-        yield Static("Private API & appearance — stored locally on this device.", id="app-subtitle")
-        yield Static("API base URL", classes="settings-label")
+        yield Static("API keys & appearance — stored locally on this device only.", id="app-subtitle")
+        yield Static("Hubcap API key", classes="settings-label")
+        yield Input(
+            value=str(_setting("morrenus_api_key", "")),
+            placeholder="used to fetch manifest bundles for the fingerprint",
+            password=True,
+            id="hubcap-key",
+            classes="settings-input",
+        )
+        yield Static("Private API (your service)", classes="settings-label")
         yield Input(
             value=str(_setting("exefp_api_base", "https://exe-fingerprinter.vercel.app")),
+            placeholder="API base URL",
             id="api-base",
             classes="settings-input",
         )
-        yield Static("API username", classes="settings-label")
-        yield Input(value=str(_setting("exefp_api_username", "")), id="api-user", classes="settings-input")
-        yield Static("API password", classes="settings-label")
-        yield Input(value=str(_setting("exefp_api_password", "")), password=True, id="api-pass", classes="settings-input")
+        yield Input(
+            value=str(_setting("exefp_api_username", "")),
+            placeholder="username",
+            id="api-user",
+            classes="settings-input",
+        )
+        yield Input(value=str(_setting("exefp_api_password", "")), password=True, placeholder="password", id="api-pass", classes="settings-input")
         with Horizontal():
             yield Button("Sign in", id="btn-signin", variant="primary")
-        yield Static("", id="settings-status")
+        yield Static(self._account_status(), id="settings-status")
         yield Static("Theme (Auto = rice on colour terminals, minimal otherwise)", classes="settings-label")
         yield Select(
             [("Auto", "auto"), ("Rice", "rice"), ("Minimal", "minimal")],
@@ -335,6 +427,20 @@ class SettingsScreen(Screen):
         yield Static("Colour-blind mode", classes="settings-label")
         yield Switch(value=_bool_setting("colour_blind_mode"), id="colour-blind")
         yield Static("Esc back · Ctrl+Q quit", id="footer")
+
+    def _account_status(self) -> str:
+        try:
+            from core import exe_fingerprinter_api as api
+
+            s = api.status()
+            if s.get("has_token"):
+                return f"Signed in as {s.get('username', '')} · HWID locked to this device"
+            if s.get("configured"):
+                return "Configured but not signed in — press Sign in."
+            return "Not signed in — enter credentials and press Sign in."
+        except Exception as exc:
+            logger.debug("[Settings] account status unavailable: %s", exc)
+            return "Private API not configured."
 
     def action_back(self) -> None:
         self.app.pop_screen()
@@ -356,6 +462,24 @@ class SettingsScreen(Screen):
         except Exception as exc:
             ok, detail = False, str(exc)
         self.app.call_from_thread(self._signin_done, ok, detail)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        from utils.settings import get_settings
+
+        settings = get_settings()
+        widget_id = event.input.id
+        value = event.value.strip()
+        if widget_id == "hubcap-key":
+            settings.setValue("morrenus_api_key", value)
+        elif widget_id == "api-base":
+            settings.setValue("exefp_api_base", value)
+        elif widget_id == "api-user":
+            settings.setValue("exefp_api_username", value)
+        elif widget_id == "api-pass":
+            settings.setValue("exefp_api_password", value)
+        settings.sync()
+        self.query_one("#settings-status", Static).update("Saved.")
+        self.query_one("#settings-status", Static).remove_class("-error")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-signin":

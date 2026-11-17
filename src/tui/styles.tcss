@@ -49,6 +49,26 @@ Screen {
     border: tall $primary;
 }
 
+/* ── home screen ────────────────────────────────────────────────────── */
+#home-body {
+    height: 1fr;
+    padding: 1 2;
+    align: center middle;
+}
+
+#home-menu {
+    height: auto;
+    min-width: 46;
+    border: tall $surface;
+    margin-right: 2;
+    padding: 1 2;
+}
+
+#hero {
+    width: 42;
+    height: 15;
+}
+
 /* ── search screen ────────────────────────────────────────────────── */
 #search-input {
     margin: 1 2 0 2;
@@ -60,12 +80,6 @@ Screen {
     height: 1;
     color: $secondary;
     padding: 0 2;
-}
-
-#logo {
-    height: 9;
-    content-align: center middle;
-    padding: 0 1;
 }
 
 #results {
@@ -145,6 +159,13 @@ Button.success {
     padding: 0 2;
     color: $secondary;
     content-align: left middle;
+}
+
+/* ── about ────────────────────────────────────────────────────────── */
+#about-text {
+    height: 1fr;
+    padding: 1 2;
+    color: $foreground;
 }
 
 /* ── settings screen ──────────────────────────────────────────────── */

@@ -15,13 +15,22 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tui.app import FingerprinterApp
-from tui.screens import GameScreen, SearchScreen, SettingsScreen
+from tui.screens import GameScreen, HomeScreen, SearchScreen, SettingsScreen
 
 
 async def main() -> int:
     app = FingerprinterApp([])
     async with app.run_test(size=(110, 32)) as pilot:
         await pilot.pause(0.5)
+
+        # ── home screen mounts ───────────────────────────────────────────
+        assert isinstance(app.screen, HomeScreen), app.screen
+        menu = app.screen.query_one("#home-menu")
+        print("[ok] home screen mounted")
+        await pilot.press("enter")
+        await pilot.pause(0.5)
+        assert isinstance(app.screen, SearchScreen), app.screen
+        print("[ok] menu → search screen")
 
         # ── search screen mounts ────────────────────────────────────────
         assert isinstance(app.screen, SearchScreen), app.screen
@@ -67,7 +76,7 @@ async def main() -> int:
             assert isinstance(app.screen, SearchScreen)
             print("[ok] Esc returned to search")
 
-        # ── settings screen ─────────────────────────────────────────────
+        # ── settings ────────────────────────────────────────────────────
         await pilot.press("f2")
         await pilot.pause(0.4)
         assert isinstance(app.screen, SettingsScreen)
@@ -75,7 +84,11 @@ async def main() -> int:
         await pilot.press("escape")
         await pilot.pause(0.3)
         assert isinstance(app.screen, SearchScreen)
-        print("[ok] Esc returned from settings")
+        print("[ok] Esc returned to search")
+        await pilot.press("escape")
+        await pilot.pause(0.3)
+        assert isinstance(app.screen, HomeScreen)
+        print("[ok] Esc returned to the home menu")
 
     print("\nTUI SMOKE OK")
     return 0

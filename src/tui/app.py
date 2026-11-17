@@ -19,7 +19,7 @@ from textual.app import App
 from textual.binding import Binding
 
 from tui import theme as theme_mod
-from tui.screens import GameScreen, SearchScreen, SettingsScreen
+from tui.screens import HomeScreen, SearchScreen, SettingsScreen
 
 CSS_PATH = Path(__file__).with_name("styles.tcss")
 
@@ -45,10 +45,25 @@ class FingerprinterApp(App):
             self.theme = "colour-blind" if theme_mod.colour_blind_enabled() else "rice"
 
     def on_mount(self) -> None:
-        self.push_screen(SearchScreen())
+        self.push_screen(HomeScreen())
 
     def action_settings(self) -> None:
         self.push_screen(SettingsScreen())
+
+
+def _prime_image_probe() -> None:
+    """Probe the terminal once, while stdin is still in canonical mode.
+
+    Must run before Textual takes ownership of stdin, otherwise the probe
+    replies land in the focused widget as literal text (as if typed).
+    """
+    try:
+        from textual_image import _terminal as probe
+
+        probe._PROBE_TIMEOUT = 0.7
+        probe.get_cell_size()
+    except Exception:
+        pass
 
 
 def run_tui(argv: Optional[list] = None) -> int:
@@ -59,6 +74,7 @@ def run_tui(argv: Optional[list] = None) -> int:
     if batch is not None:
         return batch
 
+    _prime_image_probe()
     try:
         app = FingerprinterApp(argv)
         app.run()
