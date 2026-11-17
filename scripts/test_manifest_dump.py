@@ -162,9 +162,11 @@ def main() -> int:
             message = None
         except md.ManifestDumpError as e:
             message = str(e)
-        check(message == "Could not find depot key for depot 1234 in the manifest bundle, "
-              "the local key database, or the EXE-fingerprinter API.",
-              "no key anywhere raises the message the dialog shows")
+        check(message is not None and message.startswith("No depot key for depot 1234:"),
+              "no key anywhere raises a per-source explanation")
+        check(message is not None and "not consulted" in message
+              and "carries no key" in message and "local key database — no entry." in message,
+              "the message names every source it ruled out")
 
     print("\n=== the key can also arrive as a [depot] entry in the LUA file ===")
     with tempfile.TemporaryDirectory() as tmp:

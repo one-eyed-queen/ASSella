@@ -279,7 +279,9 @@ def prepare_manifest_dump(
     """
     # API first: your private API serves the base-game keys and manifest GIDs.
     api_error = ""
-    if key_lookup is None:
+    if key_lookup is not None:
+        api_error = "not consulted (a local key lookup override is in effect)"
+    else:
         api_map, api_error = _api_depot_map(app_id)
         api_info = api_map.get(str(depot_id)) or {}
         if api_info.get("key") and api_info.get("manifest"):

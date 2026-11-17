@@ -52,7 +52,7 @@ def main() -> int:
     print("-- 2. manifest_dump suite")
     proc = run([sys.executable, "scripts/test_manifest_dump.py"],
                env={"QT_QPA_PLATFORM": "offscreen"})
-    record("manifest_dump (28 checks)", proc.returncode == 0)
+    record("manifest_dump (29 checks)", proc.returncode == 0)
 
     # 3. Qt-free runtime
     print("-- 3. Qt-free runtime")
