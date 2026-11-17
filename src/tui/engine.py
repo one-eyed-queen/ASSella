@@ -204,7 +204,7 @@ def scan_app(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=300,
+                timeout=900,
                 env={**os.environ, "DOTNET_NOLOGO": "1"},
             )
             if proc.returncode != 0:

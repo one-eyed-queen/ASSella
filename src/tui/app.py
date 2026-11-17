@@ -13,9 +13,10 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+import logging
 from typing import Optional
 
-from textual import events
+from textual import events, work
 from textual.app import App
 from textual.binding import Binding
 from textual.filter import NoColor
@@ -23,6 +24,8 @@ from textual.screen import ModalScreen
 from textual.theme import Theme
 
 from version import APP_VERSION
+
+logger = logging.getLogger(__name__)
 
 from . import settings
 from .jobs import Job
@@ -75,6 +78,28 @@ class FingerprinterApp(App):
         from .screens import HomeScreen
 
         self.push_screen(HomeScreen())
+        self.run_worker(self._silent_sign_in, thread=True, group="auth-check", exclusive=True)
+
+    @work(thread=True, exclusive=True, group="auth-check")
+    def _silent_sign_in(self):
+        """Sign in silently with the saved credentials — never prompts."""
+        try:
+            from core import exe_fingerprinter_api as api
+
+            if not api.is_configured():
+                return
+            result = api.ensure_token()
+            if not result.ok:
+                logger.info("[Auth] silent sign-in failed: %s", result.error)
+                self.call_from_thread(
+                    self.notify,
+                    f"API sign-in failed — check Settings ({result.error})",
+                    title="EXE-fingerprinter",
+                    severity="warning",
+                    timeout=8,
+                )
+        except Exception as exc:
+            logger.debug("[Auth] silent sign-in error: %s", exc)
 
     def _set_look(self):
         minimal = settings.is_minimal()

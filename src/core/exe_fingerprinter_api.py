@@ -317,5 +317,6 @@ def status() -> Dict[str, Any]:
         "base_url": config.base_url,
         "username": config.username,
         "has_token": bool(token),
+        "token_expiry": config.token_expiry,
         "hwid": compute_hwid(),
     }

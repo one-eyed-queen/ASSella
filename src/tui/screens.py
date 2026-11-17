@@ -677,7 +677,14 @@ class FingerprintTaskScreen(Screen):
         )
         selection.select_all()
         self._set_status(f"{len(self._entries)} executable(s) — untick the ones you don't want, then press F.")
-        self._detail("The fingerprint analyses only the files you confirm; it downloads them to a temp folder, which is deleted on exit.")
+        if scan.errors:
+            err = "\n\n".join(scan.errors)
+            self._detail(
+                f"{len(scan.errors)} depot(s) could not be listed — the game may be split across them:\n\n{err}",
+                error=True,
+            )
+        else:
+            self._detail("The fingerprint analyses only the files you confirm; it downloads them to a temp folder, which is deleted on exit.")
         self.query_one("#btn-fingerprint", Button).disabled = False
 
     @work(thread=True, exclusive=True, group="fingerprint")
@@ -1133,12 +1140,18 @@ class SettingsScreen(Screen):
 
     def _account_status(self) -> str:
         try:
+            from datetime import datetime, timezone
+
             from core import exe_fingerprinter_api as api
 
             status = api.status()
+            if not status.get("configured"):
+                return "Not configured — enter credentials once, press Sign in once; the app remembers them."
             if status.get("has_token"):
-                return f"Signed in as {status.get('username', '')} · HWID locked to this device"
-            return "Not signed in — enter credentials and press Sign in."
+                expiry = status.get("token_expiry") or 0
+                until = datetime.fromtimestamp(expiry, tz=timezone.utc).strftime("%Y-%m-%d") if expiry else "unknown"
+                return f"Signed in as {status.get('username', '')} · HWID locked to this device · session cached until {until} (credentials stored locally)"
+            return f"Saved as {status.get('username', '')} — not signed in yet; the app signs in automatically on launch."
         except Exception as exc:
             logger.debug("[Settings] account status unavailable: %s", exc)
             return "Private API not configured."
