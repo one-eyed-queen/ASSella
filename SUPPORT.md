@@ -11,9 +11,7 @@ The fastest way to get help is the official documentation:
 👉 **[Executable Downloader Documentation](https://assella.pages.dev/)**
 
 - **[Installation Guide](https://assella.pages.dev/install)**: Step-by-step setup for Steam Deck and Linux.
-- **[Downloading Games](https://assella.pages.dev/downloading)**: How to use Hubcap Manifest API keys and download game depots.
-- **[DLC Management](https://assella.pages.dev/guides/dlc-only)**: Managing DLC-only titles and instant license unlocks.
-- **[AT0-M & SLSsteam Migration](https://assella.pages.dev/guides/atom)**: Native Steam file adoption and interceptor setup.
+- **[How it works](https://assella.pages.dev/downloading)**: Search, fingerprint, and download just the .exe files.
 
 ---
 

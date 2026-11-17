@@ -19,9 +19,9 @@ EXE-fingerprinter operates on a 4-branch model:
 
 ### Prerequisites
 
-- Linux (SteamOS, Arch, Bazzite, CachyOS, Fedora, Ubuntu, NixOS, etc.)
-- Python 3.10+
-- Qt6 / PySide6 dependencies (`xcb-util-cursor`, `libnotify`, `p7zip`)
+- Linux (SteamOS, Arch, Bazzite, CachyOS, Fedora, Ubuntu, NixOS, etc.) or Windows
+- Python 3.10+ with the dependencies in `requirements.txt`
+- A terminal (this is a TUI — no Qt)
 
 ### Setting Up a Development Clone
 
@@ -47,19 +47,15 @@ python src/main.py
 
 EXE-fingerprinter is built for speed and reliability on the Steam Deck and desktop Linux. All contributions must respect these invariants:
 
-### A. Performance & UI Responsiveness
-- **Fast Startup**: EXE-fingerprinter launches its main window in under one second. Never perform disk scans, network requests, or subprocess calls on the Qt GUI thread.
-- **Lazy Imports**: Heavy modules (e.g. `curl_cffi`, `bs4`, scrapers, API clients) must be imported inside worker functions where they are used, never at the top level of UI modules.
-- **Background Workers**: Run long-running tasks via `QThread`, `TaskRunner`, or background workers, posting results back via Qt signals or `utils.main_thread.post_to_main_thread`.
+### A. Performance & Responsiveness
+- **Fast Startup**: the TUI comes up in under a second. Never do network, disk-wide scans or subprocess work on the render path; use worker threads with a queue, like the TUI does.
+- **Lazy Imports**: heavy imports (requests/urllib3, API clients) must happen where they are used, not at module import time.
+- **No GUI thread**: the TUI owns stdout/stderr via raw terminal control. Never log to the terminal — logs go to a file (`utils/logger.py`).
 
-### B. Steam & SLSsteam Integration Invariants
-- **No Hardcoded Home Paths**: Always use `Path.home()` or `os.path.expanduser("~")`. Never hardcode `/home/deck/`.
-- **Strict No-ACF Invariant**: In ACF-Independent mode, manifest creation is natively handled by Steam (`install|<appid>|<lib_idx>`). The codebase must **never** generate or write `.acf` manifest files.
-- **SLSsteam Inode Preservation**: Updates to `~/.config/SLSsteam/config.yaml` must be written in-place (or via `BatchConfigEditor` / `_atomic_write`) to preserve the file inode and prevent breaking SLSsteam's `inotify` file watcher.
-- **Depot & AppID Rules**:
-  - Base AppIDs must never be added to `AdditionalDepots` (only content depot IDs belong there).
-  - Valid 64-hex keys in `DecryptionKeys` must never be stripped or sanitized.
-  - DLC-only games must only have DLC AppIDs added to `AdditionalApps` (never the base AppID).
+### B. Steam & .exe Invariants
+- **No Hardcoded Home Paths**: always use `Path.home()` / `os.path.expanduser("~")` / platform data dirs. Never hardcode `/home/deck/`.
+- **.exe only**: base-game Windows depots only; DLC depots are skipped. No install/library flows, no `.acf` writing, no `config.yaml` editing.
+- **Depot Keys**: local key database → private API → Hubcap. Never embed a Hubcap key in the repo or the client. Never call the private database directly.
 
 ### C. Lightweight Repository
 - Heavy binary tools (Goldberg, Steamless, SLScheevo under `src/deps/`) are dynamically fetched on demand from R2 and must **never** be committed to git.
