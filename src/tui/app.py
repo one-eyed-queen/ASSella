@@ -24,7 +24,7 @@ from textual.theme import Theme
 
 from version import APP_VERSION
 
-from . import colorblind, settings
+from . import settings
 from .jobs import Job
 from .underlay import Underlay
 
@@ -81,9 +81,6 @@ class FingerprinterApp(App):
         self.set_class(minimal, "-minimal")
         self.theme = "minimal" if minimal else "paws"
         self._plain.enabled = minimal
-        cb = colorblind.filter_for(minimal)
-        if cb is not None:
-            self._filters.append(cb)
 
     def run_job(self, label: str, work, finish=None) -> bool:
         """work(progress) runs in a thread; finish(result) runs after it on the UI thread."""

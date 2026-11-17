@@ -11,7 +11,6 @@ from random import randint
 from textual.screen import ModalScreen
 
 from . import settings
-from . import colorblind
 
 from .widgets import backdrop, hires, scene
 
@@ -112,13 +111,13 @@ _pictures: dict[tuple, bytes] = {}  # building one is the slow part, and every s
 def _picture(cols, rows, cell, box=None) -> bytes:
     """box: a pane of frosted glass behind a popup or the home menu, over the sharp picture, like the loading screen.
     no box: the soft blurred wallpaper the other pages sit on"""
-    key = (cols, rows, cell, box, colorblind.mode())
+    key = (cols, rows, cell, box)
     if key not in _pictures:
         if box is None:
             picture = scene.compose(cols, rows, cell)
         else:
             picture = scene.compose(cols, rows, cell)
-        png = png_bytes(colorblind.image(picture))
+        png = png_bytes(picture)
         while len(_pictures) >= 6:
             _pictures.pop(next(iter(_pictures)))
         _pictures[key] = png

@@ -1144,12 +1144,6 @@ HomeScreen ToastHolder {
     height: 3;
 }
 
-#search-hint {
-    height: 1;
-    color: $secondary;
-    padding: 0 2;
-}
-
 #results {
     height: 1fr;
     margin: 0 2 1 2;
@@ -1233,4 +1227,57 @@ HomeScreen ToastHolder {
     background: transparent;
     margin-right: 2;
     padding: 1 2;
+}
+
+
+/* ── fingerprint report + choice ───────────────────────────────────── */
+#report {
+    height: 1fr;
+    margin: 0 2;
+    border: solid #3d4f80;
+    padding: 0 2;
+    background: transparent;
+}
+
+#report-text {
+    padding: 1 0;
+}
+
+#choice-buttons {
+    height: auto;
+    padding: 1 2;
+    align: center middle;
+}
+
+#choice-buttons > Button {
+    width: 72;
+    margin-bottom: 1;
+}
+
+#fingerprint-status {
+    height: 1;
+    padding: 0 2;
+    color: $success;
+}
+
+#fingerprint-status.-error {
+    color: $error;
+}
+
+#set-row {
+    height: 3;
+    align: left middle;
+}
+
+/* detail panel: same look as paws' add-game panel */
+#add-detail {
+    background: transparent;
+    padding: 1 2 1 2;
+    margin: 1 2 1 2;
+}
+
+#add-hint {
+    height: auto;
+    margin: 1 1 1 1;
+    padding: 0 1;
 }

@@ -89,28 +89,7 @@ def _api_results(query: str, limit: int) -> List[Dict[str, Any]]:
 
 
 def _steam_store_results(query: str, limit: int) -> List[Dict[str, Any]]:
-    try:
-        response = requests.get(
-            STORE_SEARCH,
-            params={"term": query, "l": "english", "cc": "US"},
-            headers=_HEADERS,
-            timeout=15,
-        )
-        response.raise_for_status()
-        items = (response.json() or {}).get("items") or []
-        return [
-            {
-                "appid": int(item["id"]),
-                "name": item.get("name", ""),
-                "header_url": item.get("tiny_image", ""),
-                "sources": ["steam-store"],
-            }
-            for item in items[:limit]
-            if item.get("id")
-        ]
-    except Exception as exc:
-        logger.debug("[Search] Steam Store source failed: %s", exc)
-    return []
+    return store_search_full(query, limit)
 
 
 def _steamdb_results(query: str, limit: int) -> List[Dict[str, Any]]:
@@ -211,18 +190,25 @@ def merge_results(query: str, groups: List[List[Dict[str, Any]]]) -> List[Dict[s
                 continue
             appid = int(appid)
             existing = merged.get(appid)
+            header = entry.get("header_image") or entry.get("header_url", "")
             if existing is None:
                 merged[appid] = {
                     "appid": appid,
                     "name": entry.get("name", ""),
-                    "header_url": entry.get("header_url", ""),
+                    "header_url": header,
+                    "price": entry.get("price", ""),
+                    "kind": entry.get("kind", ""),
                     "sources": list(entry.get("sources") or []),
                 }
             else:
                 if not existing["name"] and entry.get("name"):
                     existing["name"] = entry["name"]
-                if not existing["header_url"] and entry.get("header_url"):
-                    existing["header_url"] = entry["header_url"]
+                if not existing["header_url"] and header:
+                    existing["header_url"] = header
+                if not existing["price"] and entry.get("price"):
+                    existing["price"] = entry["price"]
+                if not existing["kind"] and entry.get("kind"):
+                    existing["kind"] = entry["kind"]
                 for source in entry.get("sources") or []:
                     if source not in existing["sources"]:
                         existing["sources"].append(source)
@@ -241,3 +227,102 @@ def search(query: str, limit: int = 30, include_steamdb: bool = True) -> List[Di
     if include_steamdb:
         groups.append(_steamdb_results(query, limit))
     return merge_results(query, groups)[:limit]
+
+# ── rich store results (art, price, description) ─────────────────────────
+
+STORE_HEADER_CDN = "https://cdn.cloudflare.steamstatic.com/steam/apps/{appid}/header.jpg"
+
+# "artbook", "soundtrack" etc, like paws' classification
+_KIND_WORDS = (
+    ("artbook", ("art book", "artbook", "digital art")),
+    ("soundtrack", ("soundtrack", "ost")),
+    ("graphic novel", ("graphic novel",)),
+)
+
+
+def _search_price(price: Any) -> str:
+    if not isinstance(price, dict):
+        return str(price or "")
+    final, currency = price.get("final"), price.get("currency", "")
+    if not isinstance(final, (int, float)):
+        return ""
+    return f"${final / 100:.2f}" if currency == "USD" else f"{final / 100:.2f} {currency}".strip()
+
+
+def _kind_label(name: str, store_type: str = "") -> str:
+    name_l = (name or "").lower()
+    if store_type.lower() != "game":
+        for label, words in _KIND_WORDS:
+            if any(word in name_l for word in words):
+                return label
+    return {"dlc": "dlc", "music": "soundtrack", "video": "video", "mod": "mod", "demo": "demo"}.get(
+        store_type.lower(), ""
+    )
+
+
+def store_search_full(query: str, limit: int = 30, cc: str = "us", lang: str = "en") -> List[Dict[str, Any]]:
+    """Store search with prices, header art and kind labels (paws-style)."""
+    try:
+        response = requests.get(
+            STORE_SEARCH,
+            params={"term": query, "cc": cc, "l": lang},
+            headers=_HEADERS,
+            timeout=15,
+        )
+        items = (response.json() or {}).get("items") or []
+    except Exception as exc:
+        logger.debug("[Search] store search failed: %s", exc)
+        return []
+
+    out = []
+    for item in items:
+        appid = item.get("id")
+        if not appid:
+            continue
+        name = item.get("name", "") or f"App {appid}"
+        out.append(
+            {
+                "appid": int(appid),
+                "name": name,
+                "price": _search_price(item.get("price") or {}),
+                "kind": _kind_label(name, item.get("type", "")),
+                "header_image": item.get("tiny_image") or STORE_HEADER_CDN.format(appid=appid),
+                "short_description": "",
+                "developers": [],
+                "sources": ["steam-store"],
+            }
+        )
+        if len(out) >= limit:
+            break
+    return out
+
+
+def app_details(appid: int, cc: str = "us", lang: str = "en") -> Dict[str, Any]:
+    """Full details for one app: image, price, developer, short description."""
+    try:
+        response = requests.get(
+            STORE_APPDETAILS,
+            params={"appids": str(int(appid)), "cc": cc, "l": lang},
+            headers=_HEADERS,
+            timeout=15,
+        )
+        entry = (response.json() or {}).get(str(int(appid))) or {}
+        if not entry.get("success"):
+            return {}
+        info = entry.get("data") or {}
+        price = info.get("price_overview") or {}
+        return {
+            "appid": int(appid),
+            "name": info.get("name", ""),
+            "price": price.get("final_formatted", ""),
+            "header_image": info.get("header_image") or STORE_HEADER_CDN.format(appid=int(appid)),
+            "short_description": __import__("html").unescape(info.get("short_description", "") or "").strip(),
+            "developers": info.get("developers") or info.get("publishers") or [],
+            "genres": [g.get("description", "") for g in info.get("genres", [])],
+            "release_date": (info.get("release_date") or {}).get("date", ""),
+            "free": bool(info.get("is_free")),
+        }
+    except Exception as exc:
+        logger.debug("[Search] appdetails failed for %s: %s", appid, exc)
+        return {}
+

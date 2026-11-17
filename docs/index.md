@@ -19,5 +19,5 @@ features:
   - title: Private API
     details: Your API (HWID-bound, expiry dates, username + password) serves depot keys and manifest GIDs. The public Hubcap works too. Your Hubcap key never leaves the server side.
   - title: Terminal, as it should be
-    details: A paws-style TUI with sixel graphics where the terminal supports them and a clean text view where it does not. Colour-blind mode built in. SFW assets only.
+    details: A paws-style TUI with sixel graphics where the terminal supports them and a clean text view where it does not. SFW assets only.
 ---

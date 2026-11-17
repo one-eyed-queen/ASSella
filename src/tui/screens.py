@@ -5,7 +5,7 @@ paws' interface style, rebound to EXE-fingerprinter's own features:
 * ``HomeScreen``   — app header with banner, an ASCII art panel, and a menu.
 * ``SearchScreen`` — find a game by AppID or short name (Store, SteamDB, Hubcap, your API).
 * ``GameScreen``   — fingerprint the base game (manifest-only), tick executables, download.
-* ``SettingsScreen``— API keys (Hubcap + your private API), theme, colour-blind mode.
+* ``SettingsScreen``— API keys (Hubcap + your private API), theme.
 * ``AboutScreen``  — what this is.
 
 ``--api`` starts on the same home screen with a fingerprint-only header; no games
@@ -15,24 +15,22 @@ are ever added or removed.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from textual import on, work
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import (
     Button,
+    DataTable,
     Input,
-    Label,
+    ListItem,
     ListView,
-    OptionList,
-    ProgressBar,
     Select,
     SelectionList,
     Static,
-    Switch,
-    ListItem,
 )
 from textual.widgets.option_list import Option
 
@@ -105,7 +103,8 @@ class HomeScreen(Screen):
         (key, label, desc, icon, hint)
         for key, label, desc, icon, hint in [
             ("search", "Search & fingerprint", "Type an AppID or short name — store, SteamDB, Hubcap, your API. Found games get fingerprinted; only the .exe files download.", "search", "steam store · pick files"),
-            ("settings", "Settings", "API keys (Hubcap + your private API), theme, colour-blind mode. Sign in once — the account locks to this device.", "settings", "keys + look"),
+            ("external", "External fingerprint", "Fingerprint any .exe — pick it with the native file picker, get the full report (hashes, PE layout, imports, version info, disasm) and copy or export the TOML.", "fingerprint", "any .exe · full report"),
+            ("settings", "Settings", "API keys (Hubcap + your private API), theme. Sign in once — the account locks to this device.", "settings", "keys + look"),
             ("about", "About", "What this is and how it works: manifest-only fingerprint, filelist-limited download, SFW assets.", "about", "what & why"),
             ("quit", "Quit", "Exit EXE-fingerprinter", "quit", "esc or q"),
         ]
@@ -175,6 +174,8 @@ class HomeScreen(Screen):
         key = self.HOME_MENU[index][0]
         if key == "search":
             self.app.push_screen(SearchScreen())
+        elif key == "external":
+            self.app.push_screen(ExternalFingerprintScreen())
         elif key == "settings":
             self.app.push_screen(SettingsScreen())
         elif key == "about":
@@ -191,6 +192,9 @@ class HomeScreen(Screen):
 
 # ── search screen ─────────────────────────────────────────────────────────
 
+RESULT_COLUMNS = ("appid", "name", "price", "kind")
+
+
 class SearchScreen(Screen):
     BINDINGS = [
         ("escape", "back", "back"),
@@ -201,65 +205,34 @@ class SearchScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield AppHeader(_header_title(), id="hdr")
-        yield Input(placeholder="AppID or game name…", id="search-input")
-        yield Static("Search by AppID or name — Enter searches, ↑↓ moves, Enter opens.", id="search-hint")
-        yield OptionList(id="results")
-        yield FooterHelp("esc back · ↑↓ move · enter open · f2 settings")
+        with Horizontal(id="add-split"):
+            with Vertical(id="add-left"):
+                yield Input(placeholder="game name or AppID (try 480, or 'portal')", id="search-input")
+                yield DataTable(id="results-table", cursor_type="row", zebra_stripes=True)
+                yield Static("Enter searches · ↑↓ moves · Enter picks a game", id="add-hint", classes="panel")
+            with VerticalScroll(id="add-detail", classes="panel"):
+                yield Static("[b]pick a game[/]", id="detail-info", markup=True)
+                from .widgets import hires
+
+                self._img_widget = hires.picture(None, id="detail-img") if hires.available() else None
+                if self._img_widget is not None:
+                    self._img_widget.styles.width = 34
+                    self._img_widget.styles.height = "auto"
+                    yield self._img_widget
+                yield Static("", id="detail-desc", markup=False)
+        yield FooterHelp("esc back · ↑↓ move · enter choose · f2 settings")
 
     def on_mount(self) -> None:
+        table = self.query_one("#results-table", DataTable)
+        table.add_columns(*RESULT_COLUMNS)
         self.query_one("#search-input", Input).value = ""
         self.query_one("#search-input", Input).focus()
         self._results: List[Dict[str, Any]] = []
+        self._kinds: Dict[int, str] = {}
+        self._details_token = 0
 
-    def _search(self, query: str) -> None:
-        self.app.run_worker(
-            lambda: self._do_search(query),
-            group="search",
-            thread=True,
-            exclusive=True,
-        )
-
-    @work(thread=True, exclusive=True, group="search")
-    def _do_search(self, query: str) -> None:
-        self.app.call_from_thread(self._set_busy, True)
-        try:
-            from core.unified_search import search
-
-            results = search(query, limit=30, include_steamdb=True)
-        except Exception as exc:
-            logger.warning("[Search] failed: %s", exc)
-            results = []
-        self.app.call_from_thread(self._render_results, query, results)
-        self.app.call_from_thread(self._set_busy, False)
-
-    def _set_busy(self, busy: bool) -> None:
-        widget = self.query_one("#search-input", Input)
-        widget.disabled = busy
-        if busy:
-            self.query_one("#search-hint", Static).update("Searching…")
-
-    def _render_results(self, query: str, results: List[Dict[str, Any]]) -> None:
-        self._results = results
-        view = self.query_one("#results", OptionList)
-        view.clear_options()
-        hint = self.query_one("#search-hint", Static)
-        if not results:
-            hint.update(f"No results for '{query}'.")
-            return
-        view.add_options(
-            [
-                Option(
-                    f"{entry.get('appid')}  {entry.get('name', '')}  ({', '.join(entry.get('sources') or [])})".rstrip()
-                )
-                for entry in results
-            ]
-        )
-        view.highlighted = 0
-        view.focus()
-        hint.update(f"{len(results)} result(s) — Enter opens, ↑↓ moves.")
-
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        self._search(event.value.strip())
+    def _table(self) -> DataTable:
+        return self.query_one("#results-table", DataTable)
 
     def action_back(self) -> None:
         self.app.pop_screen()
@@ -273,11 +246,152 @@ class SearchScreen(Screen):
     def action_quit(self) -> None:
         self.app.exit()
 
-    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
-        index = event.option_index
-        if 0 <= index < len(self._results):
-            entry = self._results[index]
-            self.app.push_screen(GameScreen(appid=int(entry["appid"]), name=str(entry.get("name") or "")))
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._search(event.value.strip())
+
+    def _search(self, query: str) -> None:
+        if not query:
+            return
+        self.query_one(Input).disabled = True
+        self.query_one("#add-hint", Static).update("Searching…")
+        self.run_worker(
+            lambda: self._do_search(query),
+            group="search",
+            thread=True,
+            exclusive=True,
+        )
+
+    @work(thread=True, exclusive=True, group="search")
+    def _do_search(self, query: str) -> None:
+        try:
+            from core.unified_search import search
+
+            results = search(query, limit=30, include_steamdb=True)
+        except Exception as exc:
+            logger.warning("[Search] failed: %s", exc)
+            results = []
+        self.app.call_from_thread(self._render_results, query, results)
+
+    def _render_results(self, query: str, results: List[Dict[str, Any]]) -> None:
+        self._results = results
+        table = self._table()
+        table.clear()
+        hint = self.query_one("#add-hint", Static)
+        self.query_one(Input).disabled = False
+        if not results:
+            hint.update(f"No results for '{query}'.")
+            return
+        for index, entry in enumerate(results):
+            price = entry.get("price") or ""
+            table.add_row(
+                str(entry.get("appid", "")),
+                str(entry.get("name", "")),
+                str(price).replace("[", "(").replace("]", ")"),
+                str(entry.get("kind", "")),
+                key=str(index),
+            )
+        hint.update(f"{len(results)} result(s) — Enter chooses.")
+
+    @on(DataTable.RowHighlighted, "#results-table")
+    def _on_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        try:
+            index = int(str(event.row_key.value))
+        except (TypeError, ValueError):
+            return
+        if not (0 <= index < len(self._results)):
+            return
+        self._details_token += 1
+        token = self._details_token
+        self.run_worker(lambda: self._inspect_later(index, token), group="search-inspect", thread=True)
+
+    def _inspect_later(self, index: int, token: int) -> None:
+        from core.unified_search import app_details
+
+        entry = self._results[index]
+        details = app_details(int(entry["appid"]))
+        if details:
+            entry.update({k: v for k, v in details.items() if v})
+        self.app.call_from_thread(self._show_detail, index, token, entry)
+
+    def _show_detail(self, index: int, token: int, entry: Dict[str, Any]) -> None:
+        if token != self._details_token:
+            return
+        title = f"[b]{entry.get('appid')}[/b]  {entry.get('name', '')}"
+        price = "[#5ff0a0]free[/]" if entry.get("free") else (f"[#5ff0a0]{entry.get('price')}[/]" if entry.get("price") else "")
+        self.query_one("#detail-info", Static).update(f"{title}\n{price}" if price else title)
+        self._show_image(entry.get("header_image") or entry.get("header_url") or "")
+        devs = ", ".join(entry.get("developers") or [])
+        desc = (entry.get("short_description") or "").strip()
+        if devs:
+            desc = f"dev: {devs}\n\n{desc}"
+        self.query_one("#detail-desc", Static).update(desc)
+
+    def _show_image(self, url: str) -> None:
+        from . import imgpreview
+
+        if self._img_widget is None:
+            return
+        if not url:
+            self._img_widget.display = False
+            return
+        image = imgpreview.get_header_image(url)
+        if image is None:
+            self._img_widget.display = False
+            return
+        self._img_widget.display = True
+        self._img_widget.image = image
+
+    @on(DataTable.RowSelected, "#results-table")
+    def _on_row_selected(self, event: DataTable.RowSelected) -> None:
+        try:
+            index = int(str(event.row_key.value))
+        except (TypeError, ValueError):
+            return
+        if not (0 <= index < len(self._results)):
+            return
+        entry = self._results[index]
+        self.app.push_screen(ChoiceScreen(appid=int(entry["appid"]), name=str(entry.get("name") or "")))
+
+
+# ── fingerprint vs download choice ──────────────────────────────────────────
+
+class ChoiceScreen(Screen):
+    BINDINGS = [
+        ("escape", "back", "back"),
+        ("f", "fingerprint", "fingerprint"),
+        ("d", "download", "download"),
+    ]
+
+    def __init__(self, appid: int, name: str) -> None:
+        super().__init__()
+        self.appid = int(appid)
+        self.app_name = name
+
+    def compose(self) -> ComposeResult:
+        yield AppHeader(f"App {self.appid} — {self.app_name or '…'}", id="hdr")
+        yield Static(
+            "What do you want to do with this game?",
+            id="app-subtitle",
+        )
+        with Vertical(id="choice-buttons"):
+            yield Button("Fingerprint (F)  ·  analyze the .exes", id="btn-fingerprint", variant="primary")
+            yield Button("Download (D)  ·  pick destination", id="btn-download", variant="success")
+        yield FooterHelp("f fingerprint · d download · esc back")
+
+    def action_back(self) -> None:
+        self.app.pop_screen()
+
+    def action_fingerprint(self) -> None:
+        self.app.push_screen(FingerprintTaskScreen(appid=self.appid, name=self.app_name))
+
+    def action_download(self) -> None:
+        self.app.push_screen(GameScreen(appid=self.appid, name=self.app_name))
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-fingerprint":
+            self.action_fingerprint()
+        elif event.button.id == "btn-download":
+            self.action_download()
 
 
 # ── game / fingerprint screen ──────────────────────────────────────────────
@@ -307,7 +421,7 @@ class GameScreen(Screen):
         yield SelectionList(id="exe-list")
         with Horizontal(id="button-row"):
             yield Button("Fingerprint (F)", id="btn-fingerprint", variant="primary")
-            yield Button("Download .exes (D)", id="btn-download", variant="success", disabled=True)
+            yield Button("Download to folder… (D)", id="btn-download", variant="success", disabled=True)
         yield FooterHelp("F fingerprint · D download · A toggle all · esc back")
 
     def on_mount(self) -> None:
@@ -324,7 +438,7 @@ class GameScreen(Screen):
         self._start_scan()
 
     def action_download(self) -> None:
-        self._start_download()
+        self._pick_destination()
 
     def action_toggle_all(self) -> None:
         self.query_one("#exe-list", SelectionList).toggle_all()
@@ -336,7 +450,19 @@ class GameScreen(Screen):
         if event.button.id == "btn-fingerprint":
             self._start_scan()
         elif event.button.id == "btn-download":
-            self._start_download()
+            self._pick_destination()
+
+    @work(thread=True, exclusive=True, group="dest-pick")
+    def _pick_destination(self) -> None:
+        from .native_pick import pick_folder
+
+        dest = pick_folder(f"Where should the App {self.appid} .exe files go?")
+        self.app.call_from_thread(self._destination_picked, dest)
+
+    def _destination_picked(self, dest: Optional[str]) -> None:
+        if not dest:
+            dest = engine.default_destination(str(self.appid))
+        self._start_download(dest)
 
     @work(thread=True, exclusive=True, group="scan")
     def _start_scan(self) -> None:
@@ -383,7 +509,7 @@ class GameScreen(Screen):
         self.query_one("#btn-download", Button).disabled = not self._entries
 
     @work(thread=True, exclusive=True, group="download")
-    def _start_download(self) -> None:
+    def _start_download(self, dest: Optional[str] = None) -> None:
         if self._scan is None or not self._entries:
             return
         selection = self.query_one("#exe-list", SelectionList)
@@ -395,7 +521,8 @@ class GameScreen(Screen):
             return
         self.app.call_from_thread(self._set_busy, True, f"Downloading {len(picked)} file(s)…")
         self.app.job.start(f"downloading {len(picked)} file(s)")
-        dest = engine.default_destination(str(self.appid))
+        if not dest:
+            dest = engine.default_destination(str(self.appid))
         count, errors = engine.download_selected(
             self._scan,
             picked,
@@ -414,13 +541,275 @@ class GameScreen(Screen):
         self._set_busy(False)
 
 
+# ── fingerprint task + report ───────────────────────────────────────────────
+
+class FingerprintTaskScreen(Screen):
+    BINDINGS = [("escape", "back", "back")]
+
+    def __init__(self, appid: int, name: str) -> None:
+        super().__init__()
+        self.appid = int(appid)
+        self.app_name = name
+
+    def compose(self) -> ComposeResult:
+        yield AppHeader(f"Fingerprinting App {self.appid} — {self.app_name}", id="hdr")
+        yield Static("Downloading the .exe files to a temp folder…", id="scan-status")
+        yield Static("", id="scan-detail")
+        yield FooterHelp("esc cancel")
+
+    def on_mount(self) -> None:
+        self._cancelled = False
+        self.run_worker(self._run, thread=True, group="fingerprint")
+
+    def action_back(self) -> None:
+        self._cancelled = True
+        self.app.pop_screen()
+
+    @work(thread=True, exclusive=True, group="fingerprint")
+    def _run(self) -> None:
+        import tempfile
+
+        appid = str(self.appid)
+        self.app.job.start(f"fingerprinting App {appid}")
+
+        def _progress(message, step=0, total=1):
+            if self._cancelled:
+                return
+            self.app.call_from_thread(self.query_one("#scan-detail", Static).update, str(message)[:140])
+
+        try:
+            scan = engine.scan_app(appid, progress=_progress)
+        except Exception as exc:
+            logger.warning("[Fingerprint] scan failed: %s", exc)
+            scan = None
+
+        if self._cancelled:
+            return
+
+        if scan is None or not scan.entries:
+            errors = list((scan.errors if scan else [])) or ["No executables found."]
+            self.app.job.done()
+            self.app.call_from_thread(self._failed, errors)
+            return
+
+        temp_dir = tempfile.mkdtemp(prefix=f"exe-fingerprinter-{appid}-")
+        progress = lambda msg: self.app.call_from_thread(
+            self.query_one("#scan-status", Static).update, str(msg)[:140]
+        )
+        count, errors = engine.download_selected(scan, scan.entries, destination=temp_dir, progress=progress)
+        engine.cleanup_keys(scan)
+        if self._cancelled:
+            return
+
+        from core.fingerprint import fingerprint_file
+
+        reports = []
+        for path in sorted(Path(temp_dir).glob("**/*")):
+            if not path.is_file() or path.suffix.lower() != ".exe":
+                continue
+            try:
+                reports.append(fingerprint_file(str(path), source=f"steam appid {appid}"))
+            except Exception as exc:
+                logger.warning("[Fingerprint] analysis failed for %s: %s", path, exc)
+        self.app.job.done()
+        self.app.call_from_thread(self._done, reports, temp_dir, errors)
+
+    def _failed(self, errors: List[str]) -> None:
+        self.query_one("#scan-status", Static).update("Fingerprint failed:")
+        self.query_one("#scan-detail", Static).update("\n".join(errors)[:200])
+
+    def _done(self, reports: List[Dict[str, Any]], temp_dir: str, errors: List[str]) -> None:
+        if not reports:
+            self._failed(errors or ["No executables were downloaded to analyze."])
+            return
+        self.app.pop_screen()
+        # One report screen per executable: Copy / Export work per file.
+        for report in reports:
+            self.app.push_screen(FingerprintScreen(report=report, work_dir=temp_dir))
+
+
+class FingerprintScreen(Screen):
+    """Report for a single .exe: everything a user-mode app can get from it."""
+
+    BINDINGS = [
+        ("escape", "back", "back"),
+        ("ctrl+q", "quit", "quit"),
+        ("c", "copy", "copy"),
+        ("e", "export", "export"),
+    ]
+
+    def __init__(self, report: Dict[str, Any], work_dir: Optional[str] = None) -> None:
+        super().__init__()
+        self.report = report
+        self.work_dir = work_dir or str(Path(report.get("file", {}).get("path", "")).parent)
+
+    def compose(self) -> ComposeResult:
+        name = self.report.get("file", {}).get("name", ".exe")
+        yield AppHeader(f"fingerprint · {name}", id="hdr")
+        with VerticalScroll(id="report"):
+            yield Static("", id="report-text", markup=False)
+        with Horizontal(id="button-row"):
+            yield Button("Copy TOML", id="btn-copy", variant="primary")
+            yield Button("Export TOML", id="btn-export", variant="success")
+        yield Static("", id="fingerprint-status")
+        yield FooterHelp("c copy · e export · esc done")
+
+    def on_mount(self) -> None:
+        from core.fingerprint import fingerprint_to_text
+
+        lines = fingerprint_to_text(self.report)
+        self.query_one("#report-text", Static).update("\n".join(lines))
+
+    def action_back(self) -> None:
+        self.app.pop_screen()
+
+    def action_quit(self) -> None:
+        self.app.exit()
+
+    def action_copy(self) -> None:
+        self._copy()
+
+    def action_export(self) -> None:
+        self._export()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-copy":
+            self._copy()
+        elif event.button.id == "btn-export":
+            self._export()
+
+    def _set_status(self, text: str, ok: bool = True) -> None:
+        status = self.query_one("#fingerprint-status", Static)
+        status.update(text)
+        status.remove_class("-error") if ok else status.add_class("-error")
+
+    def _copy(self) -> None:
+        from core.fingerprint import fingerprint_to_toml
+
+        from .native_pick import copy_to_clipboard
+
+        ok = copy_to_clipboard(fingerprint_to_toml(self.report))
+        self._set_status("Copied TOML to the clipboard." if ok else "Clipboard copy failed — install xclip/wl-copy.", ok)
+
+    def _export(self) -> None:
+        from core.fingerprint import fingerprint_to_toml
+
+        name = Path(self.report.get("file", {}).get("name", "file")).stem or "file"
+        out = Path(self.work_dir) / f"{name}.fingerprint.toml"
+        try:
+            out.write_text(fingerprint_to_toml(self.report), encoding="utf-8")
+        except OSError as exc:
+            self._set_status(f"Export failed: {exc}", False)
+            return
+        self._set_status(f"Wrote {out}")
+
+
+class ExternalFingerprintScreen(Screen):
+    """Pick any .exe and fingerprint it — no game depots involved."""
+
+    BINDINGS = [("escape", "back", "back")]
+
+    def compose(self) -> ComposeResult:
+        yield AppHeader("external fingerprint", id="hdr")
+        yield Static("Choose any .exe — one native file picker.", id="scan-status")
+        with Horizontal(id="button-row"):
+            yield Button("Pick .exe…", id="btn-pick", variant="primary")
+        yield FooterHelp("esc back")
+
+    def on_mount(self) -> None:
+        self.run_worker(self._pick, thread=True, group="exe-pick")
+
+    def action_back(self) -> None:
+        self.app.pop_screen()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-pick":
+            self._pick()
+
+    @work(thread=True, exclusive=True, group="exe-pick")
+    def _pick(self) -> None:
+        from .native_pick import pick_executable
+
+        path = pick_executable("Fingerprint which .exe?")
+        self.app.call_from_thread(self._picked, path)
+
+    def _picked(self, path: Optional[str]) -> None:
+        if not path:
+            self.query_one("#scan-status", Static).update("No file selected — press Pick .exe… or Esc.")
+            return
+        from core.fingerprint import fingerprint_file
+
+        report = fingerprint_file(path, source="external file")
+        self.app.pop_screen()
+        self.app.push_screen(FingerprintScreen(report=report, work_dir=str(Path(path).parent)))
+
+
 # ── settings screen ────────────────────────────────────────────────────────
 
 class SettingsScreen(Screen):
     BINDINGS = [
         ("escape", "back", "back"),
         ("ctrl+q", "quit", "quit"),
+        ("up", "nav_up", "up"),
+        ("down", "nav_down", "down"),
+        ("left", "nav_left", "left"),
+        ("right", "nav_right", "right"),
     ]
+
+    _FOCUS_ORDER = [
+        "hubcap-key",
+        "api-base",
+        "api-user",
+        "api-pass",
+        "btn-signin",
+        "theme-select",
+    ]
+
+    _THEME_ORDER = ["auto", "rice", "minimal"]
+
+    def _focus_ids(self) -> list[str]:
+        return [w_id for w_id in self._FOCUS_ORDER if self.query(f"#{w_id}")]
+
+    def _focused_id(self):
+        focused = self.focused
+        return getattr(focused, "id", None) if focused else None
+
+    def _move_focus(self, delta: int) -> None:
+        ids = self._focus_ids()
+        current = self._focused_id()
+        index = ids.index(current) if current in ids else (0 if delta > 0 else len(ids) - 1)
+        target = ids[(index + delta) % len(ids)]
+        try:
+            self.query_one(f"#{target}").focus()
+        except Exception:
+            pass
+
+    def action_nav_up(self) -> None:
+        self._move_focus(-1)
+
+    def action_nav_down(self) -> None:
+        self._move_focus(1)
+
+    def action_nav_left(self) -> None:
+        focused = self.focused
+        if getattr(focused, "id", None) == "theme-select":
+            self._cycle_theme(-1)
+
+    def action_nav_right(self) -> None:
+        focused = self.focused
+        if getattr(focused, "id", None) == "theme-select":
+            self._cycle_theme(1)
+
+    def _cycle_theme(self, delta: int) -> None:
+        from utils.settings import get_settings
+
+        current = str(get_settings().value("tui_theme", "auto") or "auto").strip().lower()
+        index = self._THEME_ORDER.index(current) if current in self._THEME_ORDER else 0
+        target = self._THEME_ORDER[(index + delta) % len(self._THEME_ORDER)]
+        select = self.query_one("#theme-select", Select)
+        select.value = target
+        get_settings().setValue("tui_theme", target)
+        get_settings().sync()
 
     def compose(self) -> ComposeResult:
         yield AppHeader("settings", id="hdr")
@@ -462,9 +851,7 @@ class SettingsScreen(Screen):
             value=str(_setting("tui_theme", "auto")),
             id="theme-select",
         )
-        yield Static("Colour-blind mode", classes="settings-label")
-        yield Switch(value=settings.colorblind_enabled(), id="colour-blind")
-        yield FooterHelp("esc back · enter saves a field · ctrl+q quit")
+        yield FooterHelp("↑↓ move · ←→ change theme · esc back · enter saves a field")
 
     def _account_status(self) -> str:
         try:
@@ -539,11 +926,6 @@ class SettingsScreen(Screen):
             settings = get_settings()
             settings.setValue("tui_theme", str(event.value))
             settings.sync()
-
-    def on_switch_changed(self, event: Switch.Changed) -> None:
-        if event.switch.id == "colour-blind":
-            settings.set_colorblind("deuteranopia" if event.value else "off")
-
 
 # ── about screen ─────────────────────────────────────────────────────────
 

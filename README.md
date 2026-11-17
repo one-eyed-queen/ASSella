@@ -26,7 +26,7 @@
 2. Fingerprint the base game's Windows depots via the steamcmd API / Steam PICS, list every `.exe` with a DepotDownloader `-manifest-only` dump.
 3. Pick the files you want. Only those are downloaded, by `-filelist`, into `%APPDATA%\exe-pawprint\<appid>`.
 
-The interface is a paws-style TUI. Sixel graphics are used where the terminal supports them; everywhere else it draws a clean text view. Colour-blind mode is built in. SFW assets only.
+The interface is a paws-style TUI. Sixel graphics are used where the terminal supports them; everywhere else it draws a clean text view. SFW assets only.
 
 **Never adds or removes games.** This is the download side of a depot workflow, not a library manager.
 

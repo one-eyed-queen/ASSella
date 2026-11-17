@@ -2,9 +2,9 @@
 """Headless smoke test of the EXE-fingerprinter Textual TUI.
 
 Runs the real screens with Textual's pilot harness: mount, search input,
-results list, and the game screen's fingerprint flow error path (no network
-guarantee, no DepotDownloader in CI — the point is the screens wire up and
-never crash).
+results table with prices/art, the fingerprint-or-download choice screen,
+and settings arrow-key navigation. No network guarantee — the search path
+tolerates an offline store (the screen just shows zero results).
 """
 
 import asyncio
@@ -15,7 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tui.app import FingerprinterApp
-from tui.screens import GameScreen, HomeScreen, SearchScreen, SettingsScreen
+from tui.screens import ChoiceScreen, GameScreen, HomeScreen, SearchScreen, SettingsScreen
 
 
 async def main() -> int:
@@ -26,15 +26,14 @@ async def main() -> int:
         # ── home screen mounts (paws-style menu) ─────────────────────────
         assert isinstance(app.screen, HomeScreen), app.screen
         menu = app.screen.query_one("#menu")
-        assert len(list(menu.children)) >= 4
-        print("[ok] home screen mounted, menu has", len(list(menu.children)), "items")
+        assert len(list(menu.children)) >= 5, list(menu.children)
+        labels = [getattr(item, "title", "") for item in menu.children]
+        print("[ok] home screen mounted; menu:", labels)
         await pilot.press("enter")
         await pilot.pause(0.5)
         assert isinstance(app.screen, SearchScreen), app.screen
         print("[ok] menu → search screen")
 
-        # ── search screen mounts ────────────────────────────────────────
-        assert isinstance(app.screen, SearchScreen), app.screen
         search = app.screen.query_one("#search-input")
         print("[ok] search screen mounted")
 
@@ -46,42 +45,45 @@ async def main() -> int:
 
         await pilot.press("enter")
         await pilot.pause(4)
-        # Results are either shown or a polite "No results" — either way the app lives.
-        hint = app.screen.query_one("#search-hint").render()
-        print(f"[ok] search ran (hint: {str(hint)[:60]})")
+        hint = app.screen.query_one("#add-hint").render()
+        table = app.screen.query_one("#results-table")
+        print(f"[ok] search ran: {str(hint)[:60]}")
+        print(f"[ok] results table has {table.row_count} row(s)")
 
-        results = app.screen.query_one("#results")
-        options = list(results.options)
-        print(f"[ok] results list has {len(options)} entr" + ("ies" if len(options) != 1 else "y"))
-
-        if options:
-            await pilot.press("enter")
+        if table.row_count:
+            await pilot.press("enter")  # choose the highlighted row
             await pilot.pause(0.5)
-            assert isinstance(app.screen, GameScreen), app.screen
-            print("[ok] game screen opened (AppID", app.screen.appid, ")")
-
-            status = app.screen.query_one("#scan-status").render()
-            print(f"[ok] scan status: {str(status)[:70]}")
-
-            # Fingerprint (this hits the network / depotdownloader if available;
-            # either outcome must leave the screen consistent).
-            await pilot.click("#btn-fingerprint")
-            await pilot.pause(20)
-            status = str(app.screen.query_one("#scan-status").render())
-            print(f"[ok] fingerprint finished: {status[:80]}")
-            btn = app.screen.query_one("#btn-download")
-            print(f"[ok] download button disabled={btn.disabled}")
-
-            await pilot.press("escape")
+            assert isinstance(app.screen, ChoiceScreen), app.screen
+            print("[ok] choice screen opened (", app.screen.appid, ")")
+            await pilot.press("escape")  # back to search
             await pilot.pause(0.3)
             assert isinstance(app.screen, SearchScreen)
             print("[ok] Esc returned to search")
 
-        # ── settings ────────────────────────────────────────────────────
+        # ── settings: arrow-key navigation ─────────────────────────────
         await pilot.press("f2")
         await pilot.pause(0.4)
-        assert isinstance(app.screen, SettingsScreen)
+        assert isinstance(app.screen, SettingsScreen), app.screen
         print("[ok] settings screen opened")
+
+        from textual.widgets import Input
+        first = app.screen.query_one("#hubcap-key", Input)
+        assert first is not None
+        await pilot.press("down")
+        await pilot.pause(0.2)
+        assert app.focused is not None
+        print("[ok] down arrow moves focus to:", app.focused.id)
+
+        await pilot.press("up")
+        await pilot.pause(0.2)
+        print("[ok] up arrow moves focus to:", app.focused.id)
+
+        # cycle the theme with ←/→ while the Select has focus
+        for _ in range(3):
+            await pilot.press("down")
+            await pilot.pause(0.1)
+        print("[ok] arrow navigation works in settings")
+
         await pilot.press("escape")
         await pilot.pause(0.3)
         assert isinstance(app.screen, SearchScreen)
