@@ -567,7 +567,7 @@ class FingerprintTaskScreen(Screen):
     def compose(self) -> ComposeResult:
         yield AppHeader(f"Fingerprinting App {self.appid} — {self.app_name}", id="hdr")
         yield Static("Downloading the .exe files to a temp folder…", id="scan-status")
-        yield Static("", id="scan-detail")
+        yield Static("", id="scan-detail", markup=False)
         yield FooterHelp("esc cancel")
 
     def on_mount(self) -> None:
@@ -590,17 +590,22 @@ class FingerprintTaskScreen(Screen):
                 return
             self.app.call_from_thread(self.query_one("#scan-detail", Static).update, str(message)[:140])
 
+        scan_error = ""
         try:
             scan = engine.scan_app(appid, progress=_progress)
         except Exception as exc:
             logger.warning("[Fingerprint] scan failed: %s", exc)
             scan = None
+            scan_error = str(exc)
 
         if self._cancelled:
             return
 
         if scan is None or not scan.entries:
-            errors = list((scan.errors if scan else [])) or ["No executables found."]
+            if scan is not None:
+                errors = list(scan.errors) or ["No executables found."]
+            else:
+                errors = [f"Scan failed: {scan_error}"] if scan_error else ["Scan failed."]
             self.app.job.done()
             self.app.call_from_thread(self._failed, errors)
             return
@@ -628,8 +633,12 @@ class FingerprintTaskScreen(Screen):
         self.app.call_from_thread(self._done, reports, temp_dir, errors)
 
     def _failed(self, errors: List[str]) -> None:
-        self.query_one("#scan-status", Static).update("Fingerprint failed:")
-        self.query_one("#scan-detail", Static).update("\n".join(errors)[:200])
+        status = self.query_one("#scan-status", Static)
+        status.update("Fingerprint failed:")
+        status.add_class("-error")
+        detail = self.query_one("#scan-detail", Static)
+        detail.update("\n\n".join(errors))
+        detail.add_class("-error")
 
     def _done(self, reports: List[Dict[str, Any]], temp_dir: str, errors: List[str]) -> None:
         if not reports:

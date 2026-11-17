@@ -32,8 +32,7 @@ PaintedHeader {
     height: 100%;
     background: #0c1424;
     content-align: right middle;
-    text-wrap: nowrap;
-    text-overflow: ellipsis;
+    text-wrap: wrap;
 }
 
 AppHeader.-home {
@@ -1172,6 +1171,23 @@ HomeScreen ToastHolder {
     padding: 0 2;
     content-align: left middle;
     color: $warning;
+}
+
+#scan-status.-error {
+    color: $error;
+}
+
+#scan-detail {
+    height: 1fr;
+    padding: 0 2;
+    content-align: left top;
+    color: $text;
+    text-wrap: wrap;
+    overflow-y: auto;
+}
+
+#scan-detail.-error {
+    color: $error;
 }
 
 #exe-list {

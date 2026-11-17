@@ -106,44 +106,56 @@ _API_CACHE_TTL = 300.0
 _API_TIMEOUT = 6.0
 
 
-def _api_depot_map(app_id: AppId) -> Dict[str, Dict[str, str]]:
+def _api_depot_map(app_id: AppId):
     """Depot keys and manifests from the private API, cached for a few minutes.
 
-    This is the last resort when neither the bundle's LUA nor the local key
-    database knows a depot. The API is optional: when the user has not signed
-    in, or the service is unreachable, this returns an empty map and the
-    caller reports the original local error.
+    Returns ``(mapping, error)``. ``error`` is a short, user-facing reason the
+    API produced nothing — empty when the API was reached and answered (even
+    with no known depots, which is not an error). The API is optional: when the
+    user has not signed in, or the service is unreachable, this returns
+    ``({}, reason)`` so callers can say *why* instead of blaming every source.
     """
     cache_key = str(app_id)
     now = time.monotonic()
     cached = _API_CACHE.get(cache_key)
     if cached and now - cached[0] < _API_CACHE_TTL:
-        return cached[1]
+        return cached[1], cached[2]
 
+    mapping: Dict[str, Dict[str, str]] = {}
+    error = ""
     try:
         from core import exe_fingerprinter_api as api
 
         if not api.is_configured():
-            return {}
-        result = api.depots(int(app_id), timeout=_API_TIMEOUT)
-        if not result.ok or not isinstance(result.data, dict):
-            if result.error:
+            error = (
+                "not signed in — open Settings, EXE-fingerprinter account, and sign in "
+                "(or set a working Hubcap key instead)"
+            )
+        else:
+            result = api.depots(int(app_id), timeout=_API_TIMEOUT)
+            if not result.ok:
+                detail = " ".join((result.error or "no details").split())[:200]
+                error = f"sign-in or lookup failed ({detail})"
                 logger.debug("[ManifestDump] API depot lookup failed: %s", result.error)
-            return {}
-        mapping = {
-            str(entry.get("depot_id")): {
-                "key": entry.get("depot_key") or "",
-                "manifest": str(entry.get("manifest_id") or ""),
-            }
-            for entry in result.data.get("depots", [])
-            if entry.get("depot_id")
-        }
+            elif not isinstance(result.data, dict):
+                error = "the API returned an unexpected response"
+            else:
+                mapping = {
+                    str(entry.get("depot_id")): {
+                        "key": entry.get("depot_key") or "",
+                        "manifest": str(entry.get("manifest_id") or ""),
+                    }
+                    for entry in result.data.get("depots", [])
+                    if entry.get("depot_id")
+                }
+                if not mapping:
+                    error = "the API does not know this game's depots (it may not list it yet)"
     except (ImportError, ValueError, TypeError) as exc:
         logger.debug("[ManifestDump] API depot lookup unavailable: %s", exc)
-        return {}
+        error = "the API client is unavailable"
 
-    _API_CACHE[cache_key] = (now, mapping)
-    return mapping
+    _API_CACHE[cache_key] = (now, mapping, error)
+    return mapping, error
 
 
 def read_depot_key(
@@ -197,7 +209,8 @@ def read_depot_key(
         )
 
     if use_api and key_lookup is None:
-        api_key = _api_depot_map(app_id).get(str(depot_id), {}).get("key")
+        api_map, _api_error = _api_depot_map(app_id)
+        api_key = api_map.get(str(depot_id), {}).get("key")
         if api_key:
             logger.info("[ManifestDump] Depot %s key served by the private API", depot_id)
             return api_key
@@ -265,8 +278,10 @@ def prepare_manifest_dump(
     Steam itself, and nothing is downloaded from Hubcap at all.
     """
     # API first: your private API serves the base-game keys and manifest GIDs.
+    api_error = ""
     if key_lookup is None:
-        api_info = _api_depot_map(app_id).get(str(depot_id)) or {}
+        api_map, api_error = _api_depot_map(app_id)
+        api_info = api_map.get(str(depot_id)) or {}
         if api_info.get("key") and api_info.get("manifest"):
             temp_dir = os.path.join(
                 temp_root or tempfile.gettempdir(), f"selective_manifests_{app_id}"
@@ -284,10 +299,12 @@ def prepare_manifest_dump(
                 txt_path=os.path.join(temp_dir, f"manifest_{depot_id}_{api_info['manifest']}.txt"),
             )
 
+    bundle_error = ""
     try:
         zip_path: Optional[Path] = find_manifest_bundle(app_id, manifests_dir)
-    except ManifestDumpError:
+    except ManifestDumpError as exc:
         zip_path = None
+        bundle_error = str(exc)
 
     temp_dir = os.path.join(
         temp_root or tempfile.gettempdir(), f"selective_manifests_{app_id}"
@@ -298,10 +315,19 @@ def prepare_manifest_dump(
 
     depot_key = read_depot_key(temp_dir, depot_id, app_id, key_lookup)
     if not depot_key:
-        raise ManifestDumpError(
-            f"Could not find depot key for depot {depot_id} in the manifest bundle, "
-            f"the local key database, or the EXE-fingerprinter API."
-        )
+        parts = [f"No depot key for depot {depot_id}:"]
+        if api_error:
+            parts.append(f"your EXE-fingerprinter API — {api_error};")
+        else:
+            parts.append(f"your EXE-fingerprinter API answered but does not know depot {depot_id};")
+        if bundle_error:
+            parts.append(f"Hubcap bundle — {bundle_error};")
+        elif zip_path is not None:
+            parts.append("Hubcap bundle was fetched but carries no key for this depot;")
+        else:
+            parts.append("Hubcap bundle — not available (check your Hubcap key in Settings);")
+        parts.append("local key database — no entry.")
+        raise ManifestDumpError(" ".join(parts))
 
     keys_path = os.path.join(temp_dir, "depot.keys")
     write_keys_file(keys_path, depot_id, depot_key)
@@ -315,7 +341,7 @@ def prepare_manifest_dump(
         # No local .manifest: the API's manifest id lets DepotDownloader fetch
         # it by itself. Without that there is nothing usable to scan.
         api_manifest = (
-            _api_depot_map(app_id).get(str(depot_id), {}).get("manifest", "")
+            _api_depot_map(app_id)[0].get(str(depot_id), {}).get("manifest", "")
             if key_lookup is None
             else ""
         )

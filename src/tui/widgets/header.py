@@ -50,7 +50,7 @@ def _text(title):
 
 
 def _plain_text(title):
-    text = f"[b #00d0ff]PAWS[/] [#9db0e0]v{__version__}  ·  manager for[/] [#ff9d3d]SLSsteam[/]"
+    text = f"[b #00d0ff]exe-fingerprinter[/] [#9db0e0]v{__version__}[/]"
     return text if title is None else f"{text}  [#9db0e0]·[/]  [b #00d0ff]{title}[/]"
 
 

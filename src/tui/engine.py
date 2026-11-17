@@ -160,7 +160,7 @@ def scan_app(
     # key is rate-limited.
     from core.manifest_dump import _api_depot_map
 
-    api_map = _api_depot_map(app_id)
+    api_map, _api_error = _api_depot_map(app_id)
     needs_bundle = any(str(p.depot_id) not in api_map for p in plans)
     if needs_bundle:
         ensure_bundle(app_id, progress)
