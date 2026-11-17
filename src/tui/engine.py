@@ -137,7 +137,10 @@ def scan_app(
     progress: Optional[Progress] = None,
     cancel: Optional[threading.Event] = None,
 ) -> ScanResult:
-    """Scan every Windows base-game depot for ``.exe`` files."""
+    """Scan every Windows base-game depot for ``.exe`` files.
+
+    Key order: your private API, then the local Hubcap bundle as a fallback.
+    """
     from core.manifest_dump import prepare_manifest_dump
 
     result = ScanResult(app_id=str(app_id))
@@ -151,7 +154,16 @@ def scan_app(
         )
         return result
 
-    ensure_bundle(app_id, progress)
+    # API first: poll your private API once, up front. The Hubcap bundle is
+    # only downloaded when the API does not know one or more depots — your
+    # own service is free, the public Hubcap pool is not, and your fallback
+    # key is rate-limited.
+    from core.manifest_dump import _api_depot_map
+
+    api_map = _api_depot_map(app_id)
+    needs_bundle = any(str(p.depot_id) not in api_map for p in plans)
+    if needs_bundle:
+        ensure_bundle(app_id, progress)
     dotnet, dll = _dotnet_and_dll()
     total = len(plans)
 

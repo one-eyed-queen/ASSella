@@ -259,10 +259,31 @@ def prepare_manifest_dump(
     The optional arguments exist so this can be exercised against a scratch
     directory; the dialog passes none of them.
 
-    A local Hubcap bundle is preferred, but it is not required: when the
-    private API knows the depot, its key and manifest id are enough for
-    DepotDownloader to fetch the manifest from Steam itself.
+    Order of attempts, cheapest first: the private API, then the local Hubcap
+    bundle and key database. When the API knows the depot, its key and
+    manifest id are enough for DepotDownloader to fetch the manifest from
+    Steam itself, and nothing is downloaded from Hubcap at all.
     """
+    # API first: your private API serves the base-game keys and manifest GIDs.
+    if key_lookup is None:
+        api_info = _api_depot_map(app_id).get(str(depot_id)) or {}
+        if api_info.get("key") and api_info.get("manifest"):
+            temp_dir = os.path.join(
+                temp_root or tempfile.gettempdir(), f"selective_manifests_{app_id}"
+            )
+            os.makedirs(temp_dir, exist_ok=True)
+            keys_path = os.path.join(temp_dir, "depot.keys")
+            write_keys_file(keys_path, depot_id, api_info["key"])
+            return ManifestDump(
+                app_id=app_id,
+                depot_id=depot_id,
+                manifest_id=str(api_info["manifest"]),
+                manifest_file="",
+                keys_path=keys_path,
+                temp_dir=temp_dir,
+                txt_path=os.path.join(temp_dir, f"manifest_{depot_id}_{api_info['manifest']}.txt"),
+            )
+
     try:
         zip_path: Optional[Path] = find_manifest_bundle(app_id, manifests_dir)
     except ManifestDumpError:
