@@ -23,10 +23,11 @@ async def main() -> int:
     async with app.run_test(size=(110, 32)) as pilot:
         await pilot.pause(0.5)
 
-        # ── home screen mounts ───────────────────────────────────────────
+        # ── home screen mounts (paws-style menu) ─────────────────────────
         assert isinstance(app.screen, HomeScreen), app.screen
-        menu = app.screen.query_one("#home-menu")
-        print("[ok] home screen mounted")
+        menu = app.screen.query_one("#menu")
+        assert len(list(menu.children)) >= 4
+        print("[ok] home screen mounted, menu has", len(list(menu.children)), "items")
         await pilot.press("enter")
         await pilot.pause(0.5)
         assert isinstance(app.screen, SearchScreen), app.screen

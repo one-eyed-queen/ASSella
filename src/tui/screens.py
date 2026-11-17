@@ -1,39 +1,48 @@
-"""Textual screens for EXE-fingerprinter.
+"""Textual screens for EXE-fingerprinter — ported from paws' layout.
 
-Three screens:
+paws' interface style, rebound to EXE-fingerprinter's own features:
 
-* ``SearchScreen``  — type an AppID or a few letters of a name; results merged
-  from Steam Store, SteamDB, Hubcap and the private API.
-* ``GameScreen``    — fingerprint the base game's Windows depots (manifest-only)
-  and download the selected executables. Nothing else.
-* ``SettingsScreen``— private API credentials, theme, colour-blind mode.
+* ``HomeScreen``   — app header with banner, an ASCII art panel, and a menu.
+* ``SearchScreen`` — find a game by AppID or short name (Store, SteamDB, Hubcap, your API).
+* ``GameScreen``   — fingerprint the base game (manifest-only), tick executables, download.
+* ``SettingsScreen``— API keys (Hubcap + your private API), theme, colour-blind mode.
+* ``AboutScreen``  — what this is.
 
-``--api`` shows the same two main screens under a fingerprint-only header;
-no games are ever added or removed.
+``--api`` starts on the same home screen with a fingerprint-only header; no games
+are ever added or removed.
 """
 
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from textual import on, work
 from textual.app import ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import (
     Button,
     Input,
     Label,
+    ListView,
     OptionList,
+    ProgressBar,
     Select,
     SelectionList,
     Static,
     Switch,
-    ListView,
+    ListItem,
 )
 from textual.widgets.option_list import Option
+
+from . import art, settings
+from .widgets.art_panel import AsciiPanel
+from .widgets.footer import FooterHelp
+from .widgets.gradient import gradient_text
+from .widgets.header import AppHeader
+from .widgets.jobbar import JobBar
+from .widgets.menu import Menu, MenuItem, restore_index
 
 from . import engine
 
@@ -53,77 +62,102 @@ def _bool_setting(key: str, default: bool = False) -> bool:
     return bool(raw)
 
 
-def _header_text(api_mode: bool) -> str:
-    return "EXE-fingerprinter · API mode" if api_mode else "EXE-fingerprinter"
+def _is_api_mode() -> bool:
+    import sys
+
+    return "--api" in sys.argv or "--api-mode" in sys.argv
 
 
-def _subtitle_text(api_mode: bool) -> str:
-    if api_mode:
-        return "Fingerprint-only — no games added or removed. Executables land in %APPDATA%\\exe-pawprint."
-    return "Fingerprint a Steam game, then download just its Windows executables."
+def _header_title() -> str:
+    return "API mode — fingerprint only" if _is_api_mode() else None
 
 
-def _hero_path() -> str:
-    return str(Path(__file__).resolve().parent.parent.parent / "assets" / "paws-bg.png")
-
-
-def _image_widget():
-    try:
-        from textual_image.widget import Image
-
-        return Image
-    except Exception:
-        return None
+DETAIL_KEYS = "\n".join(
+    [
+        "[#00d0ff]" + "─" * 28 + "[/]",
+        "[#9db0e0]shortcuts[/]",
+        "[#dbe4ff]↑ ↓[/]  [#9db0e0]move[/]",
+        "[#dbe4ff]enter[/]  [#9db0e0]run[/]",
+        "[#dbe4ff]q / esc[/]  [#9db0e0]back · quit[/]",
+        "[#dbe4ff]f2[/]  [#9db0e0]settings[/]",
+        "",
+        "[#9db0e0]the menu on the left picks screens;[/]",
+        "[#9db0e0]the panel on the right explains it.",
+    ]
+)
 
 
 # ── home screen ───────────────────────────────────────────────────────────
 
+class MenuPanel(Container):
+    DETAIL_MIN = 86
+    HINTS_MIN = 44
+
+    def on_resize(self, event):
+        self.query_one("#menu-detail").display = self.size.width >= self.DETAIL_MIN and not settings.is_minimal()
+        compact = self.size.width < self.HINTS_MIN
+        if compact != self.has_class("-compact"):
+            self.set_class(compact, "-compact")
+
+
 class HomeScreen(Screen):
-    """Menu-driven landing page — the paws-style entry screen."""
+    HOME_MENU = tuple(
+        (key, label, desc, icon, hint)
+        for key, label, desc, icon, hint in [
+            ("search", "Search & fingerprint", "Type an AppID or short name — store, SteamDB, Hubcap, your API. Found games get fingerprinted; only the .exe files download.", "search", "steam store · pick files"),
+            ("settings", "Settings", "API keys (Hubcap + your private API), theme, colour-blind mode. Sign in once — the account locks to this device.", "settings", "keys + look"),
+            ("about", "About", "What this is and how it works: manifest-only fingerprint, filelist-limited download, SFW assets.", "about", "what & why"),
+            ("quit", "Quit", "Exit EXE-fingerprinter", "quit", "esc or q"),
+        ]
+    )
 
     BINDINGS = [
         ("ctrl+q", "quit", "quit"),
-        ("/", "search", "search"),
+        ("q", "quit", "quit"),
+        ("slash", "search", "search"),
         ("f2", "settings", "settings"),
     ]
 
-    MENU = [
-        ("search", "Search & fingerprint"),
-        ("settings", "Settings (API keys · theme)"),
-        ("about", "About"),
-        ("quit", "Quit"),
-    ]
-
     def compose(self) -> ComposeResult:
-        yield Static("EXE-fingerprinter", id="app-header")
-        yield Static("Fingerprint a Steam game, then download just its .exe files.", id="app-subtitle")
         with Horizontal(id="home-body"):
-            menu = OptionList(id="home-menu")
-            yield menu
-            hero = _image_widget()
-            if hero is not None:
-                yield hero(_hero_path(), id="hero")
-        yield Static("Enter open · / search · f2 settings · ctrl+q quit", id="footer")
+            with Container(id="art-zone"):
+                yield AsciiPanel(id="art-home")
+            with Vertical(id="right-col"):
+                yield AppHeader(_header_title(), id="hdr")
+                with MenuPanel(id="menu-panel"):
+                    yield Static(gradient_text("MENU " + "· " * 6), id="menu-panel-title")
+                    with Horizontal(id="menu-body"):
+                        yield Menu(id="menu", classes="in-panel")
+                        with Vertical(id="menu-detail"):
+                            yield Static("", id="detail-top", markup=True)
+                            yield Static(DETAIL_KEYS, id="detail-keys", markup=True)
+                yield JobBar(id="job", classes="thin")
+                yield FooterHelp("pick something (up/down, enter, q to quit)")
 
     def on_mount(self) -> None:
-        menu = self.query_one("#home-menu", OptionList)
-        menu.add_options([Option(label) for _key, label in self.MENU])
-        menu.highlighted = 0
-        menu.focus()
+        self._build_menu()
+        self._refresh_art()
 
-    def _open(self, index: int) -> None:
-        key = self.MENU[index][0]
-        if key == "search":
-            self.app.push_screen(SearchScreen())
-        elif key == "settings":
-            self.app.push_screen(SettingsScreen())
-        elif key == "about":
-            self.app.push_screen(AboutScreen())
-        elif key == "quit":
-            self.app.exit()
+    def _refresh_art(self) -> None:
+        if settings.is_minimal():
+            self.query_one("#art-zone").display = False
+            return
+        try:
+            name = art.random_pick(tier="sfw", nsfw=False) or "placeholder.txt"
+        except Exception:
+            name = "placeholder.txt"
+        self.query_one(AsciiPanel).show(name)
 
-    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
-        self._open(event.option_index)
+    def _build_menu(self) -> None:
+        menu = self.query_one("#menu", ListView)
+        menu.clear()
+        for key, label, desc, icon_name, hint in self.HOME_MENU:
+            menu.append(MenuItem(key, label, desc, icon_name, hint=hint))
+        restore_index(menu, 0)
+        self._set_detail(self.HOME_MENU[0][2])
+
+    def _set_detail(self, desc: str) -> None:
+        self.query_one("#detail-top", Static).update(f"[b]{desc}[/b]")
 
     def action_search(self) -> None:
         self.app.push_screen(SearchScreen())
@@ -134,73 +168,59 @@ class HomeScreen(Screen):
     def action_quit(self) -> None:
         self.app.exit()
 
-    def action_home(self) -> None:
-        self.app.pop_screen()
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        index = event.list_view.index
+        if index is None or not (0 <= index < len(self.HOME_MENU)):
+            return
+        key = self.HOME_MENU[index][0]
+        if key == "search":
+            self.app.push_screen(SearchScreen())
+        elif key == "settings":
+            self.app.push_screen(SettingsScreen())
+        elif key == "about":
+            self.app.push_screen(AboutScreen())
+        elif key == "quit":
+            self.app.exit()
 
-
-class AboutScreen(Screen):
-    BINDINGS = [("escape", "back", "back")]
-
-    def compose(self) -> ComposeResult:
-        yield Static("About", id="app-header")
-        yield Static(
-            "EXE-fingerprinter 3.0.0\n\n"
-            "A TUI that fingerprints a Steam game's base-game Windows depots\n"
-            "and downloads just the executable files — nothing else.\n\n"
-            "Depot keys come from your local key database, the private API,\n"
-            "or Hubcap. Search merges Steam Store, SteamDB, Hubcap and the API.\n\n"
-            "SFW assets only. Unofficial — not affiliated with Valve or Steam.\n\n"
-            "Esc back",
-            id="about-text",
-        )
-        yield Static("Esc back", id="footer")
-
-    def action_back(self) -> None:
-        self.app.pop_screen()
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        index = event.list_view.index
+        if index is None or not (0 <= index < len(self.HOME_MENU)):
+            return
+        self._set_detail(self.HOME_MENU[index][2])
 
 
 # ── search screen ─────────────────────────────────────────────────────────
 
 class SearchScreen(Screen):
     BINDINGS = [
-        ("ctrl+q", "quit", "quit"),
+        ("escape", "back", "back"),
+        ("slash", "focus_search", "search"),
         ("f2", "settings", "settings"),
-        ("/", "focus_search", "search"),
-        ("escape", "home", "home"),
+        ("ctrl+q", "quit", "quit"),
     ]
 
     def compose(self) -> ComposeResult:
-        yield Static(_header_text(self._is_api_mode()), id="app-header")
-        yield Static(_subtitle_text(self._is_api_mode()), id="app-subtitle")
+        yield AppHeader(_header_title(), id="hdr")
         yield Input(placeholder="AppID or game name…", id="search-input")
         yield Static("Search by AppID or name — Enter searches, ↑↓ moves, Enter opens.", id="search-hint")
         yield OptionList(id="results")
-        yield Static("Enter open · ↑↓ move · f2 settings · ctrl+q quit", id="footer")
-
-    def _is_api_mode(self) -> bool:
-        return "--api" in self.app.argv or "--api-mode" in self.app.argv
+        yield FooterHelp("esc back · ↑↓ move · enter open · f2 settings")
 
     def on_mount(self) -> None:
-        from textual.widgets import Input, OptionList
-
         self.query_one("#search-input", Input).value = ""
         self.query_one("#search-input", Input).focus()
         self._results: List[Dict[str, Any]] = []
 
-    def action_focus_search(self) -> None:
-        self.query_one("#search-input", Input).focus()
-
-    def action_settings(self) -> None:
-        self.app.push_screen(SettingsScreen())
-
-    def action_quit(self) -> None:
-        self.app.exit()
-
-    def action_home(self) -> None:
-        self.app.pop_screen()
+    def _search(self, query: str) -> None:
+        self.app.run_worker(
+            lambda: self._do_search(query),
+            group="search",
+            thread=True,
+            exclusive=True,
+        )
 
     @work(thread=True, exclusive=True, group="search")
-    def _search(self, query: str) -> None:
+    def _do_search(self, query: str) -> None:
         self.app.call_from_thread(self._set_busy, True)
         try:
             from core.unified_search import search
@@ -215,13 +235,8 @@ class SearchScreen(Screen):
     def _set_busy(self, busy: bool) -> None:
         widget = self.query_one("#search-input", Input)
         widget.disabled = busy
-        self.query_one("#search-hint", Static).update("Searching…" if busy else self._hint_text())
-
-    def _hint_text(self) -> str:
-        n = len(self._results)
-        if n:
-            return f"{n} result(s) — Enter opens, ↑↓ moves."
-        return "Type an AppID or game name, then press Enter."
+        if busy:
+            self.query_one("#search-hint", Static).update("Searching…")
 
     def _render_results(self, query: str, results: List[Dict[str, Any]]) -> None:
         self._results = results
@@ -241,10 +256,22 @@ class SearchScreen(Screen):
         )
         view.highlighted = 0
         view.focus()
-        hint.update(self._hint_text())
+        hint.update(f"{len(results)} result(s) — Enter opens, ↑↓ moves.")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self._search(event.value.strip())
+
+    def action_back(self) -> None:
+        self.app.pop_screen()
+
+    def action_focus_search(self) -> None:
+        self.query_one("#search-input", Input).focus()
+
+    def action_settings(self) -> None:
+        self.app.push_screen(SettingsScreen())
+
+    def action_quit(self) -> None:
+        self.app.exit()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         index = event.option_index
@@ -262,6 +289,7 @@ class GameScreen(Screen):
         ("f", "fingerprint", "fingerprint"),
         ("d", "download", "download"),
         ("a", "toggle_all", "toggle all"),
+        ("f2", "settings", "settings"),
     ]
 
     def __init__(self, appid: int, name: str) -> None:
@@ -270,7 +298,7 @@ class GameScreen(Screen):
         self.app_name = name
 
     def compose(self) -> ComposeResult:
-        yield Static(f"App {self.appid} — {self.app_name or '…'}", id="app-title")
+        yield AppHeader(f"App {self.appid} — {self.app_name or '…'}", id="hdr")
         yield Static(
             "Base game only · DLC skipped · manifest-only scan (downloads no game content)",
             id="app-subtitle",
@@ -280,7 +308,7 @@ class GameScreen(Screen):
         with Horizontal(id="button-row"):
             yield Button("Fingerprint (F)", id="btn-fingerprint", variant="primary")
             yield Button("Download .exes (D)", id="btn-download", variant="success", disabled=True)
-        yield Static("F fingerprint · D download · A toggle all · Esc back", id="footer")
+        yield FooterHelp("F fingerprint · D download · A toggle all · esc back")
 
     def on_mount(self) -> None:
         self._scan: Optional[engine.ScanResult] = None
@@ -301,17 +329,19 @@ class GameScreen(Screen):
     def action_toggle_all(self) -> None:
         self.query_one("#exe-list", SelectionList).toggle_all()
 
-    # ── buttons ───────────────────────────────────────────────────────────
+    def action_settings(self) -> None:
+        self.app.push_screen(SettingsScreen())
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-fingerprint":
             self._start_scan()
         elif event.button.id == "btn-download":
             self._start_download()
 
-    # ── scanning ─────────────────────────────────────────────────────────
     @work(thread=True, exclusive=True, group="scan")
     def _start_scan(self) -> None:
         self.app.call_from_thread(self._set_busy, True, "Scanning Windows base-game depots…")
+        self.app.job.start("fingerprinting the base game")
 
         def _progress(message: str, step: int, total: int) -> None:
             self._progress(f"{message} ({step + 1}/{total})")
@@ -347,11 +377,11 @@ class GameScreen(Screen):
             selection.add_options(
                 [(entry.get("path", f"depot {entry.get('depot_id')}"), index) for index, entry in enumerate(self._entries)]
             )
-            status.update(f"{len(self._entries)} executable(s) — select, then press D.")
+            status.update(f"{len(self._entries)} executable(s) — tick what you want, then press D.")
+        self.app.job.done()
         self._set_busy(False)
         self.query_one("#btn-download", Button).disabled = not self._entries
 
-    # ── downloading ───────────────────────────────────────────────────────
     @work(thread=True, exclusive=True, group="download")
     def _start_download(self) -> None:
         if self._scan is None or not self._entries:
@@ -364,6 +394,7 @@ class GameScreen(Screen):
             )
             return
         self.app.call_from_thread(self._set_busy, True, f"Downloading {len(picked)} file(s)…")
+        self.app.job.start(f"downloading {len(picked)} file(s)")
         dest = engine.default_destination(str(self.appid))
         count, errors = engine.download_selected(
             self._scan,
@@ -371,6 +402,7 @@ class GameScreen(Screen):
             destination=dest,
             progress=lambda line: self._progress(line[:140]),
         )
+        self.app.job.done()
         self.app.call_from_thread(self._download_finished, count, errors, dest)
 
     def _download_finished(self, count: int, errors: List[str], dest: str) -> None:
@@ -391,12 +423,12 @@ class SettingsScreen(Screen):
     ]
 
     def compose(self) -> ComposeResult:
-        yield Static("Settings", id="app-header")
+        yield AppHeader("settings", id="hdr")
         yield Static("API keys & appearance — stored locally on this device only.", id="app-subtitle")
         yield Static("Hubcap API key", classes="settings-label")
         yield Input(
             value=str(_setting("morrenus_api_key", "")),
-            placeholder="used to fetch manifest bundles for the fingerprint",
+            placeholder="fetches manifest bundles for the fingerprint",
             password=True,
             id="hubcap-key",
             classes="settings-input",
@@ -414,9 +446,15 @@ class SettingsScreen(Screen):
             id="api-user",
             classes="settings-input",
         )
-        yield Input(value=str(_setting("exefp_api_password", "")), password=True, placeholder="password", id="api-pass", classes="settings-input")
-        with Horizontal():
-            yield Button("Sign in", id="btn-signin", variant="primary")
+        yield Input(
+            value=str(_setting("exefp_api_password", "")),
+            password=True,
+            placeholder="password",
+            id="api-pass",
+            classes="settings-input",
+        )
+        with Horizontal(id="set-row"):
+            yield Button("Sign in", id="btn-signin")
         yield Static(self._account_status(), id="settings-status")
         yield Static("Theme (Auto = rice on colour terminals, minimal otherwise)", classes="settings-label")
         yield Select(
@@ -425,18 +463,16 @@ class SettingsScreen(Screen):
             id="theme-select",
         )
         yield Static("Colour-blind mode", classes="settings-label")
-        yield Switch(value=_bool_setting("colour_blind_mode"), id="colour-blind")
-        yield Static("Esc back · Ctrl+Q quit", id="footer")
+        yield Switch(value=settings.colorblind_enabled(), id="colour-blind")
+        yield FooterHelp("esc back · enter saves a field · ctrl+q quit")
 
     def _account_status(self) -> str:
         try:
             from core import exe_fingerprinter_api as api
 
-            s = api.status()
-            if s.get("has_token"):
-                return f"Signed in as {s.get('username', '')} · HWID locked to this device"
-            if s.get("configured"):
-                return "Configured but not signed in — press Sign in."
+            status = api.status()
+            if status.get("has_token"):
+                return f"Signed in as {status.get('username', '')} · HWID locked to this device"
             return "Not signed in — enter credentials and press Sign in."
         except Exception as exc:
             logger.debug("[Settings] account status unavailable: %s", exc)
@@ -447,6 +483,25 @@ class SettingsScreen(Screen):
 
     def action_quit(self) -> None:
         self.app.exit()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        from utils.settings import get_settings
+
+        saved = get_settings()
+        widget_id = event.input.id
+        value = event.value.strip()
+        if widget_id == "hubcap-key":
+            saved.setValue("morrenus_api_key", value)
+        elif widget_id == "api-base":
+            saved.setValue("exefp_api_base", value)
+        elif widget_id == "api-user":
+            saved.setValue("exefp_api_username", value)
+        elif widget_id == "api-pass":
+            saved.setValue("exefp_api_password", value)
+        saved.sync()
+        status = self.query_one("#settings-status", Static)
+        status.update("Saved.")
+        status.remove_class("-error")
 
     @work(thread=True, exclusive=True, group="signin")
     def _sign_in(self) -> None:
@@ -462,24 +517,6 @@ class SettingsScreen(Screen):
         except Exception as exc:
             ok, detail = False, str(exc)
         self.app.call_from_thread(self._signin_done, ok, detail)
-
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        from utils.settings import get_settings
-
-        settings = get_settings()
-        widget_id = event.input.id
-        value = event.value.strip()
-        if widget_id == "hubcap-key":
-            settings.setValue("morrenus_api_key", value)
-        elif widget_id == "api-base":
-            settings.setValue("exefp_api_base", value)
-        elif widget_id == "api-user":
-            settings.setValue("exefp_api_username", value)
-        elif widget_id == "api-pass":
-            settings.setValue("exefp_api_password", value)
-        settings.sync()
-        self.query_one("#settings-status", Static).update("Saved.")
-        self.query_one("#settings-status", Static).remove_class("-error")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-signin":
@@ -505,8 +542,28 @@ class SettingsScreen(Screen):
 
     def on_switch_changed(self, event: Switch.Changed) -> None:
         if event.switch.id == "colour-blind":
-            from utils.settings import get_settings
+            settings.set_colorblind("deuteranopia" if event.value else "off")
 
-            settings = get_settings()
-            settings.setValue("colour_blind_mode", bool(event.value))
-            settings.sync()
+
+# ── about screen ─────────────────────────────────────────────────────────
+
+class AboutScreen(Screen):
+    BINDINGS = [("escape", "back", "back")]
+
+    def compose(self) -> ComposeResult:
+        yield AppHeader("about", id="hdr")
+        yield Static(
+            "[b]EXE-fingerprinter 3.0.0[/b]\n\n"
+            "A TUI that fingerprints a Steam game's base-game Windows depots\n"
+            "and downloads just the executables — nothing else.\n\n"
+            "depot keys  →  local key database → your private API → Hubcap\n"
+            "manifests   →  steamcmd / PICS (DLC depots skipped)\n"
+            "downloads   →  DepotDownloader -filelist of the .exe files you tick\n\n"
+            "SFW assets only. Unofficial — not affiliated with Valve or Steam.\n\n"
+            "[#9db0e0]Esc back[/]",
+            id="about-text",
+        )
+        yield FooterHelp("esc back")
+
+    def action_back(self) -> None:
+        self.app.pop_screen()
