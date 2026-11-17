@@ -116,7 +116,7 @@ def check_port_availability(dialog) -> None:
         ThemedMessageBox.information(
             dialog,
             "Port Check",
-            f"Port {port} is currently in use by this instance of ASSella (Active)."
+            f"Port {port} is currently in use by this instance of EXE-fingerprinter (Active)."
         )
         return
 
@@ -140,12 +140,12 @@ def check_port_availability(dialog) -> None:
 
 def get_service_status() -> str:
     try:
-        service_path = os.path.expanduser("~/.config/systemd/user/assella-testing.service")
+        service_path = os.path.expanduser("~/.config/systemd/user/exe_fingerprinter-testing.service")
         if not os.path.exists(service_path):
             return "not_installed"
 
         res = subprocess.run(
-            ["systemctl", "--user", "is-active", "assella-testing.service"],
+            ["systemctl", "--user", "is-active", "exe_fingerprinter-testing.service"],
             capture_output=True,
             text=True,
             timeout=2.0,
@@ -163,7 +163,7 @@ def get_service_status() -> str:
 def is_service_enabled() -> bool:
     try:
         res = subprocess.run(
-            ["systemctl", "--user", "is-enabled", "assella-testing.service"],
+            ["systemctl", "--user", "is-enabled", "exe_fingerprinter-testing.service"],
             capture_output=True,
             text=True,
             timeout=2.0,
@@ -213,7 +213,7 @@ def update_service_status(dialog) -> None:
 
 def start_service(dialog) -> None:
     try:
-        subprocess.run(["systemctl", "--user", "start", "assella-testing.service"], timeout=5.0)
+        subprocess.run(["systemctl", "--user", "start", "exe_fingerprinter-testing.service"], timeout=5.0)
         update_service_status(dialog)
     except Exception as e:
         ThemedMessageBox.critical(dialog, "Service Error", f"Failed to start service: {e}")
@@ -221,7 +221,7 @@ def start_service(dialog) -> None:
 
 def stop_service(dialog) -> None:
     try:
-        subprocess.run(["systemctl", "--user", "stop", "assella-testing.service"], timeout=5.0)
+        subprocess.run(["systemctl", "--user", "stop", "exe_fingerprinter-testing.service"], timeout=5.0)
         update_service_status(dialog)
     except Exception as e:
         ThemedMessageBox.critical(dialog, "Service Error", f"Failed to stop service: {e}")
@@ -229,7 +229,7 @@ def stop_service(dialog) -> None:
 
 def enable_boot(dialog) -> None:
     try:
-        subprocess.run(["systemctl", "--user", "enable", "assella-testing.service"], timeout=5.0)
+        subprocess.run(["systemctl", "--user", "enable", "exe_fingerprinter-testing.service"], timeout=5.0)
         update_service_status(dialog)
     except Exception as e:
         ThemedMessageBox.critical(dialog, "Service Error", f"Failed to enable service on boot: {e}")
@@ -237,7 +237,7 @@ def enable_boot(dialog) -> None:
 
 def disable_boot(dialog) -> None:
     try:
-        subprocess.run(["systemctl", "--user", "disable", "assella-testing.service"], timeout=5.0)
+        subprocess.run(["systemctl", "--user", "disable", "exe_fingerprinter-testing.service"], timeout=5.0)
         update_service_status(dialog)
     except Exception as e:
         ThemedMessageBox.critical(dialog, "Service Error", f"Failed to disable service on boot: {e}")

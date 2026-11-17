@@ -274,7 +274,7 @@ class ImageFetcher(QObject):
         url.setQuery(query)
         request = QNetworkRequest(url)
         request.setRawHeader(b"Authorization", f"Bearer {self._sgdb_key}".encode())
-        request.setRawHeader(b"User-Agent", b"ASSella")
+        request.setRawHeader(b"User-Agent", b"EXE-fingerprinter")
         self._reply = get_network_manager().get(request)
         self._reply.finished.connect(self._on_sgdb_list)  # type: ignore
 
@@ -325,7 +325,7 @@ class ImageFetcher(QObject):
             self.finished.emit(b"")
             return
         request = QNetworkRequest(QUrl(image_url))
-        request.setRawHeader(b"User-Agent", b"ASSella")
+        request.setRawHeader(b"User-Agent", b"EXE-fingerprinter")
         self._reply = get_network_manager().get(request)
         self._reply.finished.connect(self._on_sgdb_image)  # type: ignore
 

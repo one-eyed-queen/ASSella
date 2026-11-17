@@ -69,7 +69,7 @@ class TestNotifyDiscordRelease(unittest.TestCase):
             commit="abcdef1234567890",
             ping="@here",
         )
-        self.assertEqual(payload_beta["username"], "ASSella Releases")
+        self.assertEqual(payload_beta["username"], "EXE-fingerprinter Releases")
         self.assertEqual(payload_beta.get("content"), "@here")
         self.assertEqual(len(payload_beta["embeds"]), 1)
         embed = payload_beta["embeds"][0]

@@ -1,6 +1,6 @@
 # Command Line Interface (CLI)
 
-ASSella includes a modern, headless Command Line Interface powered by [Python Rich](https://github.com/Textualize/rich). It allows you to check for updates, query local Steam libraries, search online manifest repositories, and download games directly from a terminal or headless SSH session without requiring a desktop environment or X11/Wayland display server.
+Executable Downloader includes a modern, headless Command Line Interface powered by [Python Rich](https://github.com/Textualize/rich). It allows you to check for updates, query local Steam libraries, search online manifest repositories, and download games directly from a terminal or headless SSH session without requiring a desktop environment or X11/Wayland display server.
 
 ::: tip Availability
 The modern Rich CLI interface is currently available in the **Canary** release channel (`canary` branch) and can be run via the canary AppImage or directly from source.
@@ -14,7 +14,7 @@ You can invoke CLI commands using the `-cli` (or `--cli`) argument:
 
 ```bash
 # If using the downloaded AppImage:
-./ASSella.AppImage -cli <command> [arguments] [options]
+./ExeFingerprinter.AppImage -cli <command> [arguments] [options]
 
 # If running from source repository:
 python3 src/main.py -cli <command> [arguments] [options]
@@ -25,7 +25,7 @@ python3 src/main.py -cli <command> [arguments] [options]
 
 To display the built-in command reference at any time:
 ```bash
-./ASSella.AppImage -cli --help
+./ExeFingerprinter.AppImage -cli --help
 ```
 
 ---
@@ -34,15 +34,15 @@ To display the built-in command reference at any time:
 
 ### 1. Update All Check (`update-all`)
 
-Checks all installed ASSella-managed games across all detected Steam libraries against remote manifest repositories:
+Checks all installed EXE-fingerprinter-managed games across all detected Steam libraries against remote manifest repositories:
 
 ```bash
-./ASSella.AppImage -cli update-all
+./ExeFingerprinter.AppImage -cli update-all
 ```
 
 **What it does:**
 - Scans all local Steam library folders.
-- Filters for ASSella-managed games (`ACCELA`, `AT0-M`, `DLC-Only`).
+- Filters for EXE-fingerprinter-managed games (`ACCELA`, `AT0-M`, `DLC-Only`).
 - Queries Hubcap / Steam manifest APIs in headless mode.
 - Renders an interactive results table with status indicators (`✓ Up to date`, `▲ Update Available`, `AT0-M`, `? Unknown`).
 - Caches results to `UpdateStatusCache` and prints a summary breakdown.
@@ -55,10 +55,10 @@ Search your installed game libraries or list all games currently managed:
 
 ```bash
 # Search for installed games by title or AppID:
-./ASSella.AppImage -cli library search "Slay"
+./ExeFingerprinter.AppImage -cli library search "Slay"
 
 # List all installed games across Steam libraries:
-./ASSella.AppImage -cli list
+./ExeFingerprinter.AppImage -cli list
 ```
 
 **Table Columns:**
@@ -75,7 +75,7 @@ Search your installed game libraries or list all games currently managed:
 Search the online Hubcap manifest repository for games and view upload history:
 
 ```bash
-./ASSella.AppImage -cli search "Cyberpunk"
+./ExeFingerprinter.AppImage -cli search "Cyberpunk"
 ```
 
 **Output:**
@@ -90,10 +90,10 @@ Download and configure games using DepotDownloader directly from the terminal:
 
 ```bash
 # Download by AppID:
-./ASSella.AppImage -cli download 1091500
+./ExeFingerprinter.AppImage -cli download 1091500
 
 # Download by game title (shows ranked search matches if multiple exist):
-./ASSella.AppImage -cli download "Hollow Knight"
+./ExeFingerprinter.AppImage -cli download "Hollow Knight"
 ```
 
 #### Download Options & Flags
@@ -110,16 +110,16 @@ Download and configure games using DepotDownloader directly from the terminal:
 
 ```bash
 # Smart-download with recommended depots for Linux / Proton:
-./ASSella.AppImage -cli download 1091500 --smart
+./ExeFingerprinter.AppImage -cli download 1091500 --smart
 
 # Download a specific beta branch:
-./ASSella.AppImage -cli download "Hollow Knight" --branch beta --smart
+./ExeFingerprinter.AppImage -cli download "Hollow Knight" --branch beta --smart
 
 # Download to a specific custom directory:
-./ASSella.AppImage -cli download 2868840 --dest /mnt/fast_nvme/games --smart
+./ExeFingerprinter.AppImage -cli download 2868840 --dest /mnt/fast_nvme/games --smart
 
 # Download all depots:
-./ASSella.AppImage -cli download 1091500 --all
+./ExeFingerprinter.AppImage -cli download 1091500 --all
 ```
 
 ---
@@ -164,10 +164,10 @@ A color-coded table displays all available depots with OS tags, language, size, 
 ## Diagnostic & Verbose Output
 
 By default, CLI mode quiets background framework logs and prints only formatted Rich tables and status messages. Full detailed logs continue to be written to:
-`~/.local/share/ACCELA/logs/assella_<timestamp>.log`
+`~/.local/share/ACCELA/logs/exe_fingerprinter_<timestamp>.log`
 
 To print full debug logs directly to the console during execution, pass `--verbose` or `-v`:
 
 ```bash
-./ASSella.AppImage -cli --verbose search "Elden"
+./ExeFingerprinter.AppImage -cli --verbose search "Elden"
 ```

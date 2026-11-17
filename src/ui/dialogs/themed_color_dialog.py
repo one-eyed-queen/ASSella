@@ -1,8 +1,8 @@
 """
-themed_color_dialog.py - ASSella's own colour picker.
+themed_color_dialog.py - EXE-fingerprinter's own colour picker.
 
 QColorDialog draws a desktop window, so picking the accent colour popped a
-window that belonged to the desktop rather than to ASSella. This module embeds
+window that belonged to the desktop rather than to EXE-fingerprinter. This module embeds
 the picker's own colour wheel/swatch widget inside a normal themed frame, which
 also gives us the native dialog's behaviour for free (the wheel, the presets,
 the HTML/hex field).

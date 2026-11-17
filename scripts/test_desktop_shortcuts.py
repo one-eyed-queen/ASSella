@@ -10,7 +10,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-_TMP = tempfile.mkdtemp(prefix="assella-shortcuts-")
+_TMP = tempfile.mkdtemp(prefix="exe_fingerprinter-shortcuts-")
 os.environ["HOME"] = _TMP
 os.environ["XDG_CONFIG_HOME"] = str(Path(_TMP) / ".config")
 os.environ["XDG_DATA_HOME"] = str(Path(_TMP) / ".local" / "share")

@@ -45,7 +45,7 @@ def create_style_tab(dialog) -> QWidget:
     layout.setContentsMargins(12, 10, 12, 10)
     layout.setSpacing(8)
 
-    desc_lbl = QLabel("Customize the visual appearance, accent colors, and font settings of ASSella.")
+    desc_lbl = QLabel("Customize the visual appearance, accent colors, and font settings of EXE-fingerprinter.")
     desc_lbl.setStyleSheet("color: rgba(255, 255, 255, 0.6); font-size: 8.5pt; border: none; background: transparent;")
     layout.addWidget(desc_lbl)
 

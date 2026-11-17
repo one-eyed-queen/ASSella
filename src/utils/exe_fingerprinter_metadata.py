@@ -58,9 +58,9 @@ def write_accela_metadata(
             os.fsync(f.fileno())
         os.replace(tmp_metadata_path, metadata_path)
 
-        # NOTE: No .assella/.accela side-markers are written anymore. The
+        # NOTE: No .exe_fingerprinter/.accela side-markers are written anymore. The
         # .DepotDownloader folder (with this metadata.json) is the sole
-        # marker identifying an ASSella-managed install. Legacy markers
+        # marker identifying an EXE-fingerprinter-managed install. Legacy markers
         # found on disk are still recognised on read for backward
         # compatibility, and unrelated cleanup code removes them.
              
@@ -83,7 +83,7 @@ def load_accela_metadata(game_path: str) -> Optional[Dict[str, Any]]:
     if not game_path or not os.path.exists(game_path):
         return None
         
-    for sub in (".DepotDownloader", ".assella", ".accela"):
+    for sub in (".DepotDownloader", ".exe_fingerprinter", ".accela"):
         metadata_path = os.path.join(game_path, sub, "metadata.json")
         if os.path.exists(metadata_path):
             try:

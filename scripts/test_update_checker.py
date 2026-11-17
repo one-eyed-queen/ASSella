@@ -60,7 +60,7 @@ class _FakeResponse:
 def _release(
     tag: str,
     published: str = "2026-10-25T10:00:00Z",
-    assets=("ASSella-3.0.1.AppImage",),
+    assets=("EXE-fingerprinter-3.0.1.AppImage",),
     prerelease: bool = False,
     target_commitish: str = "",
     channel: str = "",
@@ -238,7 +238,7 @@ class TestUpdateCheckerRules(UpdateCheckerTestCase):
 
     def test_release_without_appimage_asset_is_ignored(self):
         result = self.run_check(
-            releases=[_release("v3.0.4", published="2026-10-25T10:00:00Z", assets=("ASSella-3.0.4.AppImage.zsync",))],
+            releases=[_release("v3.0.4", published="2026-10-25T10:00:00Z", assets=("EXE-fingerprinter-3.0.4.AppImage.zsync",))],
             channel="stable",
         )
         self.assertEqual(result["status"], "up_to_date")
@@ -569,7 +569,7 @@ class TestBranchAndPrereleaseAwareness(UpdateCheckerTestCase):
         res = self.run_check(
             releases=[_release("v3.0.2", published="2026-10-25T10:00:00Z", prerelease=False, target_commitish="main")],
             channel="stable",
-            current="20261021+ASSella-3.0.0",
+            current="20261021+EXE-fingerprinter-3.0.0",
             build_date="2026-11-09",
         )
         self.assertEqual(res["status"], "update_available")
@@ -949,8 +949,8 @@ class TestBuildDateHelpers(unittest.TestCase):
         self.assertEqual(app_version, "3.1.1")
 
     def test_build_stamp_in_version_file_wins(self):
-        """A dated build ('20261024+ASSella-3.0.1') carries its own build date."""
-        with mock.patch.object(version_mod, "app_version", "20261024+ASSella-3.0.1"):
+        """A dated build ('20261024+EXE-fingerprinter-3.0.1') carries its own build date."""
+        with mock.patch.object(version_mod, "app_version", "20261024+EXE-fingerprinter-3.0.1"):
             self.assertEqual(get_build_date(), "2026-10-24")
             self.assertEqual(get_build_date_display(), "24/10/2026")
 

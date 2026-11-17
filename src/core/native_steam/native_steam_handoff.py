@@ -6,7 +6,7 @@ Self-contained engine for handing off games directly to the Steam client.
 Performs full registration in SLSsteam (AdditionalApps, AdditionalDepots,
 DecryptionKeys, and optional ManifestIds for pinned builds) and signals
 Steam to install the game natively, then returns control immediately to
-ASSella without blocking the task runner.
+EXE-fingerprinter without blocking the task runner.
 """
 
 import logging
@@ -438,7 +438,7 @@ def perform_steam_handoff(
                 game_folder = Path(dest_lib) / "steamapps" / "common" / installdir
                 if game_folder.is_dir():
                     import shutil
-                    for marker_name in (".assella", ".ASSELLA", ".ACCELA", ".accela", ".DepotDownloader", ".depotdownloader"):
+                    for marker_name in (".exe_fingerprinter", ".EXE-FINGERPRINTER", ".ACCELA", ".accela", ".DepotDownloader", ".depotdownloader"):
                         m_path = game_folder / marker_name
                         if m_path.exists():
                             if m_path.is_dir():

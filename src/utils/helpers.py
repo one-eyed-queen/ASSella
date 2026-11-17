@@ -1,6 +1,7 @@
 import logging
 import os
 import platform
+import re
 import shutil
 import ssl
 import subprocess
@@ -71,9 +72,9 @@ def format_bytes(num_bytes: int) -> str:
 def is_arm64() -> bool:
     """Check if the current host architecture is ARM64 / aarch64.
 
-    Can be simulated on x86_64 machines via ASSELLA_FORCE_ARM64=1.
+    Can be simulated on x86_64 machines via EXE_FINGERPRINTER_FORCE_ARM64=1.
     """
-    if os.environ.get("ASSELLA_FORCE_ARM64") in ("1", "true", "True"):
+    if os.environ.get("EXE_FINGERPRINTER_FORCE_ARM64") in ("1", "true", "True"):
         return True
     return platform.machine().lower() in ("aarch64", "arm64", "armv8b", "armv8l")
 
@@ -81,9 +82,9 @@ def is_arm64() -> bool:
 def is_armada_os() -> bool:
     """Check if the current host is running Armada OS.
 
-    Can be simulated on other systems via ASSELLA_FORCE_ARMADA=1.
+    Can be simulated on other systems via EXE_FINGERPRINTER_FORCE_ARMADA=1.
     """
-    if os.environ.get("ASSELLA_FORCE_ARMADA") in ("1", "true", "True"):
+    if os.environ.get("EXE_FINGERPRINTER_FORCE_ARMADA") in ("1", "true", "True"):
         return True
     try:
         for p in ("/etc/os-release", "/usr/lib/os-release"):
@@ -176,6 +177,19 @@ def _clean_corrupt_hostfxr(dotnet_root: str):
         logger.debug(f"Error during host/fxr cleanup: {e}")
 
 
+def dotnet_has_compatible_runtime(list_runtimes_output: str) -> bool:
+    """True when --list-runtimes output contains .NET 9 or newer.
+
+    DepotDownloader targets net9.0 with rollForward=LatestMajor, so any
+    Microsoft.NETCore.App of version 9.x or higher can run it.
+    """
+    for line in (list_runtimes_output or "").splitlines():
+        match = re.search(r"Microsoft\.NETCore\.App\s+(\d+)\.", line)
+        if match and int(match.group(1)) >= 9:
+            return True
+    return False
+
+
 def get_dotnet_path() -> str | None:
     """Get the path to dotnet executable, checking both locations.
 
@@ -225,8 +239,8 @@ def get_dotnet_path() -> str | None:
                 run_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
 
             result = subprocess.run([dotnet_exe, "--list-runtimes"], **run_kwargs)
-            if "Microsoft.NETCore.App 9." in result.stdout:
-                logger.info(f"Found .NET 9 using {dotnet_exe}")
+            if dotnet_has_compatible_runtime(result.stdout):
+                logger.info(f"Found a compatible .NET runtime using {dotnet_exe}")
                 return dotnet_exe
             elif result.returncode != 0:
                 logger.debug(
@@ -234,7 +248,7 @@ def get_dotnet_path() -> str | None:
                 )
             else:
                 logger.debug(
-                    f"Probing {dotnet_exe} succeeded but .NET 9 not in runtimes: {result.stdout.strip()}"
+                    f"Probing {dotnet_exe} succeeded but no .NET 9+ runtime in: {result.stdout.strip()}"
                 )
 
         except (OSError, subprocess.SubprocessError) as e:
@@ -598,7 +612,7 @@ DB_RELOCATED_FILES = {
     "plugin_library.json",
     "voices.json",
     "games.db",
-    "assella.db",
+    "exe_fingerprinter.db",
 }
 
 
@@ -1419,7 +1433,7 @@ def get_encryption_key() -> bytes:
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
-        salt=b'assella_salt_key_123', # Fixed salt
+        salt=b'exe_fingerprinter_salt_key_123', # Fixed salt
         iterations=100000,
     )
     return base64.urlsafe_b64encode(kdf.derive(machine_id))
@@ -1460,7 +1474,7 @@ def decrypt_string(encrypted_text: str) -> str:
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
-            salt=b'assella_salt_key_123',
+            salt=b'exe_fingerprinter_salt_key_123',
             iterations=100000,
         )
         old_key = base64.urlsafe_b64encode(kdf.derive(old_machine_id))

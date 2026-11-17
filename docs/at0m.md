@@ -1,6 +1,6 @@
 # AT0-M (Steam native downloads)
 
-**AT0-M** lets the real Steam client download your games. ASSella doesn't download anything itself here. Instead, it tells Steam (through **SLSsteam**) which games, depots and keys to use, and a few small **plugins** inside Steam do the rest.
+**AT0-M** lets the real Steam client download your games. EXE-fingerprinter doesn't download anything itself here. Instead, it tells Steam (through **SLSsteam**) which games, depots and keys to use, and a few small **plugins** inside Steam do the rest.
 
 To Steam, an AT0-M game looks like a game you own: it shows in your library, downloads from Steam's servers, and updates itself.
 
@@ -30,12 +30,12 @@ Open **Settings → at0-m**. It has two sub-tabs.
 | :--- | :--- |
 | **Enable plugins** | The master switch. Installs the plugins and sets `Plugins: yes` in SLSsteam's `config.yaml`. Turn this on first. |
 | **Start download with Steam** | What Steam does after a game is registered. **Start auto**: starts downloading straight away. **Add only**: only adds it to your library, and you press *Install* yourself. **Always ask**: asks every time. |
-| **DLC-Only Download behaviour** | For games where you own the base game and only add DLC: download the DLC through Steam (**Start Native**), through ASSella (**Start ASSella**), or **Always ask**. See the [DLC-Only Mode guide](/guides/dlc-only). |
+| **DLC-Only Download behaviour** | For games where you own the base game and only add DLC: download the DLC through Steam (**Start Native**), through EXE-fingerprinter (**Start EXE-fingerprinter**), or **Always ask**. See the [DLC-Only Mode guide](/guides/dlc-only). |
 | **Manage plugins** | One button per plugin. **Green** = installed and up to date. Click to check for updates, or to turn an optional plugin off. **Grey** = not installed (click to install) or not available yet. See [Plugins](/plugins). |
 | **Extras** | Optional plugins such as Lettuce. |
-| **I'm using custom plugins (Advanced)** | Only for people who run their own plugins. ASSella stops checking for its plugins. You're on your own with this one. |
+| **I'm using custom plugins (Advanced)** | Only for people who run their own plugins. EXE-fingerprinter stops checking for its plugins. You're on your own with this one. |
 
-If ASSella finds plugins in your SLSsteam folder that it doesn't publish, a **Review** button appears. Unknown plugins can clash with SpaceBunny and Styx.
+If EXE-fingerprinter finds plugins in your SLSsteam folder that it doesn't publish, a **Review** button appears. Unknown plugins can clash with SpaceBunny and Styx.
 
 ### Advanced
 
@@ -56,7 +56,7 @@ If ASSella finds plugins in your SLSsteam folder that it doesn't publish, a **Re
 
 What happens when you press **Register to AT0-M**:
 
-1. **ASSella writes the game into SLSsteam's `config.yaml`:**
+1. **EXE-fingerprinter writes the game into SLSsteam's `config.yaml`:**
    - the game and its DLC (`AdditionalApps`),
    - the depots Steam may download (`AdditionalDepots`),
    - the keys that unlock them (`DecryptionKeys`).
@@ -83,7 +83,7 @@ Answers are checked before use: anything that isn't a valid code (8–20 digits)
 
 ## Plugins and updates
 
-- **Install or update:** **Settings → at0-m → Manage plugins**, then click a plugin. ASSella downloads it from its signed plugin list, checks the signature, and copies it into `~/.config/SLSsteam/plugins/`.
+- **Install or update:** **Settings → at0-m → Manage plugins**, then click a plugin. EXE-fingerprinter downloads it from its signed plugin list, checks the signature, and copies it into `~/.config/SLSsteam/plugins/`.
 - **Required plugins** (SpaceBunny, Styx, Lobster) can't be turned off while AT0-M is on.
 - **Optional plugins** (Lettuce) can be turned off. Clicking a green optional plugin asks whether to turn it off or check for an update.
 - **After an update**, restart Steam so it loads the new plugin version.
@@ -92,8 +92,8 @@ What each plugin does: [Plugins](/plugins).
 
 ## Moving games between modes
 
-On a game's [Info tab](/game-details#info), **Move to AT0-M** hands an ASSella-downloaded game to Steam, and **Move to ASSella** does the reverse. If the game has a pinned build, [DLC-only mode](/guides/dlc-only), an EOS proxy or Goldberg applied, ASSella shows what it will do about each one before moving.
+On a game's [Info tab](/game-details#info), **Move to AT0-M** hands an EXE-fingerprinter-downloaded game to Steam, and **Move to EXE-fingerprinter** does the reverse. If the game has a pinned build, [DLC-only mode](/guides/dlc-only), an EOS proxy or Goldberg applied, EXE-fingerprinter shows what it will do about each one before moving.
 
 ## Uran and Epsilon use the same setup
 
-[Uran](/uran) (Game Mode) and [Epsilon](/epsilon) (your browser) register games exactly like ASSella does. They write to the same `config.yaml`, rely on the same [plugins](/plugins), and share the same Hubcap key.
+[Uran](/uran) (Game Mode) and [Epsilon](/epsilon) (your browser) register games exactly like EXE-fingerprinter does. They write to the same `config.yaml`, rely on the same [plugins](/plugins), and share the same Hubcap key.

@@ -148,7 +148,7 @@ class CreditsDialog(QDialog):
         left = QVBoxLayout()
         left.setSpacing(3)
 
-        name = QLabel("ASSELA")
+        name = QLabel("EXE-fingerprinter")
         name.setStyleSheet(
             f"font-size: 22px; font-weight: 900; color: {self.accent_color}; letter-spacing: 3px;"
         )
@@ -406,7 +406,7 @@ class CreditsDialog(QDialog):
 
     @pyqtSlot()
     def _on_check_up_to_date(self) -> None:
-        self.status_label.setText("ASSella is up to date.")
+        self.status_label.setText("EXE-fingerprinter is up to date.")
         self.status_label.setStyleSheet(
             "color: #2ECC71; font-weight: bold; font-size: 12px; background: transparent;"
         )

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Smoke test: import every ASSella module for real.
+Smoke test: import every EXE-fingerprinter module for real.
 
 `py_compile` is NOT enough. Python 3.14 evaluates annotations lazily (PEP 649),
 so a missing typing import such as `Optional` compiles cleanly and only explodes

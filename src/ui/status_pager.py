@@ -49,7 +49,7 @@ class StatusPagerWidget(QFrame):
         """Asynchronously check for active developer broadcast announcements."""
         def _worker():
             url = os.environ.get(
-                "ASSELLA_BROADCAST_URL",
+                "EXE_FINGERPRINTER_BROADCAST_URL",
                 f"https://raw.githubusercontent.com/niwia/ASSella/beta/broadcast.json?t={int(time.time())}",
             )
             try:
@@ -61,7 +61,7 @@ class StatusPagerWidget(QFrame):
                 else:
                     req = urllib.request.Request(
                         url,
-                        headers={"User-Agent": "ASSella-Client", "Cache-Control": "no-cache"},
+                        headers={"User-Agent": "EXE-fingerprinter-Client", "Cache-Control": "no-cache"},
                     )
                     with urllib.request.urlopen(req, timeout=2.5) as resp:
                         if resp.status == 200:

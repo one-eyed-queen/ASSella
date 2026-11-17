@@ -989,17 +989,17 @@ def _resolve_install_path(game_data: Dict[str, Any]) -> Optional[str]:
 
 
 def _remove_accela_markers(install_path: Optional[str]) -> List[str]:
-    """Retire the ASSella/ACCELA marker files from an install folder.
+    """Retire the EXE-fingerprinter/ACCELA marker files from an install folder.
 
     Returns the marker paths that were actually removed. The marker is what
-    identifies a game as ASSella-managed, so it is only retired once the AT0-M
+    identifies a game as EXE-fingerprinter-managed, so it is only retired once the AT0-M
     identity (config.yaml + plugin library) is safely committed. A removal
     that silently failed is not reported as a removal.
     """
     removed: List[str] = []
     if not install_path or not os.path.isdir(install_path):
         return removed
-    for marker_name in (".assella", ".ASSELLA", ".ACCELA", ".accela", ".DepotDownloader", ".depotdownloader"):
+    for marker_name in (".exe_fingerprinter", ".EXE-FINGERPRINTER", ".ACCELA", ".accela", ".DepotDownloader", ".depotdownloader"):
         m_path = os.path.join(install_path, marker_name)
         if not os.path.exists(m_path):
             continue
@@ -1311,7 +1311,7 @@ def migrate_game_to_atom(
     auto_revert_eos: bool = True,
 ) -> Dict[str, Any]:
     """
-    Core single-game migration engine: converts an ASSella-managed game to AT0-M (Steam Native) mode.
+    Core single-game migration engine: converts an EXE-fingerprinter-managed game to AT0-M (Steam Native) mode.
     Handles:
     - DLC-only mapped entitlements (only user-selected DLC depots, DLC AppIDs, DLC keys)
     - Full game entitlements (all depots and keys from Hubcap bundle without smart depot filtering)
@@ -1536,7 +1536,7 @@ def migrate_game_to_atom(
     except Exception as e:
         logger.warning(f"[PluginGames] Depotcache sync failed for {appid_str}: {e}")
 
-    # 7. Retire ASSella markers
+    # 7. Retire EXE-fingerprinter markers
     marker_retained = False
     marker_retained_reasons: List[str] = []
 
@@ -1566,7 +1566,7 @@ def batch_convert_games_to_atom(
     cancel_check: Optional[Callable[[], bool]] = None,
 ) -> Dict[str, Any]:
     """
-    Batch convert multiple eligible games from ASSella to AT0-M (Steam Native) mode.
+    Batch convert multiple eligible games from EXE-fingerprinter to AT0-M (Steam Native) mode.
     Executes per-game migration sequentially using the single-game migration engine.
     """
     from utils.settings import get_settings

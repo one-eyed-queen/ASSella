@@ -2,7 +2,7 @@
 """
 at0-m Manifest Engine (at0m.py)
 --------------------------------
-Primary manifest retrieval pipeline for ASSella using direct Steam CDN downloads
+Primary manifest retrieval pipeline for EXE-fingerprinter using direct Steam CDN downloads
 authenticated via Manifest Request Codes (MRC) from wudrm (gmrc.wudrm.com),
 with automatic, transparent fallback to the Hubcap API (hubcapmanifest.com).
 
@@ -35,7 +35,7 @@ import sqlite3
 import subprocess
 
 # Optional: curl_cffi for Chrome 120 TLS impersonation (Tier 2 MRC fallback)
-# Already bundled in the ASSella AppImage (used by steamdb_scraper.py too)
+# Already bundled in the EXE-fingerprinter AppImage (used by steamdb_scraper.py too)
 try:
     from curl_cffi import requests as cffi_requests
     _CFFI_AVAILABLE = True
@@ -59,7 +59,7 @@ except ImportError:
     DepotManifest = None
     HAS_STEAM_LIB = False
 
-# Ensure ASSella source modules can be imported for fallback
+# Ensure EXE-fingerprinter source modules can be imported for fallback
 ACCELA_ROOT = Path(__file__).resolve().parent
 for candidate in [
     ACCELA_ROOT / "squashfs-root" / "bin" / "src",
@@ -1079,7 +1079,7 @@ def save_manifest_with_sidecar(
     with open(manifest_file, "wb") as f:
         f.write(manifest_bytes)
 
-    # Compute standard raw 20-byte SHA-1 digest for DepotDownloader / ASSella delta patching
+    # Compute standard raw 20-byte SHA-1 digest for DepotDownloader / EXE-fingerprinter delta patching
     sha1_digest = hashlib.sha1(manifest_bytes).digest()
     with open(sha_file, "wb") as f:
         f.write(sha1_digest)
@@ -1136,7 +1136,7 @@ def fetch_and_install_manifest_for_update(
 # ─────────────────────────────────────────────────────────────────────────────
 def run_test():
     """
-    Runs self-test on a real game manifest in the ASSella update workflow:
+    Runs self-test on a real game manifest in the EXE-fingerprinter update workflow:
     Tests primary fetch -> Steam CDN -> Decryption -> SHA sidecar creation -> Verification.
     Also tests fallback mechanism.
     """
@@ -1157,7 +1157,7 @@ def run_test():
         print(f" -> SUCCESS: Fetched {len(manifest_bytes)} bytes!")
         print(f" -> Magic signature: 0x{manifest_bytes[:4].hex().upper()} (matches Valve 0x71F617D0)")
 
-        # Test writing manifest and .sha sidecar in the way ASSella update tasks do
+        # Test writing manifest and .sha sidecar in the way EXE-fingerprinter update tasks do
         import tempfile
         test_out_dir = Path(tempfile.gettempdir()) / "at0m_test_output"
         mf, sf = save_manifest_with_sidecar(test_depot, test_manifest, manifest_bytes, test_out_dir)
@@ -1193,14 +1193,14 @@ def run_test():
     print(" -> [Test 3 Passed!]")
 
     print("\n" + "=" * 65)
-    print("  ALL TESTS PASSED! at0-m is ready for ASSella.")
+    print("  ALL TESTS PASSED! at0-m is ready for EXE-fingerprinter.")
     print("=" * 65)
     return True
 
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="at0-m Manifest Engine for ASSella")
+    parser = argparse.ArgumentParser(description="at0-m Manifest Engine for EXE-fingerprinter")
     parser.add_argument("--test", action="store_true", help="Run integration test suite")
     parser.add_argument("--depot", type=int, help="Depot ID")
     parser.add_argument("--manifest", type=int, help="Manifest ID (GID)")

@@ -147,7 +147,7 @@ class AtomDlcSetupDialog(QDialog):
 
         sub = QLabel(
             f"Choose which DLCs to unlock for <b>{self.game_name}</b> ({self.appid}) in AT0-M. "
-            "Only the SLSsteam config is written; nothing is downloaded by ASSella."
+            "Only the SLSsteam config is written; nothing is downloaded by EXE-fingerprinter."
         )
         sub.setWordWrap(True)
         sub.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 8.5pt; padding: 10px 16px 0 16px;")

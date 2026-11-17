@@ -1,5 +1,5 @@
 """
-Modular Manifest Verifier for ASSella.
+Modular Manifest Verifier for EXE-fingerprinter.
 
 Compares Hubcap's manifest modification timestamp against Steam's live build release timestamp.
 All calculations take place strictly in UTC and avoid any fake/simulated fallback or local system clock dependencies.

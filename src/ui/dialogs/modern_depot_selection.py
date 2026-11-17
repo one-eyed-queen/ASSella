@@ -773,6 +773,20 @@ class ModernDepotSelectionDialog(QDialog):
         act_row = QHBoxLayout()
         act_row.setSpacing(8)
 
+        self.exe_fingerprinter_btn = QPushButton("EXE-fingerprinter…")
+        self.exe_fingerprinter_btn.setFixedHeight(34)
+        self.exe_fingerprinter_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.exe_fingerprinter_btn.setToolTip(
+            "Scan the selected depots for Windows executables (.exe) and download only those"
+        )
+        self.exe_fingerprinter_btn.setStyleSheet(
+            "QPushButton { background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);"
+            " border-radius: 6px; color: #FFFFFF; font-weight: 500; font-size: 9pt; padding: 0 12px; }"
+            "QPushButton:hover { background-color: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); }"
+        )
+        self.exe_fingerprinter_btn.clicked.connect(self._on_exe_fingerprinter_clicked)
+        act_row.addWidget(self.exe_fingerprinter_btn)
+
         self.cancel_btn = QPushButton("Cancel")
         self.cancel_btn.setFixedHeight(34)
         self.cancel_btn.setFixedWidth(80)
@@ -1635,6 +1649,74 @@ class ModernDepotSelectionDialog(QDialog):
 
         self._dump_thread.finished_signal.connect(_on_finished)
         self._dump_thread.start()
+
+    def _on_exe_fingerprinter_clicked(self):
+        """Scan checked depots for .exe files; download only those."""
+        depot_ids = self.get_selected_depots()
+        if not depot_ids:
+            ThemedMessageBox.warning(self, "Warning", "Please select at least one depot first.")
+            return
+
+        from PyQt6.QtWidgets import QApplication
+        from ui.dialogs.exe_scan_runner import ExeScanThread
+
+        progress = ThemedProgressDialog(
+            "Scanning depots for executables…", "Cancel", 0, len(depot_ids), self
+        )
+        progress.setWindowTitle("EXE-fingerprinter")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.show()
+        QApplication.processEvents()
+
+        thread = ExeScanThread(self.app_id, depot_ids, self)
+        progress.canceled.connect(thread.cancel)
+
+        def _on_progress(message, index):
+            progress.setValue(max(progress.progress_bar.value(), index))
+            progress.setLabelText(message)
+            QApplication.processEvents()
+
+        def _on_finished(entries, errors):
+            progress.close()
+
+            if not entries:
+                detail = "\n".join(errors) if errors else "The selected depots contain no .exe files."
+                ThemedMessageBox.information(
+                    self,
+                    "EXE-fingerprinter",
+                    f"No executables were found.\n\n{detail}",
+                )
+                return
+
+            # Exactly one executable across the selected depots: auto-select it.
+            if len(entries) == 1:
+                only = entries[0]
+                self.selected_files = {only["depot_id"]: [only["path"]]}
+                count = 1
+                self.exe_fingerprinter_btn.setText(
+                    f"EXE-fingerprinter… ({count} .exe selected)"
+                )
+                ThemedMessageBox.information(
+                    self,
+                    "EXE-fingerprinter",
+                    f"Found exactly one executable:\n\n{only['path']}\n\n"
+                    f"Press OK at the bottom to download it.",
+                )
+                return
+
+            from ui.dialogs.executable_chooser import ExecutableChooserDialog
+
+            chooser = ExecutableChooserDialog(entries, app_id=self.app_id, parent=self)
+            if chooser.exec():
+                self.selected_files = chooser.selected_files_by_depot()
+                count = sum(len(paths) for paths in self.selected_files.values())
+                self.exe_fingerprinter_btn.setText(f"EXE-fingerprinter… ({count} .exe selected)")
+
+        thread.progress.connect(_on_progress)
+        thread.finished_scan.connect(_on_finished)
+        self._exe_scan_thread = thread
+        thread.start()
 
     # Public getters matching DepotSelectionDialog interface
     def get_selected_depots(self) -> List[str]:

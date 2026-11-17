@@ -155,7 +155,7 @@ class TestBatchAtomMigration(unittest.TestCase):
         from ui.dialogs.library.filter_sort import game_is_dlc_only
 
         candidates = [
-            {"appid": "100", "game_name": "Valid ASSella Game", "is_accela_install": True, "install_path": "/tmp"},
+            {"appid": "100", "game_name": "Valid EXE-fingerprinter Game", "is_accela_install": True, "install_path": "/tmp"},
             {"appid": "200", "game_name": "Game With Pin", "is_accela_install": True, "install_path": "/tmp"},
             {"appid": "300", "game_name": "DLC-Only Game", "is_accela_install": True, "install_path": "/tmp"},
             {"appid": "400", "game_name": "Already AT0-M Game", "is_accela_install": True, "is_atom": True, "install_path": "/tmp"},
@@ -171,9 +171,9 @@ class TestBatchAtomMigration(unittest.TestCase):
             if g.get("is_atom") or g.get("is_vapor") or g.get("is_plugin_game"):
                 skipped.append((g, "Already in AT0-M"))
                 continue
-            # 2. Not ASSella install
+            # 2. Not EXE-fingerprinter install
             if not g.get("is_accela_install"):
-                skipped.append((g, "Not ASSella Install"))
+                skipped.append((g, "Not EXE-fingerprinter Install"))
                 continue
             # 3. DLC-Only
             if mock_is_dlc(aid) or game_is_dlc_only(g):
@@ -189,7 +189,7 @@ class TestBatchAtomMigration(unittest.TestCase):
         skipped_map = {item[0]["appid"]: item[1] for item in skipped}
         self.assertEqual(skipped_map["300"], "DLC-Only Mode")
         self.assertEqual(skipped_map["400"], "Already in AT0-M")
-        self.assertEqual(skipped_map["500"], "Not ASSella Install")
+        self.assertEqual(skipped_map["500"], "Not EXE-fingerprinter Install")
 
 
 class TestOwnerTags(unittest.TestCase):
@@ -326,7 +326,7 @@ class TestAcfHelper(unittest.TestCase):
                 acf, "111", ["555"], {}, steam_running=False
             )
             self.assertEqual(status, ACF_SKIPPED)
-            self.assertEqual(list(Path(tmp).glob("appmanifest_111.acf.assella-bak-*")), [])
+            self.assertEqual(list(Path(tmp).glob("appmanifest_111.acf.exe_fingerprinter-bak-*")), [])
 
     def test_atomic_write_keeps_a_backup(self):
         import tempfile
@@ -336,7 +336,7 @@ class TestAcfHelper(unittest.TestCase):
             acf.write_text("original", encoding="utf-8")
             self.assertTrue(atomic_write_acf(str(acf), "updated"))
             self.assertEqual(acf.read_text(encoding="utf-8"), "updated")
-            backups = list(Path(tmp).glob("appmanifest_111.acf.assella-bak-*"))
+            backups = list(Path(tmp).glob("appmanifest_111.acf.exe_fingerprinter-bak-*"))
             self.assertEqual(len(backups), 1)
             self.assertEqual(backups[0].read_text(encoding="utf-8"), "original")
 
@@ -462,7 +462,7 @@ class TestMountedDepotKeys(unittest.TestCase):
 class TestMigrationOrdering(unittest.TestCase):
     """The migration must not leave a game without an identity.
 
-    The ASSella marker is the physical proof that a game is ASSella-managed.
+    The EXE-fingerprinter marker is the physical proof that a game is EXE-fingerprinter-managed.
     It may only be retired once the AT0-M identity is committed, and the
     branch the user pinned must survive the migration.
     """
@@ -502,7 +502,7 @@ class TestMigrationOrdering(unittest.TestCase):
             return batch_convert_games_to_atom(games)
 
     def test_markers_survive_a_failed_config_commit(self):
-        """A config that cannot be written must leave the game ASSella-managed."""
+        """A config that cannot be written must leave the game EXE-fingerprinter-managed."""
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -555,7 +555,7 @@ class TestMigrationOrdering(unittest.TestCase):
             self.assertEqual(len(results["migrated"]), 0)
             self.assertEqual(len(results["failed"]), 1)
             self.assertIn("nothing was changed", results["failed"][0]["reason"])
-            # The marker is still there: the game keeps its ASSella identity.
+            # The marker is still there: the game keeps its EXE-fingerprinter identity.
             self.assertTrue(marker.exists())
 
     def test_markers_are_retired_after_a_successful_migration(self):

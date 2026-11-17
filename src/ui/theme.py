@@ -575,7 +575,7 @@ def apply_font(
     """
     Applies the font to the application.
 
-    Prioritizes Open Sans (or Google Sans) from local ASSella fonts directory
+    Prioritizes Open Sans (or Google Sans) from local EXE-fingerprinter fonts directory
     if user hasn't specified a custom font override.
     """
     register_application_fonts()
@@ -601,10 +601,10 @@ def apply_font(
     is_bold = font.bold() if font else False
     is_italic = font.italic() if font else False
 
-    # Case 3: ASSella Preferred Default Font — Open Sans
+    # Case 3: EXE-fingerprinter Preferred Default Font — Open Sans
     families = QFontDatabase.families()
     if "Open Sans" in families:
-        logger.info(f"Using ASSella preferred default font: Open Sans ({target_size}pt)")
+        logger.info(f"Using EXE-fingerprinter preferred default font: Open Sans ({target_size}pt)")
         new_font = QFont("Open Sans", target_size)
         new_font.setBold(is_bold)
         new_font.setItalic(is_italic)
@@ -612,7 +612,7 @@ def apply_font(
         return True, "Open Sans"
 
     if "Google Sans" in families:
-        logger.info(f"Using ASSella preferred default font: Google Sans ({target_size}pt)")
+        logger.info(f"Using EXE-fingerprinter preferred default font: Google Sans ({target_size}pt)")
         new_font = QFont("Google Sans", target_size)
         new_font.setBold(is_bold)
         new_font.setItalic(is_italic)

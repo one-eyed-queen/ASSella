@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# ASSella - Byparr Cloudflare Solver Setup Script (Experimental)
+# EXE-fingerprinter - Byparr Cloudflare Solver Setup Script (Experimental)
 # 
 # Credits:
 #   Byparr by ThePhaseless: https://github.com/ThePhaseless/Byparr
 #   Camoufox by Daij-Djan:  https://github.com/Daij-Djan/camoufox
 #
 # Automatically sets up Byparr inside ~/.local/share/ACCELA/byparr.
-# Managed directly by ASSella (starts when ASSella opens, closes when ASSella exits).
+# Managed directly by EXE-fingerprinter (starts when EXE-fingerprinter opens, closes when EXE-fingerprinter exits).
 # No root / sudo required.
 # ==============================================================================
 
 set -e
 
-echo "=== ASSella: Setting up Byparr Cloudflare Solver (Experimental) ==="
+echo "=== EXE-fingerprinter: Setting up Byparr Cloudflare Solver (Experimental) ==="
 echo "Credits: Byparr by ThePhaseless (https://github.com/ThePhaseless/Byparr)"
 echo ""
 
@@ -47,13 +47,13 @@ else
     git clone --depth 1 https://github.com/ThePhaseless/Byparr.git "$BYPARR_DIR"
 fi
 
-# 3. Create the ASSella supervisor runner for automatic cleanup on crash/exit
+# 3. Create the EXE-fingerprinter supervisor runner for automatic cleanup on crash/exit
 echo "[3/4] Writing process supervisor..."
-cat <<'EOF' > "$BYPARR_DIR/assella_runner.py"
+cat <<'EOF' > "$BYPARR_DIR/exe_fingerprinter_runner.py"
 #!/usr/bin/env python3
 """
-ASSella Byparr Process Supervisor.
-Monitors the ASSella parent PID. If ASSella exits or crashes abruptly,
+EXE-fingerprinter Byparr Process Supervisor.
+Monitors the EXE-fingerprinter parent PID. If EXE-fingerprinter exits or crashes abruptly,
 this supervisor immediately terminates Byparr, Uvicorn, and all spawned
 invisible-playwright Firefox browsers so zero background processes linger.
 """
@@ -63,20 +63,20 @@ import time
 import signal
 import threading
 
-parent_pid_str = os.environ.get("ASSELLA_PID") or os.environ.get("ACCELA_PID")
+parent_pid_str = os.environ.get("EXE_FINGERPRINTER_PID") or os.environ.get("ACCELA_PID")
 parent_pid = int(parent_pid_str) if parent_pid_str and parent_pid_str.isdigit() else 0
 
 def _watchdog():
     if not parent_pid:
         return
-    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [ASSELLA_RUNNER] Supervisor active. Monitoring parent ASSella PID {parent_pid}...", flush=True)
+    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [EXE_FINGERPRINTER_RUNNER] Supervisor active. Monitoring parent EXE-fingerprinter PID {parent_pid}...", flush=True)
     while True:
         time.sleep(1.0)
         try:
             os.kill(parent_pid, 0)
         except OSError:
-            # Parent ASSella is dead! Suicide the process group immediately.
-            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [ASSELLA_RUNNER] Parent ASSella PID {parent_pid} terminated or crashed. Terminating Byparr process tree.", flush=True)
+            # Parent EXE-fingerprinter is dead! Suicide the process group immediately.
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [EXE_FINGERPRINTER_RUNNER] Parent EXE-fingerprinter PID {parent_pid} terminated or crashed. Terminating Byparr process tree.", flush=True)
             try:
                 os.killpg(0, signal.SIGKILL)
             except Exception:
@@ -94,8 +94,8 @@ if __name__ == "__main__":
     uvicorn.run(app, host=HOST, port=PORT)
 EOF
 
-chmod +x "$BYPARR_DIR/assella_runner.py"
-cp -f "$BYPARR_DIR/assella_runner.py" "$BYPARR_DIR/accela_runner.py" 2>/dev/null || true
+chmod +x "$BYPARR_DIR/exe_fingerprinter_runner.py"
+cp -f "$BYPARR_DIR/exe_fingerprinter_runner.py" "$BYPARR_DIR/accela_runner.py" 2>/dev/null || true
 
 # 4. Initialize Python 3.14 & download the stealth browser
 echo "[4/4] Initializing Python environment and downloading stealth browser..."
@@ -109,6 +109,6 @@ echo ""
 echo "=========================================================================="
 echo "  Byparr setup successfully completed!"
 echo "  Location: $BYPARR_DIR"
-echo "  ASSella will now automatically start Byparr when opened,"
+echo "  EXE-fingerprinter will now automatically start Byparr when opened,"
 echo "  and stop it (freeing all memory & CPU) when closed or crashed."
 echo "=========================================================================="

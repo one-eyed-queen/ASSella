@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Build, sign and stage plugins_manifest.json for ASSella.
+"""Build, sign and stage plugins_manifest.json for EXE-fingerprinter.
 
 The source of truth is the plugin repository (``~/Documents/spacebunny`` by
-default), never ASSella's own download cache. For each published plugin this
+default), never EXE-fingerprinter's own download cache. For each published plugin this
 script:
 
   * reads the metadata the plugin carries itself: its version
     (``X.VERSION = "..."`` or the ``-- name.lua (x.y)`` header) and its role
     (``KATAMARI.plugins.<id> = { role = "..." }``); the role decides whether
-    ASSella treats it as a download interceptor;
+    EXE-fingerprinter treats it as a download interceptor;
   * refuses to publish a file whose contents changed while its version did
     not (bump the version in the plugin, or pass --allow-same-version);
   * copies the file into the staging directory (real copies, no symlinks);
   * writes the manifest with a monotonic ``serial`` and signs it with Ed25519
-    (``plugins_manifest.json.sig``), which ASSella verifies before trusting it.
+    (``plugins_manifest.json.sig``), which EXE-fingerprinter verifies before trusting it.
 
-The PUBLISH table below is what ASSella shows in Settings -> AT0-M; a plugin
+The PUBLISH table below is what EXE-fingerprinter shows in Settings -> AT0-M; a plugin
 left out of it is not shown. Per plugin:
 
   required: True      essential; always installed, cannot be turned off
@@ -62,7 +62,7 @@ BUNDLED_MANIFEST = Path(__file__).resolve().parents[1] / "src" / "res" / "plugin
 MANIFEST_NAME = "plugins_manifest.json"
 INTERCEPTOR_ROLES = {"mrc-provider", "download-interceptor", "interceptor"}
 
-# What gets published. Text here is what users see in ASSella.
+# What gets published. Text here is what users see in EXE-fingerprinter.
 PUBLISH: dict[str, dict] = {
     "spacebunny.lua": {
         "name": "SpaceBunny",
@@ -286,7 +286,7 @@ def stage_files(stage: Path, manifest_bytes: bytes, signature: bytes, payloads: 
     def put(name: str, data: bytes) -> None:
         dst = stage / name
         if dst.is_symlink():
-            dst.unlink()  # the old layout linked into ASSella's cache; replace with a real file
+            dst.unlink()  # the old layout linked into EXE-fingerprinter's cache; replace with a real file
         tmp = dst.with_name(dst.name + ".tmp")
         tmp.write_bytes(data)
         tmp.replace(dst)
@@ -305,7 +305,7 @@ def stage_files(stage: Path, manifest_bytes: bytes, signature: bytes, payloads: 
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Build, sign and stage plugins_manifest.json for ASSella.")
+    ap = argparse.ArgumentParser(description="Build, sign and stage plugins_manifest.json for EXE-fingerprinter.")
     ap.add_argument("--source", type=Path, default=DEFAULT_SOURCE, help="plugin repository (default: ~/Documents/spacebunny)")
     ap.add_argument("--stage", type=Path, default=DEFAULT_STAGE, help="R2 staging directory (default: ~/r2-publish/github-files)")
     ap.add_argument("--key", type=Path, default=DEFAULT_KEY, help="Ed25519 signing key (PEM)")

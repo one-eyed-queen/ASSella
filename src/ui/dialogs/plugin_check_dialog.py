@@ -1,4 +1,4 @@
-"""Startup plugin check: shows what ASSella would change and lets the user decide.
+"""Startup plugin check: shows what EXE-fingerprinter would change and lets the user decide.
 
 Nothing is installed, updated or moved to .bak unless the user ticks it and
 presses Apply. "Not now" asks again on the next start; "Don't ask again"
@@ -27,7 +27,7 @@ class PluginCheckDialog(QDialog):
         self._boxes: List[QCheckBox] = []
 
         body = install_themed_frame(self, margins=(16, 10, 16, 14), spacing=10)
-        intro = QLabel("Some SLSsteam plugins need attention. Tick what you want ASSella to do.")
+        intro = QLabel("Some SLSsteam plugins need attention. Tick what you want EXE-fingerprinter to do.")
         intro.setWordWrap(True)
         intro.setStyleSheet("color: rgba(255,255,255,0.85); font-size: 9pt;")
         body.addWidget(intro)
@@ -81,7 +81,7 @@ class PluginCheckDialog(QDialog):
 
 
 class UnlistedPluginsDialog(QDialog):
-    """Plugins in the SLSsteam folder that ASSella does not publish.
+    """Plugins in the SLSsteam folder that EXE-fingerprinter does not publish.
 
     Two answers: turn them off (moved to .bak, nothing deleted) or keep them
     and switch on "I'm using custom plugins". Closing asks again next start.
@@ -97,7 +97,7 @@ class UnlistedPluginsDialog(QDialog):
 
         intro = QLabel(
             "These plugins are in your SLSsteam plugins folder but are not part of the set "
-            "ASSella installs and tests together:"
+            "EXE-fingerprinter installs and tests together:"
         )
         intro.setWordWrap(True)
         intro.setStyleSheet("color: rgba(255,255,255,0.85); font-size: 9pt;")
@@ -131,7 +131,7 @@ class UnlistedPluginsDialog(QDialog):
         disable_hint = QLabel(
             "<b>Turn them off</b>: moved to <i>.bak</i> in the same folder, nothing is deleted. "
             "Rename a file back to turn it on again.<br>"
-            "<b>Keep them</b>: switches on “I'm using custom plugins”. ASSella then stops managing "
+            "<b>Keep them</b>: switches on “I'm using custom plugins”. EXE-fingerprinter then stops managing "
             "and checking plugins; change it any time in Settings → AT0-M."
         )
         disable_hint.setWordWrap(True)
@@ -140,7 +140,7 @@ class UnlistedPluginsDialog(QDialog):
 
         btns = QHBoxLayout()
         later = QPushButton("Not now")
-        later.setToolTip("Ask again next time ASSella starts.")
+        later.setToolTip("Ask again next time EXE-fingerprinter starts.")
         keep = QPushButton("Keep them (custom plugins)")
         off = QPushButton("Turn them off")
         off.setDefault(True)

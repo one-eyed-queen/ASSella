@@ -1,19 +1,19 @@
-# ASSella Installation Guide
+# EXE-fingerprinter Installation Guide
 
 Read the instructions thoroughly before proceeding!
 
 ::: tip Already using ACCELA or previously ran the Into the Wired (ETW) installation script?
-You can skip the Headcrab reset and setup steps and go directly to **[Step 5 — Install ASSella](#_5-install-assella)** to replace ACCELA with ASSella.
+You can skip the Headcrab reset and setup steps and go directly to **[Step 5 — Install EXE-fingerprinter](#_5-install-exe_fingerprinter)** to replace ACCELA with EXE-fingerprinter.
 
 - **Want to install or troubleshoot Headcrab?** Start at [Step 3 — Reset Steam to vanilla](#_3-reset-steam-to-vanilla), then continue through the following steps.
-- **Only want to replace ACCELA with ASSella?** Go directly to Step 5.
+- **Only want to replace ACCELA with EXE-fingerprinter?** Go directly to Step 5.
 :::
 
 ---
 
 ## 1. Get your Hubcap Manifest API key
 
-Before using ASSella to download games, you need to obtain your **Hubcap Manifest API key**. ASSella relies heavily on this API, so make sure you complete this step first.
+Before using EXE-fingerprinter to download games, you need to obtain your **Hubcap Manifest API key**. EXE-fingerprinter relies heavily on this API, so make sure you complete this step first.
 
 ### Step 1: Connect your Discord account
 
@@ -36,7 +36,7 @@ If the website isn't accessible, try switching to a different DNS provider (such
 4. Your Hubcap Manifest API key should now be available.
 
 ::: danger Keep your API key safe
-Treat it like a password and never share it publicly or include it in screenshots. You will need this key when configuring ASSella.
+Treat it like a password and never share it publicly or include it in screenshots. You will need this key when configuring EXE-fingerprinter.
 :::
 
 ::: details I need a photo tutorial
@@ -68,12 +68,12 @@ Copy your key by clicking the copy icon next to the key field.
 
 :::
 
-::: details Bonus: Where to enter or check your API key in ASSella
+::: details Bonus: Where to enter or check your API key in EXE-fingerprinter
 
 #### Step 1: Open Settings
-In the main ASSella window, click the **Settings** (gear) icon located in the upper right header.
+In the main EXE-fingerprinter window, click the **Settings** (gear) icon located in the upper right header.
 
-<img src="/images/hubcap/assella_settings_step1.png" alt="ASSella Main Window - Settings Gear Icon" style="border-radius: 8px; margin: 0.8rem 0; max-width: 100%;" />
+<img src="/images/hubcap/exe_fingerprinter_settings_step1.png" alt="EXE-fingerprinter Main Window - Settings Gear Icon" style="border-radius: 8px; margin: 0.8rem 0; max-width: 100%;" />
 
 #### Step 2: Paste your API Key and verify connection
 In the Settings dialog:
@@ -81,7 +81,7 @@ In the Settings dialog:
 2. Click **Paste** (or press Ctrl+V) to insert your API key.
 3. Click **OK** to save. The Hubcap stats indicator below will reflect your active connection status.
 
-<img src="/images/hubcap/assella_settings_step2.png" alt="ASSella Settings - Hubcap API Key Input and Status" style="border-radius: 8px; margin: 0.8rem 0; max-width: 100%;" />
+<img src="/images/hubcap/exe_fingerprinter_settings_step2.png" alt="EXE-fingerprinter Settings - Hubcap API Key Input and Status" style="border-radius: 8px; margin: 0.8rem 0; max-width: 100%;" />
 
 :::
 
@@ -91,7 +91,7 @@ In the Settings dialog:
 
 Before proceeding, choose the path that applies to you:
 
-- **Existing ACCELA / ETW installation:** Skip directly to [Step 5 — Install ASSella](#_5-install-assella). You do not need to reset Steam or reinstall Headcrab just to replace the application.
+- **Existing ACCELA / ETW installation:** Skip directly to [Step 5 — Install EXE-fingerprinter](#_5-install-exe_fingerprinter). You do not need to reset Steam or reinstall Headcrab just to replace the application.
 - **Fresh installation or Headcrab troubleshooting:** Continue to Step 3 below.
 
 ---
@@ -169,13 +169,13 @@ curl -fsSL "https://cdn.jsdelivr.net/gh/Deadboy666/h3adcr-b@refs/heads/main/head
 
 :::
 
-Let the installation finish. You can now proceed to Step 5 to install ASSella.
+Let the installation finish. You can now proceed to Step 5 to install EXE-fingerprinter.
 
 ---
 
-## 5. Install ASSella
+## 5. Install EXE-fingerprinter
 
-Official releases: **[ASSella GitHub Releases](https://github.com/niwia/ASSella/releases)**
+Official releases: **[Executable Downloader GitHub Releases](https://github.com/niwia/ASSella/releases)**
 
 ::: code-group
 
@@ -184,15 +184,15 @@ curl -fsSL https://raw.githubusercontent.com/niwia/ASSella/beta/install.sh | bas
 ```
 
 ```bash [Option B — Manual AppImage]
-# Download ASSella.AppImage from GitHub Releases
-chmod +x ASSella.AppImage
-./ASSella.AppImage
+# Download ExeFingerprinter.AppImage from GitHub Releases
+chmod +x ExeFingerprinter.AppImage
+./ExeFingerprinter.AppImage
 ```
 
 :::
 
 ### Installer Notes
-- The installer downloads and installs ASSella into `~/.local/share/ACCELA`.
+- The installer downloads and installs EXE-fingerprinter into `~/.local/share/ACCELA`.
 - If an existing ACCELA installation is detected, the script backs up the previous application binary and creates a compatibility symlink.
 - The installer **does not** delete your installed game files.
 - The installer script does not explicitly migrate application settings, so make sure you retain a backup of any important configuration before proceeding.
@@ -203,8 +203,8 @@ chmod +x ASSella.AppImage
 
 - [x] Obtained your Hubcap Manifest API key.
 - [x] Installed or updated Headcrab if required.
-- [x] Installed ASSella.
-- [x] Configured your Hubcap Manifest API key in ASSella.
+- [x] Installed EXE-fingerprinter.
+- [x] Configured your Hubcap Manifest API key in EXE-fingerprinter.
 - [x] Confirmed that the application launches correctly.
 
 ---

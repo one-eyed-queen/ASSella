@@ -1,8 +1,8 @@
 # Online Multiplayer & Proxy Guide
 
-ASSella and SLSsteam provide built-in, native support for playing multiplayer games online via community multiplayer fixes, Steamworks matchmaking spoofing, dynamic socket routing, and Epic Online Services (EOS) emulation.
+EXE-fingerprinter and SLSsteam provide built-in, native support for playing multiplayer games online via community multiplayer fixes, Steamworks matchmaking spoofing, dynamic socket routing, and Epic Online Services (EOS) emulation.
 
-This guide explains how each online component works, how to enable them in ASSella's UI, how they modify your configuration under the hood, and how to safely edit `config.yaml` manually.
+This guide explains how each online component works, how to enable them in EXE-fingerprinter's UI, how they modify your configuration under the hood, and how to safely edit `config.yaml` manually.
 
 ---
 
@@ -16,7 +16,7 @@ Playing games with online fixes on Linux and SteamOS typically involves up to th
 | **Netsock Proxy** | `steamnetsock-patch` (`LD_AUDIT`) | Injects a socket-routing library for Steam Networking Sockets | Required when Proton/Wine cannot establish P2P sockets under spoofed AppIDs. |
 | **EOS Proxy** | `eos-proxy` (`EOSSDK-Win64-Shipping.dll`) | Intercepts Epic Online Services authentication calls | Required for crossplay or multiplayer titles relying on Epic Online Services. |
 
-<img width="100%" alt="ASSella Online Tiles Grid" src="/images/online_tiles_cropped.png" style="border-radius: 8px; margin: 1.5rem 0;" />
+<img width="100%" alt="EXE-fingerprinter Online Tiles Grid" src="/images/online_tiles_cropped.png" style="border-radius: 8px; margin: 1.5rem 0;" />
 
 ---
 
@@ -30,9 +30,9 @@ Most Steam online fixes work by tricking the Steam client and Steamworks API int
 
 SLSsteam handles this at the client hook level via the `FakeAppIds` configuration directive. When configured, SLSsteam dynamically intercepts game startup requests and reports the fake AppID to Steam while allowing the game to load its genuine assets and depots.
 
-### Enabling SLSonline in ASSella
+### Enabling SLSonline in EXE-fingerprinter
 
-1. Open your **Steam Library** in ASSella and click on the game to open **Game Details**.
+1. Open your **Steam Library** in EXE-fingerprinter and click on the game to open **Game Details**.
 2. On the **Info** tab, scroll to the bottom section.
 3. Click the **SLSonline** material tile:
    - The tile will highlight in your theme accent color and display **Active**.
@@ -55,7 +55,7 @@ Under Linux and Proton, when a game's AppID is spoofed (e.g. to `480`), Steam Ne
 
 [steamnetsock-patch](https://github.com/yesyes0649/steamnetsock-patch) (developed by `yesyes0649`) solves this. It compiles into a Linux shared object (`netsock.so`) that hooks into the dynamic linker via `LD_AUDIT`. It intercepts networking socket calls at runtime and ensures that socket endpoints and NAT punching communicate through Steam's routing architecture.
 
-### Enabling Netsock in ASSella
+### Enabling Netsock in EXE-fingerprinter
 
 ::: warning Prerequisites & Anti-Cheat Notice
 - **SLSonline must be enabled first**: Netsock is an audit bridge for spoofed sockets; activate SLSonline before turning on Netsock.
@@ -64,8 +64,8 @@ Under Linux and Proton, when a game's AppID is spoofed (e.g. to `480`), Steam Ne
 
 1. In **Game Details → Info tab**, ensure **SLSonline** is active.
 2. Click the **Netsock** tile.
-3. ASSella will show a one-time safety and anti-cheat advisory. Click **Yes** to confirm.
-4. ASSella will automatically:
+3. EXE-fingerprinter will show a one-time safety and anti-cheat advisory. Click **Yes** to confirm.
+4. EXE-fingerprinter will automatically:
    - Check for `netsock.so` locally (or download the latest release from GitHub).
    - Place the library in `~/.config/SLSsteam/tools/netsock/netsock.so`.
    - Add the required launch option override to SLSsteam's `config.yaml`.
@@ -82,23 +82,23 @@ When running these games with an online fix, the game will attempt to authentica
 
 [eos-proxy](https://github.com/yesyes0649/eos-proxy) (by `yesyes0649`) is a specialized replacement library for `EOSSDK-Win64-Shipping.dll`. It intercepts the EOS SDK initialization, authentication, and overlay calls, bypassing Epic account linking while still allowing peer-to-peer multiplayer to function.
 
-### How ASSella Handles EOS Proxy
+### How EXE-fingerprinter Handles EOS Proxy
 
-ASSella features automatic file detection and state tracking:
+EXE-fingerprinter features automatic file detection and state tracking:
 
 ```
 [Genuine Game Files]
    └── EOSSDK-Win64-Shipping.dll (Original)
              │
-             ▼ ASSella: "Enable Proxy"
+             ▼ EXE-fingerprinter: "Enable Proxy"
    ├── EOSSDK-Win64-Shipping.yes (Original backed up safely)
    └── EOSSDK-Win64-Shipping.dll (Patched proxy DLL active)
 ```
 
-1. **Automatic Detection**: When you open **Game Details**, ASSella scans the game's directory for `EOSSDK-Win64-Shipping.dll`. If found, the **EOS Proxy** tile automatically appears in the bottom grid.
+1. **Automatic Detection**: When you open **Game Details**, EXE-fingerprinter scans the game's directory for `EOSSDK-Win64-Shipping.dll`. If found, the **EOS Proxy** tile automatically appears in the bottom grid.
 2. **Safe Backups**: When toggled on, the genuine DLL is renamed with a `.yes` extension (`EOSSDK-Win64-Shipping.yes`) and the proxy DLL is dropped in place.
 3. **Restoration**: Clicking **Remove Proxy** deletes the proxy and renames the genuine `.yes` backup back to `.dll`.
-4. **Game Update Detection ("Stale" State)**: If the game updates and Steam overwrites the proxy with a genuine DLL, ASSella detects the hash mismatch and labels the button amber (**Reapply Proxy**). Clicking it restores the patch with one click.
+4. **Game Update Detection ("Stale" State)**: If the game updates and Steam overwrites the proxy with a genuine DLL, EXE-fingerprinter detects the hash mismatch and labels the button amber (**Reapply Proxy**). Clicking it restores the patch with one click.
 
 ---
 
@@ -108,9 +108,9 @@ Modern Unreal Engine 4/5 co-op games and multi-platform releases often use **bot
 - Epic Online Services for lobby matchmaking and auth.
 - Steam Networking Sockets for game server traffic.
 
-In ASSella, you can activate both simultaneously. When both are available and SLSonline is active, Game Details arranges the controls into an intuitive 2x2 grid:
+In EXE-fingerprinter, you can activate both simultaneously. When both are available and SLSonline is active, Game Details arranges the controls into an intuitive 2x2 grid:
 
-<img width="100%" alt="ASSella Game Details Dialog with Full Online Setup" src="/images/online_game_details.png" style="border-radius: 8px; margin: 1.5rem 0;" />
+<img width="100%" alt="EXE-fingerprinter Game Details Dialog with Full Online Setup" src="/images/online_game_details.png" style="border-radius: 8px; margin: 1.5rem 0;" />
 
 ### Recommended Setup Order:
 1. Turn on **SLSonline** (confirm FID is `480`).
@@ -122,7 +122,7 @@ In ASSella, you can activate both simultaneously. When both are available and SL
 
 ## 5. What Edits Happen in SLSsteam `config.yaml`?
 
-When you toggle these features in ASSella, the application modifies `~/.config/SLSsteam/config.yaml` using safe atomic writes. Here is what is added:
+When you toggle these features in EXE-fingerprinter, the application modifies `~/.config/SLSsteam/config.yaml` using safe atomic writes. Here is what is added:
 
 ### SLSonline Modification (`FakeAppIds`)
 ```yaml
@@ -152,12 +152,12 @@ SLSsteam monitors `config.yaml` and hot-reloads its configuration automatically.
 :::
 
 To open and edit your configuration:
-- In ASSella: Navigate to **Settings → Tools → Open Config** to open `config.yaml` directly in your system's default text editor.
+- In EXE-fingerprinter: Navigate to **Settings → Tools → Open Config** to open `config.yaml` directly in your system's default text editor.
 - Or open `~/.config/SLSsteam/config.yaml` in whatever text editor you have available (Kate, Gedit, VS Code, nano, etc.), make your edits, and save.
 
 ::: danger If You Encounter Config Errors
 If you make a formatting mistake, experience YAML syntax errors, or SLSsteam acts unexpectedly:
-1. Open **ASSella → Settings → Health**.
+1. Open **EXE-fingerprinter → Settings → Health**.
 2. Run the **Config Fixer** / validation check to automatically repair structure, indentation, and missing sections.
 3. You can also revert to an automatic timestamped backup at any time via **Settings → Tools → Restore Config Backup**.
 :::
@@ -219,7 +219,7 @@ LaunchOptions:
 ## 7. Troubleshooting & FAQ
 
 ### "Failed to connect to lobby" or "No games found"
-- **AppID / Online Fix Compatibility**: Most of the time, ASSella's online spoofing allows you to play directly with players who are using community multiplayer fixes (such as those from Online-Fix.me or similar). To ensure multiplayer lobbies appear, check with your friends which AppID their fix is directing to (most commonly `480` for Spacewar) and ensure your **FID** matches theirs. If they are on `480` and you have a different ID configured (or vice versa), Steam will separate your lobbies.
+- **AppID / Online Fix Compatibility**: Most of the time, EXE-fingerprinter's online spoofing allows you to play directly with players who are using community multiplayer fixes (such as those from Online-Fix.me or similar). To ensure multiplayer lobbies appear, check with your friends which AppID their fix is directing to (most commonly `480` for Spacewar) and ensure your **FID** matches theirs. If they are on `480` and you have a different ID configured (or vice versa), Steam will separate your lobbies.
 
 ### Game crashes immediately upon launch with Netsock enabled
 - The game likely features anti-cheat (EAC, BattlEye, or proprietary integrity checks) that blocks `LD_AUDIT`.
@@ -227,7 +227,7 @@ LaunchOptions:
 
 ### "EOS Login Failed" after a game update
 - The game update overwrote the patched `EOSSDK-Win64-Shipping.dll` with an unpatched binary.
-- Open ASSella, open **Game Details**, and click the amber **Reapply Proxy** button.
+- Open EXE-fingerprinter, open **Game Details**, and click the amber **Reapply Proxy** button.
 
 ### Flatpak Steam Compatibility
-- ASSella automatically detects Flatpak Steam (`~/.var/app/com.valvesoftware.Steam`) and syncs `netsock.so` into the Flatpak sandbox environment so `LaunchOptions` resolve correctly across both host and container paths.
+- EXE-fingerprinter automatically detects Flatpak Steam (`~/.var/app/com.valvesoftware.Steam`) and syncs `netsock.so` into the Flatpak sandbox environment so `LaunchOptions` resolve correctly across both host and container paths.

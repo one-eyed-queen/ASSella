@@ -366,7 +366,7 @@ def create_at0m_tab(dialog) -> QWidget:
     dialog.at0m_dlc_action_combo.setFixedWidth(155)
     dialog.at0m_dlc_action_combo.addItem("Always ask", "ask")
     dialog.at0m_dlc_action_combo.addItem("Start Native (at0-m)", "native")
-    dialog.at0m_dlc_action_combo.addItem("Start ASSella", "assella")
+    dialog.at0m_dlc_action_combo.addItem("Start EXE-fingerprinter", "exe_fingerprinter")
 
     saved_dlc_behavior = dialog.settings.value(
         "at0m_default_dlc_action",
@@ -609,7 +609,7 @@ def create_at0m_tab(dialog) -> QWidget:
         if names:
             shown = ", ".join(names[:4]) + (f" and {len(names) - 4} more" if len(names) > 4 else "")
             dialog.unlisted_plugins_lbl.setText(f"Other plugins in your SLSsteam folder: {shown}")
-            dialog.unlisted_plugins_lbl.setToolTip("Plugins ASSella does not publish can clash with SpaceBunny and Styx.")
+            dialog.unlisted_plugins_lbl.setToolTip("Plugins EXE-fingerprinter does not publish can clash with SpaceBunny and Styx.")
         unlisted_box.setVisible(bool(names))
 
     def _review_unlisted():
@@ -741,7 +741,7 @@ def create_at0m_tab(dialog) -> QWidget:
             choice = ThemedMessageBox.choices(
                 dialog, display_name,
                 f"{display_name} is optional and turned on.\n\n"
-                "Turning it off removes it from the SLSsteam plugins folder; ASSella will not "
+                "Turning it off removes it from the SLSsteam plugins folder; EXE-fingerprinter will not "
                 "reinstall it until you turn it on again here.",
                 [("Cancel", "cancel"), ("Turn off", "off"), ("Check for update", "update")],
                 default="update",
@@ -779,7 +779,7 @@ def create_at0m_tab(dialog) -> QWidget:
                 dialog,
                 "Custom Plugins (Advanced)",
                 "Bypassing plugin presence verification enables native downloads and game transfers with custom or third-party Lua plugins.\n\n"
-                "Please note: ASSella cannot guarantee compatibility, functionality, or stability with third-party plugins!"
+                "Please note: EXE-fingerprinter cannot guarantee compatibility, functionality, or stability with third-party plugins!"
             )
         _refresh_all_buttons()
         _refresh_unlisted()
@@ -846,12 +846,12 @@ def create_at0m_tab(dialog) -> QWidget:
         _update_subwidget_states(checked)
         combo = getattr(dialog, "at0m_download_action_combo", None)
         if combo is not None:
-            idx = combo.findData("ask" if checked else "assella")
+            idx = combo.findData("ask" if checked else "exe_fingerprinter")
             if idx >= 0:
                 combo.setCurrentIndex(idx)
         elif not checked:
             for k in ("at0m_default_download_action", "vapor_default_download_action", "native_steam_default_action"):
-                dialog.settings.setValue(k, "assella")
+                dialog.settings.setValue(k, "exe_fingerprinter")
 
     dialog.enable_at0m_checkbox.toggled.connect(_on_enable_at0m_toggled)
     _update_subwidget_states(dialog.enable_at0m_checkbox.isChecked())

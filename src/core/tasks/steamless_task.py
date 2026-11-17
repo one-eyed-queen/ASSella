@@ -603,7 +603,7 @@ class SteamlessIntegration(QObject):
                 if not python_exe or not os.path.exists(python_exe):
                     err_msg = (
                         "Cannot find the tool's Python interpreter. "
-                        "Please reinstall ASSella."
+                        "Please reinstall EXE-fingerprinter."
                     )
                     self._last_exe_error = err_msg
                     self.error.emit(err_msg)

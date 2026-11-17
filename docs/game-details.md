@@ -6,7 +6,7 @@ Click any game in [Library](/library) to open its details. The header shows the 
 
 ## Info
 
-![Info tab (ASSella-managed game)](/images/guide/details-info-assella.png)
+![Info tab (EXE-fingerprinter-managed game)](/images/guide/details-info-exe_fingerprinter.png)
 
 - **Branch & build** (dropdown) — which branch the game follows and its current build. Switching branch downloads that branch's build.
 - **Main action button** — changes with the game's state:
@@ -22,7 +22,7 @@ Click any game in [Library](/library) to open its details. The header shows the 
   - **SLSonline** — gives the game a Fake AppID (480, *Spacewar*) so Steam multiplayer and lobbies work with friends.
   - **Netsock** — Steam Networking Sockets fix for games that disconnect under Proton. Needs SLSonline.
   - **Bypass** — skips a third-party launcher and starts the game's real executable. Cannot be on together with Netsock. [Launcher Bypass guide](/guides/launcher-bypass).
-- **Managed by** — whether ASSella or Steam (AT0-M) updates the game, with **Move to AT0-M** / **Move to ASSella** to switch.
+- **Managed by** — whether EXE-fingerprinter or Steam (AT0-M) updates the game, with **Move to AT0-M** / **Move to EXE-fingerprinter** to switch.
 
 ![Info tab (AT0-M game)](/images/guide/details-info-atom.png)
 
@@ -48,7 +48,7 @@ What this game has in SLSsteam's config, in three lists:
 
 The game's patch history from SteamDB. Pick an older build to see its depots and **Download Selected** to roll back, or **Manual** to enter a manifest by hand.
 
-ASSella reads SteamDB directly. **Byparr** (a helper that gets past SteamDB's bot check) is **optional**: it's only used as a fallback, for example to load the full history. If the direct route is blocked on your network, the tab offers to install it. Step by step: [Downgrade a Game](/guides/downgrade).
+EXE-fingerprinter reads SteamDB directly. **Byparr** (a helper that gets past SteamDB's bot check) is **optional**: it's only used as a fallback, for example to load the full history. If the direct route is blocked on your network, the tab offers to install it. Step by step: [Downgrade a Game](/guides/downgrade).
 
 ---
 
@@ -62,7 +62,7 @@ ASSella reads SteamDB directly. **Byparr** (a helper that gets past SteamDB's bo
 - **Depots & installation**
   - **Depots: Select** — choose which depots this game keeps (**Reset** returns to the default).
   - **Fix Installation** — repairs the install and makes Steam verify it.
-  - **Desktop** — adds the game to your app menu with its SteamGridDB icon; the shortcut starts it through Steam. Click again (**Desktop: Remove**) to take it away. Linux, ASSella-managed games. To do this for every new download, turn on **Settings → Downloads → Create a desktop shortcut after install**.
+  - **Desktop** — adds the game to your app menu with its SteamGridDB icon; the shortcut starts it through Steam. Click again (**Desktop: Remove**) to take it away. Linux, EXE-fingerprinter-managed games. To do this for every new download, turn on **Settings → Downloads → Create a desktop shortcut after install**.
 - **Utility & store links** — **Open Store**, **Open SteamDB**, **Copy App ID**, **Copy Path**.
 - **Move DLC to DlcData (Advanced)** — maps DLC entitlements to the game's AppID in SLSsteam's `DlcData` section to bypass Steam's 64 DLC limit. See the [DLC-Only Mode guide](/guides/dlc-only).
 

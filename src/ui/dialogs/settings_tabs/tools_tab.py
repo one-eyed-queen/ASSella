@@ -174,14 +174,14 @@ def create_tools_tab(dialog) -> QWidget:
     open_log_btn.setStyleSheet(btn_style)
     from utils.logger import open_log_directory
     open_log_btn.clicked.connect(lambda: open_log_directory())
-    open_log_btn.setToolTip("Open the ASSella log directory in your file manager.")
+    open_log_btn.setToolTip("Open the EXE-fingerprinter log directory in your file manager.")
     btn_row.addWidget(open_log_btn)
 
     export_logs_btn = QPushButton("Export Diagnostic Logs")
     export_logs_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     export_logs_btn.setStyleSheet(btn_style)
     export_logs_btn.clicked.connect(lambda: export_diagnostic_logs(dialog))
-    export_logs_btn.setToolTip("Bundle recent ASSella logs, SLSsteam logs, config.yaml, and plugin details into a ZIP archive.")
+    export_logs_btn.setToolTip("Bundle recent EXE-fingerprinter logs, SLSsteam logs, config.yaml, and plugin details into a ZIP archive.")
     btn_row.addWidget(export_logs_btn)
 
     btn_row.addStretch()
@@ -290,7 +290,7 @@ def create_sls_logging_card(dialog):
 
 
 def export_diagnostic_logs(dialog) -> None:
-    """Bundle latest 2 ASSella logs, SLSsteam log, config.yaml, and plugins info into a ZIP archive."""
+    """Bundle latest 2 EXE-fingerprinter logs, SLSsteam log, config.yaml, and plugins info into a ZIP archive."""
     import zipfile
     from datetime import datetime
     from utils.logger import get_base_path
@@ -306,7 +306,7 @@ def export_diagnostic_logs(dialog) -> None:
             logger.debug(f"[Diagnostics] Error flushing log handler: {e}")
 
     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    default_name = f"assella_diagnostics_{timestamp_str}.zip"
+    default_name = f"exe_fingerprinter_diagnostics_{timestamp_str}.zip"
     default_dest = str(Path.home() / default_name)
 
     save_path, _ = ThemedFileDialog.getSaveFileName(
@@ -321,17 +321,17 @@ def export_diagnostic_logs(dialog) -> None:
     collected = []
     try:
         with zipfile.ZipFile(save_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            # 1. Latest 2 ASSella logs
+            # 1. Latest 2 EXE-fingerprinter logs
             log_dir = get_base_path() / "logs"
             if log_dir.is_dir():
                 log_files = sorted(
-                    log_dir.glob("assella_*.log"),
+                    log_dir.glob("exe_fingerprinter_*.log"),
                     key=lambda p: p.stat().st_mtime,
                     reverse=True,
                 )
                 for log_file in log_files[:2]:
                     zf.write(log_file, arcname=f"logs/{log_file.name}")
-                    collected.append(f"ASSella Log: {log_file.name}")
+                    collected.append(f"EXE-fingerprinter Log: {log_file.name}")
 
             # 2. SLSsteam log from user home
             try:
@@ -446,7 +446,7 @@ def run_schema_grabber_manually(dialog) -> None:
     py = get_venv_python()
     cmd.append(py if py else ("python" if sys.platform == "win32" else "python3"))
     cmd.append(str(helper_path))
-    os.environ["ASSELLA_SRC"] = str(Paths.BASE_DIR)
+    os.environ["EXE_FINGERPRINTER_SRC"] = str(Paths.BASE_DIR)
     launch_terminal_command(cmd, str(helper_path.parent))
 
 

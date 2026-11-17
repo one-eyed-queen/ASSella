@@ -37,13 +37,13 @@ from typing import Iterator, Optional
 
 logger = logging.getLogger(__name__)
 
-# Loggers belonging to ASSella itself. Third-party packages are excluded so
+# Loggers belonging to EXE-fingerprinter itself. Third-party packages are excluded so
 # urllib3/SteamClient chatter cannot reach the pager.
 _OWN_PACKAGES = ("utils", "core", "managers", "ui", "ACCELA")
 
 
 def is_our_logger(name: str) -> bool:
-    """True when a logger name belongs to ASSella rather than a dependency."""
+    """True when a logger name belongs to EXE-fingerprinter rather than a dependency."""
     return any(name == p or name.startswith(p + ".") for p in _OWN_PACKAGES)
 
 # Categories, so callers and future UI can group or filter without parsing text.

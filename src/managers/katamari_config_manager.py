@@ -1,4 +1,4 @@
-"""Katamari Configuration Manager for ASSella and SLSsteam Lua Plugins.
+"""Katamari Configuration Manager for EXE-fingerprinter and SLSsteam Lua Plugins.
 
 Manages the Katamari 'mother config' (~/.config/SLSsteam/katamari.conf.lua).
 Acts as the single source of truth for the Katamari family:
@@ -171,7 +171,7 @@ class KatamariConfigManager:
     # A provider switched off ("None" as rescue) is kept in the file inside a
     # block comment carrying this marker, so its URL/headers survive and it can
     # be picked again. Katamari's Lua loader ignores comments.
-    _DISABLED_MARK = "--[[assella:disabled"
+    _DISABLED_MARK = "--[[exe_fingerprinter:disabled"
 
     @classmethod
     def _scan_providers(cls, array_block: str):
@@ -600,7 +600,7 @@ class KatamariConfigManager:
         template = f"""-- katamari.conf.lua (0.2)
 --
 -- MOTHER CONFIG for the Katamari family.
--- Managed automatically by ASSella.
+-- Managed automatically by EXE-fingerprinter.
 
 return {{
 	family = {{
@@ -832,8 +832,8 @@ return {{
     def ensure_config(cls, conf_path: Optional[Path] = None) -> bool:
         """Make sure katamari.conf.lua exists and has the shared keys the plugins need.
 
-        ASSella is the only writer of this file; the plugins only read it.
-        Missing file: written from the template (with the Hubcap key ASSella
+        EXE-fingerprinter is the only writer of this file; the plugins only read it.
+        Missing file: written from the template (with the Hubcap key EXE-fingerprinter
         has). Existing file: only keys that are absent, or left empty by an
         older template, are filled in (the worker routes); nothing the user
         set is changed.

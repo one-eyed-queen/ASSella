@@ -353,7 +353,7 @@ def create_plugins_tab(dialog, add_to_dialog: bool = False) -> QWidget:
     p_grid.addWidget(wurl_lbl, 0, 0)
     p_grid.addWidget(proxy_wurl_input, 0, 1)
 
-    wtok_lbl = QLabel("ASSella Token:")
+    wtok_lbl = QLabel("EXE-fingerprinter Token:")
     wtok_lbl.setStyleSheet(STYLE_LABEL)
     proxy_token_input = QLineEdit()
     proxy_token_input.setStyleSheet(STYLE_INPUT)

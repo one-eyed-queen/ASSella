@@ -1,6 +1,6 @@
 """
-themed_message_box.py - ASSella custom themed alert & confirmation dialog.
-Replaces native OS QMessageBox with ASSella dark theme and DialogTitleBar,
+themed_message_box.py - EXE-fingerprinter custom themed alert & confirmation dialog.
+Replaces native OS QMessageBox with EXE-fingerprinter dark theme and DialogTitleBar,
 eliminating standard Linux window-manager decorations.
 
 Call sites migrate mechanically, because the class methods mirror
@@ -110,7 +110,7 @@ class _SeverityIcon(QWidget):
 
 
 class ThemedMessageBox(QDialog):
-    """Frameless, theme-aware confirmation and alert dialog matching ASSella aesthetics."""
+    """Frameless, theme-aware confirmation and alert dialog matching EXE-fingerprinter aesthetics."""
 
     StandardButton = StandardButton
     Ok = StandardButton.Ok
@@ -478,7 +478,7 @@ def confirm_steam_owned_override(parent: Optional[QWidget] = None) -> bool:
     choice = ThemedMessageBox.choices(
         parent,
         "Steam Ownership Warning",
-        "ASSella suspects that you own this game or a part of it on Steam.\n\n"
+        "EXE-fingerprinter suspects that you own this game or a part of it on Steam.\n\n"
         "If you have it, don't enable this. If you are sure that you don't own this, proceed.",
         [("Proceed", "proceed"), ("Cancel", "cancel")],
         default="cancel",

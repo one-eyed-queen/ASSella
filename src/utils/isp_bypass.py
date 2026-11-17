@@ -1,5 +1,5 @@
 """
-ISP Bypass Module for ASSella.
+ISP Bypass Module for EXE-fingerprinter.
 
 Provides DNS-over-HTTPS (DoH) resolution and managed background Tor/SOCKS5 proxy fallback
 strictly for Hubcap API requests (hubcapmanifest.com).
@@ -37,7 +37,7 @@ _tor_lock = threading.Lock()
 
 
 class TorManager:
-    """Manages an optional background Tor process with native HTTP tunneling launched by ASSella."""
+    """Manages an optional background Tor process with native HTTP tunneling launched by EXE-fingerprinter."""
 
     TOR_SOCKS_PORT = 9050
     TOR_HTTP_PORT = 9080
@@ -132,7 +132,7 @@ class TorManager:
 
     @classmethod
     def stop_tor(cls) -> None:
-        """Cleanly terminates any background Tor helper process launched by ASSella."""
+        """Cleanly terminates any background Tor helper process launched by EXE-fingerprinter."""
         global _tor_process
         with _tor_lock:
             if _tor_process:
@@ -212,11 +212,11 @@ def get_default_wirecutter_endpoint() -> str:
         return "https://rapid-thunder-fba1wirecutter.7ucking.workers.dev"
 
 
-def get_assella_proxy_token() -> str:
-    """Returns the internal ASSella authorization token for Wirecutter Worker."""
+def get_exe_fingerprinter_proxy_token() -> str:
+    """Returns the internal EXE-fingerprinter authorization token for Wirecutter Worker."""
     try:
         from utils.settings import get_settings
-        custom_tok = get_settings().value("assella_proxy_token", "", type=str)
+        custom_tok = get_settings().value("exe_fingerprinter_proxy_token", "", type=str)
         if custom_tok and custom_tok.strip():
             return custom_tok.strip()
     except Exception as e:
@@ -430,7 +430,7 @@ def is_html_or_blocked_payload(resp: Optional[requests.Response]) -> bool:
 def _health_test_headers() -> Dict[str, str]:
     """Return standard headers for health probes, ensuring X-Assella-Token is attached."""
     headers = {"User-Agent": "Mozilla/5.0"}
-    tok = get_assella_proxy_token()
+    tok = get_exe_fingerprinter_proxy_token()
     if tok:
         headers["X-Assella-Token"] = tok
     return headers
@@ -627,7 +627,7 @@ def execute_hubcap_request(
 
     # 2. Attach X-Assella-Token to every Hubcap request that can go through the worker
     headers = dict(headers or {})
-    tok = get_assella_proxy_token()
+    tok = get_exe_fingerprinter_proxy_token()
     if tok and "X-Assella-Token" not in headers:
         headers["X-Assella-Token"] = tok
 
@@ -752,9 +752,9 @@ def execute_hubcap_request(
             if "User-Agent" not in doh_headers:
                 try:
                     from utils.version import app_version
-                    doh_headers["User-Agent"] = f"Mozilla/5.0 (X11; Linux x86_64; ASSella/{app_version})"
+                    doh_headers["User-Agent"] = f"Mozilla/5.0 (X11; Linux x86_64; EXE-fingerprinter/{app_version})"
                 except Exception:
-                    doh_headers["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64; ASSella/2.6.2)"
+                    doh_headers["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64; EXE-fingerprinter/2.6.2)"
 
             resp = session.request(method, url, headers=doh_headers, params=params, timeout=timeout, stream=stream, **bypass_kwargs)
             connection_status = "DoH"

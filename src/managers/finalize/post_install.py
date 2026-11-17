@@ -208,7 +208,7 @@ class PostInstallMixin:
 
         self._set_linux_binary_permissions()
         # Config synchronization must not depend on the mode snapshot captured
-        # when the job started. Branch/rollback jobs can enter ASSella mode with
+        # when the job started. Branch/rollback jobs can enter EXE-fingerprinter mode with
         # a stale flag, but the existing SLS config is still the authoritative
         # entitlement store. The sync helper safely no-ops when the config is
         # absent; config_enabled still respects an explicit user disablement.
@@ -456,7 +456,7 @@ class PostInstallMixin:
                     # Steam is still downloading in the background. The VaporWatcher will set
                     # up_to_date once StateFlags=4 is confirmed in the ACF. Without this guard,
                     # if gmrc.wudrm.com is unreachable Steam's MRC fetch fails and the download
-                    # stalls, yet ASSella would incorrectly show the game as up_to_date.
+                    # stalls, yet EXE-fingerprinter would incorrectly show the game as up_to_date.
                     is_stale_or_rollback = self._is_stale_or_rollback_install()
                     # Cache status: handoff defers to VaporWatcher; a pinned older
                     # build is a deliberate freeze; an unpinned older package shows
@@ -698,7 +698,7 @@ class PostInstallMixin:
 
         # 1. Always write/update our local metadata.json fallback for non-native downloads
         try:
-            from utils.assella_metadata import write_accela_metadata
+            from utils.exe_fingerprinter_metadata import write_accela_metadata
             write_accela_metadata(self.current_dest_path, self.game_data, size_on_disk)
         except Exception as e:
             logger.error(f"Failed to write metadata JSON file: {e}")
@@ -931,9 +931,9 @@ class PostInstallMixin:
             except OSError as e:
                 logger.warning(f"Failed to seed delta cache for {manifest_filename}: {e}")
 
-        # Ensure .assella marker is written for ASSella managed games
+        # Ensure .exe_fingerprinter marker is written for EXE-fingerprinter managed games
         try:
-            marker_file = os.path.join(game_install_dir, ".assella")
+            marker_file = os.path.join(game_install_dir, ".exe_fingerprinter")
             if not os.path.exists(marker_file):
                 with open(marker_file, "w", encoding="utf-8") as f:
                     f.write(f"appid={self.game_data.get('appid')}\n")

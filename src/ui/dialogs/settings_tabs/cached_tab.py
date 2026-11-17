@@ -81,7 +81,7 @@ def create_cached_page(dialog) -> QWidget:
     def _update_info():
         n = lst.count()
         info.setText(
-            f"{n} game{'s' if n != 1 else ''} with cached info. Clearing removes it everywhere ASSella "
+            f"{n} game{'s' if n != 1 else ''} with cached info. Clearing removes it everywhere EXE-fingerprinter "
             "keeps it; it is fetched again the next time you open the game. Installed and AT0-M games "
             "keep their decryption keys."
             if n else "No cached game info."

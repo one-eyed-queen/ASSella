@@ -104,7 +104,7 @@ class AssfixerConfirmDialog(QDialog):
         exp_lay.addWidget(exp_heading)
 
         exp_body = QLabel(
-            "ASSella will download the latest SLSsteam config template from GitHub "
+            "EXE-fingerprinter will download the latest SLSsteam config template from GitHub "
             "and rebuild your local config to include any new settings, removing any "
             "obsolete keys while preserving your personal values (AppIds, tokens, etc.)."
         )

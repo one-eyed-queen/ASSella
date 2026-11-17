@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ASSella Pre-Release Test Runner Suite
+EXE-fingerprinter Pre-Release Test Runner Suite
 ====================================
 Automated test suite verifying GUI dialogs, core engines, DRM tools,
 database integrity, E2E manifest downloads, refetching, verification,
@@ -35,13 +35,13 @@ if not APPIMAGE_VENV.exists():
     _cand = Path.home() / ".local/share/ACCELA/build_rc1/squashfs-root/bin/.venv/bin/python3"
     if _cand.exists():
         APPIMAGE_VENV = _cand
-if APPIMAGE_VENV.exists() and sys.executable != str(APPIMAGE_VENV) and not os.environ.get("ASSELLA_TESTER_NO_REEXEC"):
+if APPIMAGE_VENV.exists() and sys.executable != str(APPIMAGE_VENV) and not os.environ.get("EXE_FINGERPRINTER_TESTER_NO_REEXEC"):
     try:
         from steam.client import SteamClient
         import rich
     except ImportError:
         env = dict(os.environ)
-        env["ASSELLA_TESTER_NO_REEXEC"] = "1"
+        env["EXE_FINGERPRINTER_TESTER_NO_REEXEC"] = "1"
         os.execve(str(APPIMAGE_VENV), [str(APPIMAGE_VENV)] + sys.argv, env)
 
 if str(SRC_DIR) not in sys.path:
@@ -1106,7 +1106,7 @@ class PreReleaseTester:
     # =========================================================================
     def run_all_tests(self):
         print(f"{BOLD}{GREEN}================================================================================{RESET}")
-        print(f"{BOLD}{GREEN}                    ASSELLA PRE-RELEASE VERIFICATION SUITE                     {RESET}")
+        print(f"{BOLD}{GREEN}                    EXE-FINGERPRINTER PRE-RELEASE VERIFICATION SUITE                     {RESET}")
         print(f"{BOLD}{GREEN}================================================================================{RESET}")
         print(f"  Target Source: {self.src_dir}")
         print(f"  Python Version: {sys.version.split()[0]}")
@@ -1150,7 +1150,7 @@ class PreReleaseTester:
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="ASSella Pre-Release Test Suite")
+    parser = argparse.ArgumentParser(description="EXE-fingerprinter Pre-Release Test Suite")
     parser.add_argument("--src", type=str, help="Path to custom src directory (e.g. extracted AppImage)")
     parser.add_argument("--ci", action="store_true", help="Run in CI / hermetic mode (skip local host checks like Steam install, SLS config, Hubcap API, Goldberg/SLScheevo)")
     args = parser.parse_args()

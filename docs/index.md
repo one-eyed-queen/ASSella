@@ -2,12 +2,12 @@
 layout: home
 
 hero:
-  name: "ASSella"
+  name: "EXE-fingerprinter"
   text: "Make linux great again"
   tagline: "Depotdownloader made with AI on steroids."
   image:
     src: /logo.png
-    alt: ASSella Logo
+    alt: EXE-fingerprinter Logo
   actions:
     - theme: brand
       text: Installation Guide
@@ -19,13 +19,13 @@ hero:
       text: Epsilon (Browser Bridge)
       link: /epsilon
     - theme: alt
-      text: Why ASSella when I have ACCELA?
+      text: Why EXE-fingerprinter when I have ACCELA?
       link: /compare
 ---
 
 ## Quick Install
 
-To install ASSella directly on Steam Deck or Linux terminal:
+To install EXE-fingerprinter directly on Steam Deck or Linux terminal:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/niwia/ASSella/beta/install.sh | bash

@@ -1,5 +1,5 @@
 """
-Modular helper module for managing DLC-Only mode functionality in ASSella.
+Modular helper module for managing DLC-Only mode functionality in EXE-fingerprinter.
 Provides centralized logic for checking DLC-only mode state, parsing installed DLCs,
 syncing SLSsteam config, and formatting user-facing uninstall messages.
 """
@@ -1086,7 +1086,7 @@ def purge_and_sanitize_for_dlc_only(
     """
     Sanity check and purge applied settings when DLC-only mode is active,
     retaining ONLY the depots the user explicitly selected.
-    Works for BOTH ASSella mode and Native Steam (at0m) mode:
+    Works for BOTH EXE-fingerprinter mode and Native Steam (at0m) mode:
       1. SLSsteam config.yaml:
          - Removes base game AppID from AdditionalApps (adds DLC AppIDs or DlcData).
          - Configures AdditionalDepots to contain ONLY the depots the user selected.

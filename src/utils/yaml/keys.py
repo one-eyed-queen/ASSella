@@ -97,7 +97,7 @@ def remove_decryption_key(
 def has_game_decryption_keys(
     appid: Union[str, int], game_data: Optional[Dict[str, Any]] = None
 ) -> bool:
-    """Check if an ASSella-mode game has an active, non-shared DecryptionKey in SLSsteam config.yaml.
+    """Check if an EXE-fingerprinter-mode game has an active, non-shared DecryptionKey in SLSsteam config.yaml.
     Strictly ignores universal shared redistributables.
 
     Returns True if:

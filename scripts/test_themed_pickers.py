@@ -144,7 +144,7 @@ def check_color_dialog():
     dialog = ThemedColorDialog(None, initial=QColor("#C06C84"))
     check(dialog.selected_color().name() == "#c06c84", "the initial colour is preselected")
     check(bool(dialog.windowFlags() & FRAMELESS), "the colour picker is frameless")
-    check(dialog.title_bar is not None, "the colour picker carries ASSella's title bar")
+    check(dialog.title_bar is not None, "the colour picker carries EXE-fingerprinter's title bar")
 
 
 def check_input_dialog():

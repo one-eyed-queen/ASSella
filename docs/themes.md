@@ -1,6 +1,6 @@
-# Custom Themes Guide for ASSella
+# Custom Themes Guide for EXE-fingerprinter
 
-ASSella 3.0 supports custom, user-defined themes loaded directly from your personal configuration directory. You can customize the accent color, background color, background wallpaper, and themed checkbox/table indicator icons.
+EXE-fingerprinter 3.0 supports custom, user-defined themes loaded directly from your personal configuration directory. You can customize the accent color, background color, background wallpaper, and themed checkbox/table indicator icons.
 
 ---
 
@@ -12,7 +12,7 @@ All custom themes and associated assets live in:
 ~/.local/share/ACCELA/themes/
 ```
 
-> **Note:** If this directory does not exist yet, ASSella will automatically generate it on first launch, complete with an `example_theme.json.template` file. You can also create it manually with:
+> **Note:** If this directory does not exist yet, EXE-fingerprinter will automatically generate it on first launch, complete with an `example_theme.json.template` file. You can also create it manually with:
 > ```bash
 > mkdir -p ~/.local/share/ACCELA/themes
 > ```
@@ -28,7 +28,7 @@ Each theme is a separate `.json` file placed in the `themes/` folder (e.g. `~/.l
 | Property | Type | Required? | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `string` | Recommended | Unique internal identifier (lowercase alphanumeric, e.g. `"cyberpunk"`). |
-| `name` | `string` | **Yes** | Display name shown in ASSella's Theme dropdown in Settings. |
+| `name` | `string` | **Yes** | Display name shown in EXE-fingerprinter's Theme dropdown in Settings. |
 | `accent_color` | `string` | **Yes** | Hex color (`#RRGGBB`) used for buttons, active tabs, highlights, and borders. |
 | `background_color`| `string` | **Yes** | Hex color (`#RRGGBB`) used as base window and panel background. |
 | `background_image`| `string` | *Optional* | Image filename (PNG/JPG) relative to `themes/` or an absolute path. |
@@ -77,7 +77,7 @@ Directory structure for this theme:
 
 ## 4. How Material You & Pastel Color Utilities Work
 
-You don't need to specify every shade of every UI element. ASSella's built-in **Material You color engine** automatically calculates:
+You don't need to specify every shade of every UI element. EXE-fingerprinter's built-in **Material You color engine** automatically calculates:
 - **Surface & Container Tones:** Generates softened surface tints derived from your `accent_color` and `background_color`.
 - **Selected Row Backgrounds:** Deep muted container shades so text remains crisp and readable.
 - **Hover & Focus States:** Dynamic translucency values based on RGB decomposition.
@@ -90,14 +90,14 @@ You don't need to specify every shade of every UI element. ASSella's built-in **
 When providing `checkbox_unlit` and `checkbox_lit`:
 - **Recommended Size:** 16×16 to 32×32 pixels (PNG with alpha channel transparency or SVG).
 - **Design Tip:** High-contrast silhouettes work best (e.g. an outline or silhouette for `unlit`, and a bright, illuminated graphic for `lit`).
-- If omitted, ASSella will automatically use sleek rounded geometric indicators styled with your theme's `accent_color`.
+- If omitted, EXE-fingerprinter will automatically use sleek rounded geometric indicators styled with your theme's `accent_color`.
 
 ---
 
-## 6. How to Apply Your Theme in ASSella
+## 6. How to Apply Your Theme in EXE-fingerprinter
 
 1. Drop your `.json` file and any accompanying image files into `~/.local/share/ACCELA/themes/`.
-2. Open **ASSella**.
+2. Open **EXE-fingerprinter**.
 3. Go to **Settings** (`Ctrl+S` or Gear icon) → **Style** tab.
 4. In the **Theme Preset** dropdown, your new theme will appear with its custom name.
 5. Select it — your color palette, wallpaper, and indicators will apply immediately!

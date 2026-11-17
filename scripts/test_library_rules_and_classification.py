@@ -11,7 +11,7 @@ Hermetic regression suite for:
   6. Q4 ownership & classification matrix:
      - AdditionalApps without DecryptionKeys -> ACCELA (Pass 1 & Pass 2)
      - AdditionalApps with parent OR depot key in DecryptionKeys -> at0-m
-     - Unowned physical `.assella` marker with leftover dlc_only_mode=True -> ACCELA fallback without mutating QSettings
+     - Unowned physical `.exe_fingerprinter` marker with leftover dlc_only_mode=True -> ACCELA fallback without mutating QSettings
      - Steam tab strictly owned (`localconfig.vdf` apptickets) and excludes AdditionalApps.
 """
 
@@ -25,7 +25,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-_TMP = tempfile.mkdtemp(prefix="assella-lib-rules-")
+_TMP = tempfile.mkdtemp(prefix="exe_fingerprinter-lib-rules-")
 os.environ["HOME"] = _TMP
 os.environ["XDG_CONFIG_HOME"] = str(Path(_TMP) / ".config")
 os.environ["XDG_DATA_HOME"] = str(Path(_TMP) / ".local" / "share")
@@ -180,7 +180,7 @@ class TestLibraryRulesAndClassification(unittest.TestCase):
         self.assertTrue(get_settings().value("ignore_steam_demos", False, type=bool))
 
     def test_04_game_manager_classification_and_multiline_depot(self):
-        """GameManager handles AdditionalApps vs DecryptionKeys, multi-line .depot, unowned .assella fallback, and appid_ names."""
+        """GameManager handles AdditionalApps vs DecryptionKeys, multi-line .depot, unowned .exe_fingerprinter fallback, and appid_ names."""
         from managers.game_manager import GameManager
         from utils.settings import get_settings
 
@@ -190,7 +190,7 @@ class TestLibraryRulesAndClassification(unittest.TestCase):
         depots_dir = self.data_dir / "depots"
         depots_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1) AdditionalApps WITHOUT DecryptionKeys -> ASSella + placeholder name fixed
+        # 1) AdditionalApps WITHOUT DecryptionKeys -> EXE-fingerprinter + placeholder name fixed
         pz_dir = common / "ProjectZomboid"
         pz_dir.mkdir(parents=True, exist_ok=True)
         (pz_dir / "zomboid.bin").write_text("x", encoding="utf-8")
@@ -208,11 +208,11 @@ class TestLibraryRulesAndClassification(unittest.TestCase):
             encoding="utf-8",
         )
 
-        # 3) Multi-line .depot with DLC depot on line 1 and base depot on line 2 + .assella marker
+        # 3) Multi-line .depot with DLC depot on line 1 and base depot on line 2 + .exe_fingerprinter marker
         #    Must NOT auto-flip to dlc_only or scrub 2185060 from AdditionalApps!
         tpm_dir = common / "Two Point Museum"
         tpm_dir.mkdir(parents=True, exist_ok=True)
-        (tpm_dir / ".assella").write_text("", encoding="utf-8")
+        (tpm_dir / ".exe_fingerprinter").write_text("", encoding="utf-8")
         (tpm_dir / "TPM.bin").write_text("x" * 500, encoding="utf-8")
         (depots_dir / "2185060.depot").write_text(
             "2999843: 11111\n2185063: 22222\n",
@@ -223,7 +223,7 @@ class TestLibraryRulesAndClassification(unittest.TestCase):
             encoding="utf-8",
         )
 
-        # 4) Unowned physical .assella marker with stale dlc_only_mode=True in QSettings
+        # 4) Unowned physical .exe_fingerprinter marker with stale dlc_only_mode=True in QSettings
         #    Must fall back to ACCELA WITHOUT modifying QSettings!
         get_settings().setValue("dlc_only_mode/2185060", True)
 

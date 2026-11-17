@@ -6,9 +6,9 @@ How plugins reach a user
    today; more mirrors can be appended to ``PLUGIN_SOURCES``). Each source is
    tried in order. A manifest is only accepted when its detached Ed25519
    signature (``plugins_manifest.json.sig``) verifies against a key built into
-   ASSella and it is not older than the manifest already cached (rollback
+   EXE-fingerprinter and it is not older than the manifest already cached (rollback
    guard). TLS certificate checks are never disabled.
-2. Only when no source is reachable does ASSella fall back to the cached
+2. Only when no source is reachable does EXE-fingerprinter fall back to the cached
    manifest, then to the one bundled in ``res/plugins``.
 3. Plugin files come from the same sources, and every file must match the
    SHA-256 in the manifest. Local copies (cache, bundled) are used only when
@@ -22,7 +22,7 @@ The manifest also controls what may run:
 
 Installed files are never deleted or silently replaced: an older copy is kept
 as ``<name>.bak``, and the 6-hourly background check only updates a plugin
-when the installed file is one ASSella itself published (its hash appears in
+when the installed file is one EXE-fingerprinter itself published (its hash appears in
 a verified manifest). A file the user edited is left alone.
 """
 
@@ -78,7 +78,7 @@ MANIFEST_PUBLIC_KEYS: List[str] = [
 
 DEFAULT_TIMEOUT = 10.0
 MANIFEST_TIMEOUT = 6.0
-HTTP_USER_AGENT = "ASSella-PluginManager/2.0"
+HTTP_USER_AGENT = "EXE-fingerprinter-PluginManager/2.0"
 
 # In-process memo of the last manifest result, so status checks in the UI do
 # not hit the network every time. Actions (install/update buttons, deploy all,
@@ -93,7 +93,7 @@ BACKGROUND_CHECK_INTERVAL = 6 * 60 * 60
 
 # Plugins that make up the family. katamari.lua (the registry) is no longer
 # shipped: every plugin creates the KATAMARI table itself and only reads
-# katamari.conf.lua, which ASSella keeps writing as the shared config.
+# katamari.conf.lua, which EXE-fingerprinter keeps writing as the shared config.
 KATAMARI_FAMILY_PLUGINS = {
     "spacebunny.lua",
     "styx.lua",
@@ -414,7 +414,7 @@ def _read_json(path: Path) -> Optional[Dict[str, Any]]:
 
 def _remember_published_hashes(data: Dict[str, Any]) -> None:
     """Keep every hash a verified manifest ever published, so the background
-    updater can tell an untouched ASSella install from a user-edited file."""
+    updater can tell an untouched EXE-fingerprinter install from a user-edited file."""
     try:
         path = _known_shas_path()
         known = set((_read_json(path) or {}).get("sha256", []))
@@ -515,7 +515,7 @@ def _bundled_manifest() -> Optional[Dict[str, Any]]:
 def _newest_local_manifest() -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """Cached or bundled manifest, whichever is newer.
 
-    A new ASSella release ships a newer bundled manifest; preferring an old
+    A new EXE-fingerprinter release ships a newer bundled manifest; preferring an old
     cached copy over it would show a stale plugin set until the next fetch.
     """
     cached = _read_json(get_cached_manifest_path())
@@ -1373,7 +1373,7 @@ def apply_plugin_actions(actions: List[Dict[str, Any]]) -> List[str]:
 
 def run_plugin_maintenance(force: bool = False) -> Dict[str, Any]:
     """Non-interactive check for scripts and tests: plans, then applies only the
-    safe defaults. ASSella itself asks the user (plan + apply)."""
+    safe defaults. EXE-fingerprinter itself asks the user (plan + apply)."""
     actions = [a for a in plan_plugin_maintenance(force=force) if a["default"]]
     report: Dict[str, Any] = {"checked": True, "archived": [], "updated": [], "skipped": []}
     for a, msg in zip(actions, apply_plugin_actions(actions)):
@@ -1422,7 +1422,7 @@ def archive_unlisted_plugins(names: Optional[Iterable[str]] = None) -> List[str]
             continue
         for name in wanted:
             p = tdir / name
-            if p.is_file() and _archive(p, "Turned off a plugin ASSella does not publish"):
+            if p.is_file() and _archive(p, "Turned off a plugin EXE-fingerprinter does not publish"):
                 archived.append(str(p))
     return archived
 
@@ -1476,7 +1476,7 @@ def archive_non_katamari_plugins() -> List[str]:
 
 
 def check_and_prompt_legacy_plugins(parent_window=None, force: bool = False) -> bool:
-    """Ask about plugins in the SLSsteam folder that ASSella does not publish.
+    """Ask about plugins in the SLSsteam folder that EXE-fingerprinter does not publish.
 
     Other plugins can hook the same Steam functions as SpaceBunny/Styx and
     break downloads in ways that are hard to trace, so the user picks:

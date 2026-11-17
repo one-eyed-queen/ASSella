@@ -485,7 +485,7 @@ def create_health_tab(dialog) -> QWidget:
     rec_header_row.addWidget(dialog.rec_score_badge)
     rec_layout.addLayout(rec_header_row)
 
-    rec_desc = QLabel("Essential settings recommended for the optimal ASSella workflow.")
+    rec_desc = QLabel("Essential settings recommended for the optimal EXE-fingerprinter workflow.")
     rec_desc.setStyleSheet("color: rgba(255, 255, 255, 0.6); font-size: 8.5pt; font-weight: 400; border: none; background: transparent; margin-bottom: 4px;")
     rec_desc.setWordWrap(True)
     rec_layout.addWidget(rec_desc)
@@ -922,7 +922,7 @@ def run_assfixer_restore(dialog) -> None:
 
 
 def _launch_terminal_and_quit_app(dialog, cmd: list) -> bool:
-    """Launch terminal command and gracefully quit ASSella."""
+    """Launch terminal command and gracefully quit EXE-fingerprinter."""
     from PyQt6.QtCore import QTimer
     from PyQt6.QtWidgets import QApplication
 
@@ -970,14 +970,14 @@ def _confirm_slssteam_backup(dialog, installer: str = "Headcrab") -> Tuple[bool,
             "Headcrab - the installer smallcrab is forked from - rewrites the SLSsteam "
             "configuration when it installs, and smallcrab patches the same Steam files.\n\n"
             f"Config file:\n{config_path}\n\n"
-            "Back it up first if you keep custom settings there. ASSella can make the copy "
+            "Back it up first if you keep custom settings there. EXE-fingerprinter can make the copy "
             "for you and restore it later from Health -> SLS Config -> Restore Backup."
         )
     else:
         msg = (
             "Headcrab rewrites the SLSsteam configuration when it installs.\n\n"
             f"Config file:\n{config_path}\n\n"
-            "Back it up first if you keep custom settings there. ASSella can make the copy "
+            "Back it up first if you keep custom settings there. EXE-fingerprinter can make the copy "
             "for you and restore it later from Health -> SLS Config -> Restore Backup."
         )
 
@@ -1022,7 +1022,7 @@ def on_h3adcrab_clicked(dialog) -> None:
         "curl -fsSL headcrab.pages.dev | bash\n\n"
         "Option 2: Alternative mirror (runn.i.ng / GitHub)\n"
         'curl -fsSL "https://runn.i.ng/Deadboy666/h3adcr-b/refs/heads/main/headcrab.sh" | bash\n\n'
-        "A terminal window will open and ASSella will close so Headcrab can safely configure SLSsteam without file conflicts."
+        "A terminal window will open and EXE-fingerprinter will close so Headcrab can safely configure SLSsteam without file conflicts."
         + backup_note,
         [
             ("Option 1 (Cloudflare)", "opt1"),
@@ -1046,7 +1046,7 @@ def on_r3set_crab_clicked(dialog) -> None:
         "Reset Steam to Vanilla",
         "This will uninstall SLSsteam and Headcrab, and put Steam client back to original.\n"
         "You will not lose the games you added.\n\n"
-        "A terminal window will open and ASSella will close to allow the reset process to run.\n\n"
+        "A terminal window will open and EXE-fingerprinter will close to allow the reset process to run.\n\n"
         "Do you want to proceed?",
         ThemedMessageBox.StandardButton.Yes | ThemedMessageBox.StandardButton.No,
         ThemedMessageBox.StandardButton.No,
@@ -1150,7 +1150,7 @@ def _confirm_smallcrab(dialog, backup_note: str = "") -> bool:
         "It is recommended that you only run this if you know what this does.\n\n"
         "The script may also ask to create steam.cfg, which stops Steam from updating "
         "itself. You can undo that with the Steam Updates button in this tab.\n\n"
-        "A terminal window will open and ASSella will close, the same as the h3adcrab "
+        "A terminal window will open and EXE-fingerprinter will close, the same as the h3adcrab "
         "button." + backup_note,
         [
             ("Run smallcrab", "run"),

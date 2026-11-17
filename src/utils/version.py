@@ -45,7 +45,7 @@ app_version = _load_version()
 
 # Authoritative build date and UTC timestamp (ISO-8601). The release workflow
 # stamps both constants into the packaged AppImage; during dev runs they must be
-# kept aligned with src/res/version. A dated version stamp ('20261022+ASSella-3.0.1')
+# kept aligned with src/res/version. A dated version stamp ('20261022+exe_fingerprinter-3.0.1')
 # overrides them with its calendar date - see get_build_date() / get_build_timestamp().
 BUILD_DATE = "2026-11-12"
 BUILD_TIMESTAMP = "2026-11-12T06:35:00Z"
@@ -54,7 +54,7 @@ BUILD_TIMESTAMP = "2026-11-12T06:35:00Z"
 def _stamp_date(raw: str) -> str:
     """Return the ISO date (YYYY-MM-DD) of a build stamp prefix, or '' when absent.
 
-    Handles the 'YYYYMMDD+ASSella-3.0.1' stamp used by dated builds.
+    Handles the 'YYYYMMDD+exe_fingerprinter-3.0.1' stamp used by dated builds.
     """
     m = re.match(r"^(\d{8})\+", (raw or "").strip())
     if not m:
@@ -122,20 +122,20 @@ def get_build_date_display() -> str:
 
 def extract_semver(raw_version: str) -> str:
     """
-    Extract version string by stripping build stamp prefix (e.g. '20261021+ASSella-3.0.0' -> '3.0.0')
+    Extract version string by stripping build stamp prefix (e.g. '20261021+EXE-fingerprinter-3.0.0' -> '3.0.0')
     and leading 'v' followed by a digit, while preserving all channel markers and bare suffixes
     (e.g. '3.0.0testing051026003', '3.0Release_candidate111026001', 'v2.7.0beta').
     """
     if not raw_version:
         return ""
     v = raw_version.strip()
-    m = re.match(r'^\d{8}\+[a-zA-Z0-9_-]+-(.+)$', v, re.IGNORECASE)
+    m = re.match(r'^\d{8}\+[a-zA-Z0-9_ -]+-(.+)$', v, re.IGNORECASE)
     if m:
         v = m.group(1).strip()
-    elif "+ASSella-" in v:
-        v = v.split("+ASSella-", 1)[1].strip()
-    elif "+assella-" in v:
-        v = v.split("+assella-", 1)[1].strip()
+    elif "+EXE-fingerprinter-" in v:
+        v = v.split("+EXE-fingerprinter-", 1)[1].strip()
+    elif "+exe_fingerprinter-" in v:
+        v = v.split("+exe_fingerprinter-", 1)[1].strip()
 
     # Strip leading 'v' or 'V' only if followed by a digit
     v = re.sub(r'^[vV](?=\d)', '', v)
@@ -149,7 +149,7 @@ def _normalize_build_num(num_str: str) -> int:
     Dated stamps are decoded onto a single canonical scale (YYYYMMDDNNN) so that the
     different stamp encodings stay comparable with one another:
 
-      - 9-digit DDMMYYNNN (ASSella canary/RC builds): '051026003' -> 20261005003
+      - 9-digit DDMMYYNNN (EXE-fingerprinter canary/RC builds): '051026003' -> 20261005003
       - 8-digit YYYYMMDD:                             '20261021'   -> 20261021000
       - 8-digit DDMMYYYY:                             '05102026'   -> 20261005000
 
@@ -168,7 +168,7 @@ def _normalize_build_num(num_str: str) -> int:
     def _canonical(year: int, month: int, day: int, seq: int = 0) -> int:
         return year * 10000000 + month * 100000 + day * 1000 + seq
 
-    # 9-digit DDMMYYNNN stamp used in ASSella Canary / testing / RC builds
+    # 9-digit DDMMYYNNN stamp used in EXE-fingerprinter Canary / testing / RC builds
     if len(s) == 9:
         dd, mm, yy, nnn = int(s[0:2]), int(s[2:4]), int(s[4:6]), int(s[6:9])
         if 1 <= dd <= 31 and 1 <= mm <= 12:
@@ -455,7 +455,7 @@ def _fetch_github_releases(timeout: int) -> List[Dict[str, Any]]:
     req = urllib.request.Request(
         api_url,
         headers={
-            "User-Agent": "ASSella-Updater",
+            "User-Agent": "EXE-fingerprinter-Updater",
             "Accept": "application/vnd.github+json",
         },
     )
@@ -471,7 +471,7 @@ def _fetch_r2_channel_manifest(channel: str, timeout: int) -> Dict[str, Any]:
     req = urllib.request.Request(
         manifest_url,
         headers={
-            "User-Agent": "ASSella-Updater",
+            "User-Agent": "EXE-fingerprinter-Updater",
             "Accept": "application/json",
         },
     )
@@ -505,7 +505,7 @@ def check_for_updates(
     update_server: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Check for ASSella application updates using GitHub and/or Cloudflare R2.
+    Check for EXE-fingerprinter application updates using GitHub and/or Cloudflare R2.
 
     update_server controls source selection:
       - 'auto': try GitHub Releases API first, fall back to R2 channel manifest,
@@ -578,7 +578,7 @@ def check_for_updates(
         try:
             branch = channel if channel in ("beta", "canary") else "main"
             url = f"https://raw.githubusercontent.com/niwia/ASSella/{branch}/src/res/version"
-            req = urllib.request.Request(url, headers={"User-Agent": "ASSella-Updater"})
+            req = urllib.request.Request(url, headers={"User-Agent": "EXE-fingerprinter-Updater"})
             with urllib.request.urlopen(req, timeout=timeout) as response:
                 remote_raw = response.read().decode("utf-8").strip()
                 api_responded = True

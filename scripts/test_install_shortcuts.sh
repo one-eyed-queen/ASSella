@@ -20,15 +20,15 @@ source "$REPO_DIR/install.sh"
 trap 'cleanup; rm -rf "$TEST_HOME"' EXIT INT TERM
 
 DESKTOP_DIR="$TEST_HOME/.local/share/applications"
-PRIMARY_DESKTOP_ENTRY="$DESKTOP_DIR/assella.desktop"
+PRIMARY_DESKTOP_ENTRY="$DESKTOP_DIR/exe_fingerprinter.desktop"
 LEGACY_DESKTOP_ENTRY="$DESKTOP_DIR/accela.desktop"
-EXEC_COMMAND="$TEST_HOME/.local/share/ACCELA/ASSella.AppImage %u"
+EXEC_COMMAND="$TEST_HOME/.local/share/ACCELA/ExeFingerprinter.AppImage %u"
 
 mkdir -p "$DESKTOP_DIR"
 
 # Reproduce the reported state: both desktop names point at each other.
 ln -s accela.desktop "$PRIMARY_DESKTOP_ENTRY"
-ln -s assella.desktop "$LEGACY_DESKTOP_ENTRY"
+ln -s exe_fingerprinter.desktop "$LEGACY_DESKTOP_ENTRY"
 
 write_desktop_entry
 
@@ -36,23 +36,23 @@ test -f "$PRIMARY_DESKTOP_ENTRY"
 test ! -L "$PRIMARY_DESKTOP_ENTRY"
 test ! -e "$LEGACY_DESKTOP_ENTRY"
 grep -q '^Exec=' "$PRIMARY_DESKTOP_ENTRY"
-grep -q '^Icon=assella$' "$PRIMARY_DESKTOP_ENTRY"
+grep -q '^Icon=exe_fingerprinter$' "$PRIMARY_DESKTOP_ENTRY"
 grep -q '^Comment=Steam Game & Depot Management Suite$' "$PRIMARY_DESKTOP_ENTRY"
-grep -q '^StartupWMClass=ASSella$' "$PRIMARY_DESKTOP_ENTRY"
+grep -q '^StartupWMClass=EXE-fingerprinter$' "$PRIMARY_DESKTOP_ENTRY"
 test -z "$DESKTOP_TMP"
 
 # Test that paths containing spaces get properly quoted around the executable
-EXEC_COMMAND="$TEST_HOME/Steam Deck User/.local/share/ACCELA/ASSella.AppImage %u"
+EXEC_COMMAND="$TEST_HOME/Steam Deck User/.local/share/ACCELA/ExeFingerprinter.AppImage %u"
 write_desktop_entry
 grep -q '^Exec="' "$PRIMARY_DESKTOP_ENTRY"
-grep -q 'ASSella.AppImage" %u$' "$PRIMARY_DESKTOP_ENTRY"
+grep -q 'ExeFingerprinter.AppImage" %u$' "$PRIMARY_DESKTOP_ENTRY"
 
 # Test icon preservation on network failure (scalable SVG + PNG fallback)
 ICON_DIR="$TEST_HOME/.local/share/icons/hicolor/256x256/apps"
-PRIMARY_ICON_PATH="$ICON_DIR/assella.png"
+PRIMARY_ICON_PATH="$ICON_DIR/exe_fingerprinter.png"
 LEGACY_ICON_PATH="$ICON_DIR/accela.png"
 SCALABLE_ICON_DIR="$TEST_HOME/.local/share/icons/hicolor/scalable/apps"
-PRIMARY_SVG_ICON_PATH="$SCALABLE_ICON_DIR/assella.svg"
+PRIMARY_SVG_ICON_PATH="$SCALABLE_ICON_DIR/exe_fingerprinter.svg"
 LEGACY_SVG_ICON_PATH="$SCALABLE_ICON_DIR/accela.svg"
 mkdir -p "$ICON_DIR" "$SCALABLE_ICON_DIR"
 echo "existing icon data" > "$PRIMARY_ICON_PATH"
@@ -73,12 +73,12 @@ fi
 
 # Interrupted-run cleanup: tracked temp files and stale hidden mktemp leftovers
 # must be removed, while the committed desktop entry survives.
-DESKTOP_TMP=$(mktemp "$DESKTOP_DIR/.assella.desktop.tmp.XXXXXX")
-ICON_TMP=$(mktemp "$ICON_DIR/.assella.png.tmp.XXXXXX")
-SVG_ICON_TMP=$(mktemp "$SCALABLE_ICON_DIR/.assella.svg.tmp.XXXXXX")
-stale_desktop="$DESKTOP_DIR/.assella.desktop.tmp.stale"
-stale_icon="$ICON_DIR/.assella.png.tmp.stale"
-stale_svg_icon="$SCALABLE_ICON_DIR/.assella.svg.tmp.stale"
+DESKTOP_TMP=$(mktemp "$DESKTOP_DIR/.exe_fingerprinter.desktop.tmp.XXXXXX")
+ICON_TMP=$(mktemp "$ICON_DIR/.exe_fingerprinter.png.tmp.XXXXXX")
+SVG_ICON_TMP=$(mktemp "$SCALABLE_ICON_DIR/.exe_fingerprinter.svg.tmp.XXXXXX")
+stale_desktop="$DESKTOP_DIR/.exe_fingerprinter.desktop.tmp.stale"
+stale_icon="$ICON_DIR/.exe_fingerprinter.png.tmp.stale"
+stale_svg_icon="$SCALABLE_ICON_DIR/.exe_fingerprinter.svg.tmp.stale"
 : > "$stale_desktop"
 : > "$stale_icon"
 : > "$stale_svg_icon"
@@ -97,19 +97,19 @@ SVG_ICON_TMP=""
 # Stdin pipe execution (curl ... | bash): BASH_SOURCE must not trigger an
 # unbound variable error under set -u, and must execute main.
 help_output=$(cat "$REPO_DIR/install.sh" | bash -s -- --help)
-echo "$help_output" | grep -q 'ASSella Installer & Management Suite'
+echo "$help_output" | grep -q 'EXE-fingerprinter Installer & Management Suite'
 echo "$help_output" | grep -q -- '--server MODE'
 
 # Strict channel filtering, v3.0.1 exclusion, published_at ordering, and SHA256 extraction
 FAKE_RELEASES_JSON='[
-  {"tag_name":"v3.0.1","prerelease":false,"draft":false,"target_commitish":"beta","published_at":"2026-10-22T15:04:23Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.0.1/ASSella.AppImage"}]},
-  {"tag_name":"v3.0.5-beta.1","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-10-15T10:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.0.5-beta.1/ASSella.AppImage"}]},
-  {"tag_name":"v2.9.9beta","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-11-11T12:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v2.9.9beta/ASSella.AppImage","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]},
-  {"tag_name":"v2.9.9","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-11-11T11:30:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v2.9.9/ASSella.AppImage"}]},
-  {"tag_name":"v3.1.1","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-11T12:05:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.1.1/ASSella.AppImage","sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]},
-  {"tag_name":"v3.3.0-canary.1","prerelease":false,"draft":false,"target_commitish":"canary","published_at":"2026-11-11T14:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.3.0-canary.1/ASSella.AppImage"}]},
-  {"tag_name":"v3.2.0-canary.1","prerelease":true,"draft":false,"target_commitish":"canary","published_at":"2026-11-11T13:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.2.0-canary.1/ASSella.AppImage"}]},
-  {"tag_name":"v3.1.0","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-10T10:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.1.0/ASSella.AppImage"}]}
+  {"tag_name":"v3.0.1","prerelease":false,"draft":false,"target_commitish":"beta","published_at":"2026-10-22T15:04:23Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.0.1/ExecutableDownloader.AppImage"}]},
+  {"tag_name":"v3.0.5-beta.1","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-10-15T10:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.0.5-beta.1/ExecutableDownloader.AppImage"}]},
+  {"tag_name":"v2.9.9beta","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-11-11T12:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v2.9.9beta/ExecutableDownloader.AppImage","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]},
+  {"tag_name":"v2.9.9","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-11-11T11:30:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v2.9.9/ExecutableDownloader.AppImage"}]},
+  {"tag_name":"v3.1.1","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-11T12:05:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.1.1/ExecutableDownloader.AppImage","sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]},
+  {"tag_name":"v3.3.0-canary.1","prerelease":false,"draft":false,"target_commitish":"canary","published_at":"2026-11-11T14:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.3.0-canary.1/ExecutableDownloader.AppImage"}]},
+  {"tag_name":"v3.2.0-canary.1","prerelease":true,"draft":false,"target_commitish":"canary","published_at":"2026-11-11T13:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.2.0-canary.1/ExecutableDownloader.AppImage"}]},
+  {"tag_name":"v3.1.0","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-10T10:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.1.0/ExecutableDownloader.AppImage"}]}
 ]'
 LATEST_VER=""; LATEST_URL=""; LATEST_SHA256=""
 _parse_release_manifest_json "$FAKE_RELEASES_JSON" "stable"
@@ -126,7 +126,7 @@ _parse_release_manifest_json "$FAKE_RELEASES_JSON" "beta"
 test "$LATEST_VER" = "v2.9.9beta"
 # If only v3.0.1 (prerelease=false, target_commitish=beta) is present, beta rejects it.
 LATEST_VER=""; LATEST_URL=""
-! _parse_release_manifest_json '[{"tag_name":"v3.0.1","prerelease":false,"draft":false,"target_commitish":"beta","published_at":"2026-10-22T15:04:23Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.0.1/ASSella.AppImage"}]}]' "beta"
+! _parse_release_manifest_json '[{"tag_name":"v3.0.1","prerelease":false,"draft":false,"target_commitish":"beta","published_at":"2026-10-22T15:04:23Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.0.1/ExecutableDownloader.AppImage"}]}]' "beta"
 # Canary requires prerelease=true (v3.3.0-canary.1 with prerelease=false is rejected)
 LATEST_VER=""; LATEST_URL=""
 _parse_release_manifest_json "$FAKE_RELEASES_JSON" "canary"
@@ -137,10 +137,10 @@ fetch_github_json() { printf '%s' "$FAKE_RELEASES_JSON"; }
 resolve_beta_and_stable_releases
 unset -f fetch_github_json
 test "$BETA_VER" = "v2.9.9beta"
-test "$BETA_URL" = "https://example.invalid/v2.9.9beta/ASSella.AppImage"
+test "$BETA_URL" = "https://example.invalid/v2.9.9beta/ExecutableDownloader.AppImage"
 test "$BETA_SHA256" = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 test "$STABLE_VER" = "v3.1.1"
-test "$STABLE_URL" = "https://example.invalid/v3.1.1/ASSella.AppImage"
+test "$STABLE_URL" = "https://example.invalid/v3.1.1/ExecutableDownloader.AppImage"
 test "$STABLE_SHA256" = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 # Verify .zsync.sha256 fallback is removed and zsync2 support is present in both installers
@@ -169,7 +169,7 @@ printf 'stub zsync2 updated binary payload' > "$out"
 ZEOF
     chmod +x "$FAKE_BIN/zsync2"
     PAYLOAD_SHA=$(printf 'stub zsync2 updated binary payload' | sha256sum | awk '{print $1}')
-    : > "$INSTALL_DESTINATION/ASSella.AppImage"
+    : > "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
     curl() {
         local out="" url=""
         while [ $# -gt 0 ]; do
@@ -188,10 +188,10 @@ ZEOF
     PATH="$FAKE_BIN:$PATH"
     TARGET_CHANNEL="beta"
     PRESELECTED_VER="v2.9.9beta"
-    PRESELECTED_URL="https://example.invalid/v2.9.9beta/ASSella.AppImage"
+    PRESELECTED_URL="https://example.invalid/v2.9.9beta/ExecutableDownloader.AppImage"
     PRESELECTED_SHA256="$PAYLOAD_SHA"
     do_install
-    actual_installed=$(sha256sum "$INSTALL_DESTINATION/ASSella.AppImage" | awk '{print $1}')
+    actual_installed=$(sha256sum "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" | awk '{print $1}')
     test "$actual_installed" = "$PAYLOAD_SHA"
 )
 
@@ -232,14 +232,14 @@ fi
     trap 'cleanup; rm -rf "$TEST_HOME"' EXIT INT TERM
     rm -f "$PRIMARY_DESKTOP_ENTRY" "$LEGACY_DESKTOP_ENTRY"
     ln -s accela.desktop "$PRIMARY_DESKTOP_ENTRY"
-    ln -s assella.desktop "$LEGACY_DESKTOP_ENTRY"
+    ln -s exe_fingerprinter.desktop "$LEGACY_DESKTOP_ENTRY"
     write_desktop_entry
     test -f "$PRIMARY_DESKTOP_ENTRY"
     test ! -L "$PRIMARY_DESKTOP_ENTRY"
     test ! -e "$LEGACY_DESKTOP_ENTRY"
 
     stable_help=$(cat "$REPO_DIR/install_stable.sh" | bash -s -- --help)
-    echo "$stable_help" | grep -q 'ASSella Installer & Management Suite (Stable)'
+    echo "$stable_help" | grep -q 'EXE-fingerprinter Installer & Management Suite (Stable)'
     echo "$stable_help" | grep -q -- '--server MODE'
     if echo "$stable_help" | grep -q -- '--beta'; then
         echo "install_stable.sh --help unexpectedly lists --beta" >&2
@@ -252,17 +252,17 @@ fi
     fi
 
     STABLE_FILTER_JSON='[
-      {"tag_name":"v3.9.9","prerelease":true,"draft":false,"target_commitish":"main","published_at":"2026-11-11T15:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.9.9-pre/ASSella.AppImage"}]},
-      {"tag_name":"v3.8.0-beta.1","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-11T14:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.8.0-beta/ASSella.AppImage"}]},
-      {"tag_name":"v3.7.0","prerelease":false,"draft":true,"target_commitish":"main","published_at":"2026-11-11T13:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.7.0-draft/ASSella.AppImage"}]},
-      {"tag_name":"v3.6.0","prerelease":false,"draft":false,"target_commitish":"beta","published_at":"2026-11-11T12:30:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.6.0-beta-branch/ASSella.AppImage"}]},
-      {"tag_name":"v3.1.1","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-11T12:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.1.1/ASSella.AppImage","sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}]},
-      {"tag_name":"v3.1.0","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-10T10:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.1.0/ASSella.AppImage"}]}
+      {"tag_name":"v3.9.9","prerelease":true,"draft":false,"target_commitish":"main","published_at":"2026-11-11T15:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.9.9-pre/ExecutableDownloader.AppImage"}]},
+      {"tag_name":"v3.8.0-beta.1","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-11T14:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.8.0-beta/ExecutableDownloader.AppImage"}]},
+      {"tag_name":"v3.7.0","prerelease":false,"draft":true,"target_commitish":"main","published_at":"2026-11-11T13:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.7.0-draft/ExecutableDownloader.AppImage"}]},
+      {"tag_name":"v3.6.0","prerelease":false,"draft":false,"target_commitish":"beta","published_at":"2026-11-11T12:30:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.6.0-beta-branch/ExecutableDownloader.AppImage"}]},
+      {"tag_name":"v3.1.1","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-11T12:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.1.1/ExecutableDownloader.AppImage","sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}]},
+      {"tag_name":"v3.1.0","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-10T10:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.1.0/ExecutableDownloader.AppImage"}]}
     ]'
     LATEST_VER=""; LATEST_URL=""; LATEST_SHA256=""
     _parse_release_manifest_json "$STABLE_FILTER_JSON"
     test "$LATEST_VER" = "v3.1.1"
-    test "$LATEST_URL" = "https://example.invalid/v3.1.1/ASSella.AppImage"
+    test "$LATEST_URL" = "https://example.invalid/v3.1.1/ExecutableDownloader.AppImage"
     test "$LATEST_SHA256" = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 )
 
@@ -276,7 +276,7 @@ fi
     TARGET_CHANNEL=""; LOCAL_VER="v3.1.0"; detect_channel; test "$TARGET_CHANNEL" = "stable"
     TARGET_CHANNEL=""; LOCAL_VER="3.0.4"; detect_channel; test "$TARGET_CHANNEL" = "stable"
     TARGET_CHANNEL=""; LOCAL_VER="v2.6.2-hotfix1"; detect_channel; test "$TARGET_CHANNEL" = "stable"
-    TARGET_CHANNEL=""; LOCAL_VER="20261109+ASSella-3.1.0"; detect_channel; test "$TARGET_CHANNEL" = "stable"
+    TARGET_CHANNEL=""; LOCAL_VER="20261109+EXE-fingerprinter-3.1.0"; detect_channel; test "$TARGET_CHANNEL" = "stable"
     TARGET_CHANNEL=""; LOCAL_VER="2.9.9beta"; detect_channel; test "$TARGET_CHANNEL" = "beta"
     TARGET_CHANNEL=""; LOCAL_VER="2.7.0dev"; detect_channel; test "$TARGET_CHANNEL" = "beta"
     TARGET_CHANNEL=""; LOCAL_VER="Unknown"; detect_channel; test "$TARGET_CHANNEL" = "beta"
@@ -299,9 +299,9 @@ fi
     test "$TARGET_CHANNEL" = "beta"
 
     TOKEN_FILTER_JSON='[
-      {"tag_name":"v3.9.9-alpha.1","prerelease":true,"draft":false,"target_commitish":"","published_at":"2026-11-12T15:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/alpha/ASSella.AppImage"}]},
-      {"tag_name":"v3.9.9-latest","prerelease":true,"draft":false,"target_commitish":"","published_at":"2026-11-12T14:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/latest/ASSella.AppImage"}]},
-      {"tag_name":"v3.0Release_candidate111026001","prerelease":true,"draft":false,"target_commitish":"","published_at":"2026-11-11T10:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/rc-canary/ASSella.AppImage"}]}
+      {"tag_name":"v3.9.9-alpha.1","prerelease":true,"draft":false,"target_commitish":"","published_at":"2026-11-12T15:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/alpha/ExecutableDownloader.AppImage"}]},
+      {"tag_name":"v3.9.9-latest","prerelease":true,"draft":false,"target_commitish":"","published_at":"2026-11-12T14:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/latest/ExecutableDownloader.AppImage"}]},
+      {"tag_name":"v3.0Release_candidate111026001","prerelease":true,"draft":false,"target_commitish":"","published_at":"2026-11-11T10:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/rc-canary/ExecutableDownloader.AppImage"}]}
     ]'
     LATEST_VER=""; LATEST_URL=""
     _parse_release_manifest_json "$TOKEN_FILTER_JSON" "canary"
@@ -328,7 +328,7 @@ fi
     R2_PAYLOAD="r2 verified beta binary"
     R2_SHA=$(printf '%s' "$R2_PAYLOAD" | sha256sum | awk '{print $1}')
     mkdir -p "$INSTALL_DESTINATION"
-    rm -f "$INSTALL_DESTINATION/ASSella.AppImage"
+    rm -f "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
 
     # Case 1: UPDATE_SERVER=auto falls back to R2 when GitHub full download fails
     curl() {
@@ -343,13 +343,13 @@ fi
         case "$url" in
             */releases/channels/beta.json)
                 if [ -n "$out" ]; then
-                    printf '{"tag_name":"v2.9.9beta","prerelease":true,"assets":[{"name":"ASSella.AppImage","browser_download_url":"https://r2.example.invalid/beta/ASSella.AppImage","sha256":"%s"}]}' "$R2_SHA" > "$out"
+                    printf '{"tag_name":"v2.9.9beta","prerelease":true,"assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://r2.example.invalid/beta/ExecutableDownloader.AppImage","sha256":"%s"}]}' "$R2_SHA" > "$out"
                 else
-                    printf '{"tag_name":"v2.9.9beta","prerelease":true,"assets":[{"name":"ASSella.AppImage","browser_download_url":"https://r2.example.invalid/beta/ASSella.AppImage","sha256":"%s"}]}' "$R2_SHA"
+                    printf '{"tag_name":"v2.9.9beta","prerelease":true,"assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://r2.example.invalid/beta/ExecutableDownloader.AppImage","sha256":"%s"}]}' "$R2_SHA"
                 fi
                 return 0
                 ;;
-            https://r2.example.invalid/beta/ASSella.AppImage)
+            https://r2.example.invalid/beta/ExecutableDownloader.AppImage)
                 if [ -n "$out" ]; then
                     printf '%s' "$R2_PAYLOAD" > "$out"
                 else
@@ -366,19 +366,19 @@ fi
     TARGET_CHANNEL="beta"
     RESOLVED_FROM_SOURCE="github"
     PRESELECTED_VER="v2.9.9beta"
-    PRESELECTED_URL="https://github.invalid/v2.9.9beta/ASSella.AppImage"
+    PRESELECTED_URL="https://github.invalid/v2.9.9beta/ExecutableDownloader.AppImage"
     PRESELECTED_SHA256="$R2_SHA"
     do_install
-    actual_r2_sha=$(sha256sum "$INSTALL_DESTINATION/ASSella.AppImage" | awk '{print $1}')
+    actual_r2_sha=$(sha256sum "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" | awk '{print $1}')
     test "$actual_r2_sha" = "$R2_SHA"
 
     # Case 2: UPDATE_SERVER=github stays strict and NEVER falls back to R2
-    rm -f "$INSTALL_DESTINATION/ASSella.AppImage"
+    rm -f "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
     UPDATE_SERVER="github"
     TARGET_CHANNEL="beta"
     RESOLVED_FROM_SOURCE="github"
     PRESELECTED_VER="v2.9.9beta"
-    PRESELECTED_URL="https://github.invalid/v2.9.9beta/ASSella.AppImage"
+    PRESELECTED_URL="https://github.invalid/v2.9.9beta/ExecutableDownloader.AppImage"
     PRESELECTED_SHA256="$R2_SHA"
     if do_install; then
         echo "UPDATE_SERVER=github must not fall back to R2" >&2
@@ -400,7 +400,7 @@ fi
             esac
         done
         if [[ "$url" == */releases/channels/beta.json ]]; then
-            local body='{"tag_name":"v2.0.0beta","prerelease":true,"assets":[{"name":"ASSella.AppImage","browser_download_url":"https://r2.example.invalid/old/ASSella.AppImage"}]}'
+            local body='{"tag_name":"v2.0.0beta","prerelease":true,"assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://r2.example.invalid/old/ExecutableDownloader.AppImage"}]}'
             if [ -n "$out" ]; then printf '%s' "$body" > "$out"; else printf '%s' "$body"; fi
             return 0
         fi
@@ -420,11 +420,11 @@ fi
     STABLE_R2_PAYLOAD="r2 verified stable binary"
     STABLE_R2_SHA=$(printf '%s' "$STABLE_R2_PAYLOAD" | sha256sum | awk '{print $1}')
     mkdir -p "$INSTALL_DESTINATION"
-    rm -f "$INSTALL_DESTINATION/ASSella.AppImage"
+    rm -f "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
 
     get_latest_github_version() {
         LATEST_VER="v3.1.1"
-        LATEST_URL="https://github.invalid/v3.1.1/ASSella.AppImage"
+        LATEST_URL="https://github.invalid/v3.1.1/ExecutableDownloader.AppImage"
         LATEST_SHA256="$STABLE_R2_SHA"
     }
     curl() {
@@ -439,13 +439,13 @@ fi
         case "$url" in
             */releases/channels/stable.json)
                 if [ -n "$out" ]; then
-                    printf '{"tag_name":"v3.1.1","prerelease":false,"assets":[{"name":"ASSella.AppImage","browser_download_url":"https://r2.example.invalid/stable/ASSella.AppImage","sha256":"%s"}]}' "$STABLE_R2_SHA" > "$out"
+                    printf '{"tag_name":"v3.1.1","prerelease":false,"assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://r2.example.invalid/stable/ExecutableDownloader.AppImage","sha256":"%s"}]}' "$STABLE_R2_SHA" > "$out"
                 else
-                    printf '{"tag_name":"v3.1.1","prerelease":false,"assets":[{"name":"ASSella.AppImage","browser_download_url":"https://r2.example.invalid/stable/ASSella.AppImage","sha256":"%s"}]}' "$STABLE_R2_SHA"
+                    printf '{"tag_name":"v3.1.1","prerelease":false,"assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://r2.example.invalid/stable/ExecutableDownloader.AppImage","sha256":"%s"}]}' "$STABLE_R2_SHA"
                 fi
                 return 0
                 ;;
-            https://r2.example.invalid/stable/ASSella.AppImage)
+            https://r2.example.invalid/stable/ExecutableDownloader.AppImage)
                 if [ -n "$out" ]; then
                     printf '%s' "$STABLE_R2_PAYLOAD" > "$out"
                 else
@@ -462,7 +462,7 @@ fi
     TARGET_CHANNEL="stable"
     RESOLVED_FROM_SOURCE="github"
     do_install
-    actual_stable_sha=$(sha256sum "$INSTALL_DESTINATION/ASSella.AppImage" | awk '{print $1}')
+    actual_stable_sha=$(sha256sum "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" | awk '{print $1}')
     test "$actual_stable_sha" = "$STABLE_R2_SHA"
 
     LATEST_VER="v3.1.1"
@@ -476,7 +476,7 @@ fi
             esac
         done
         if [[ "$url" == */releases/channels/stable.json ]]; then
-            local body='{"tag_name":"v3.0.4","prerelease":false,"assets":[{"name":"ASSella.AppImage","browser_download_url":"https://r2.example.invalid/old/ASSella.AppImage"}]}'
+            local body='{"tag_name":"v3.0.4","prerelease":false,"assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://r2.example.invalid/old/ExecutableDownloader.AppImage"}]}'
             if [ -n "$out" ]; then printf '%s' "$body" > "$out"; else printf '%s' "$body"; fi
             return 0
         fi
@@ -495,10 +495,10 @@ fi
     trap 'cleanup; rm -rf "$TEST_HOME"' EXIT INT TERM
 
     MIXED_ORDER_JSON='[
-      {"tag_name":"v4.0.0","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-10T10:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v4.0.0/ASSella.AppImage","digest":"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},{"name":"ASSella.AppImage.sha256","browser_download_url":"https://example.invalid/v4.0.0/ASSella.AppImage.sha256"}]},
-      {"tag_name":"v3.9.9","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-12T10:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.9.9/ASSella.AppImage"}]},
-      {"tag_name":"v3.0.5-beta.1","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-11-10T10:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.0.5-beta.1/ASSella.AppImage"}]},
-      {"tag_name":"v2.9.9beta","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-11-11T15:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v2.9.9beta/ASSella.AppImage"}]}
+      {"tag_name":"v4.0.0","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-10T10:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v4.0.0/ExecutableDownloader.AppImage","digest":"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},{"name":"ExeFingerprinter.AppImage.sha256","browser_download_url":"https://example.invalid/v4.0.0/ExecutableDownloader.AppImage.sha256"}]},
+      {"tag_name":"v3.9.9","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-12T10:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.9.9/ExecutableDownloader.AppImage"}]},
+      {"tag_name":"v3.0.5-beta.1","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-11-10T10:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.0.5-beta.1/ExecutableDownloader.AppImage"}]},
+      {"tag_name":"v2.9.9beta","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-11-11T15:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v2.9.9beta/ExecutableDownloader.AppImage"}]}
     ]'
 
     # install.sh python3 path: stable prefers v4.0.0 over later v3.9.9; beta keeps newer-published v2.9.9beta
@@ -506,7 +506,7 @@ fi
     _parse_release_manifest_json "$MIXED_ORDER_JSON" "stable"
     test "$LATEST_VER" = "v4.0.0"
     test "$LATEST_SHA256" = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-    test "$LATEST_SHA256_URL" = "https://example.invalid/v4.0.0/ASSella.AppImage.sha256"
+    test "$LATEST_SHA256_URL" = "https://example.invalid/v4.0.0/ExecutableDownloader.AppImage.sha256"
 
     LATEST_VER=""; LATEST_URL=""; LATEST_SHA256=""; LATEST_SHA256_URL=""
     _parse_release_manifest_json "$MIXED_ORDER_JSON" "beta"
@@ -524,7 +524,7 @@ fi
             _parse_release_manifest_json "$MIXED_ORDER_JSON" "stable"
             test "$LATEST_VER" = "v4.0.0"
             test "$LATEST_SHA256" = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-            test "$LATEST_SHA256_URL" = "https://example.invalid/v4.0.0/ASSella.AppImage.sha256"
+            test "$LATEST_SHA256_URL" = "https://example.invalid/v4.0.0/ExecutableDownloader.AppImage.sha256"
 
             LATEST_VER=""; LATEST_URL=""; LATEST_SHA256=""; LATEST_SHA256_URL=""
             _parse_release_manifest_json "$MIXED_ORDER_JSON" "beta"
@@ -532,9 +532,9 @@ fi
         )
     fi
 
-    # Strict checksum & fallback checks (malformed, advertised-404, notool, ASSELLA_REQUIRE_SHA256=1)
+    # Strict checksum & fallback checks (malformed, advertised-404, notool, EXE_FINGERPRINTER_REQUIRE_SHA256=1)
     mkdir -p "$INSTALL_DESTINATION"
-    printf 'existing sentinel appimage' > "$INSTALL_DESTINATION/ASSella.AppImage"
+    printf 'existing sentinel appimage' > "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
     R2_GOOD="verified r2 replacement"
     R2_GOOD_SHA=$(printf '%s' "$R2_GOOD" | sha256sum | awk '{print $1}')
 
@@ -563,14 +563,14 @@ fi
     ALLOW_DOWNGRADE=false
     LOCAL_VER="v3.1.0"
     PRESELECTED_VER="v3.1.1"
-    PRESELECTED_URL="https://github.invalid/v3.1.1/ASSella.AppImage"
+    PRESELECTED_URL="https://github.invalid/v3.1.1/ExecutableDownloader.AppImage"
     PRESELECTED_SHA256=""
     PRESELECTED_SHA256_URL=""
     if do_install; then
         echo "Malformed .sha256 must abort installation on UPDATE_SERVER=github" >&2
         exit 1
     fi
-    test "$(cat "$INSTALL_DESTINATION/ASSella.AppImage")" = "existing sentinel appimage"
+    test "$(cat "$INSTALL_DESTINATION/ExeFingerprinter.AppImage")" = "existing sentinel appimage"
 
     # 2) Advertised .sha256 returning 404 refuses install on UPDATE_SERVER=github
     curl() {
@@ -591,25 +591,25 @@ fi
         return 0
     }
     PRESELECTED_VER="v3.1.1"
-    PRESELECTED_URL="https://github.invalid/v3.1.1/ASSella.AppImage"
+    PRESELECTED_URL="https://github.invalid/v3.1.1/ExecutableDownloader.AppImage"
     PRESELECTED_SHA256=""
-    PRESELECTED_SHA256_URL="https://github.invalid/v3.1.1/ASSella.AppImage.sha256"
+    PRESELECTED_SHA256_URL="https://github.invalid/v3.1.1/ExecutableDownloader.AppImage.sha256"
     if do_install; then
         echo "Advertised .sha256 HTTP 404 must abort installation" >&2
         exit 1
     fi
-    test "$(cat "$INSTALL_DESTINATION/ASSella.AppImage")" = "existing sentinel appimage"
+    test "$(cat "$INSTALL_DESTINATION/ExeFingerprinter.AppImage")" = "existing sentinel appimage"
 
-    # 3) ASSELLA_REQUIRE_SHA256=1 blocks unadvertised 404 sidecar
+    # 3) EXE_FINGERPRINTER_REQUIRE_SHA256=1 blocks unadvertised 404 sidecar
     PRESELECTED_VER="v3.1.1"
-    PRESELECTED_URL="https://github.invalid/v3.1.1/ASSella.AppImage"
+    PRESELECTED_URL="https://github.invalid/v3.1.1/ExecutableDownloader.AppImage"
     PRESELECTED_SHA256=""
     PRESELECTED_SHA256_URL=""
-    if ASSELLA_REQUIRE_SHA256=1 do_install; then
-        echo "ASSELLA_REQUIRE_SHA256=1 must block missing .sha256" >&2
+    if EXE_FINGERPRINTER_REQUIRE_SHA256=1 do_install; then
+        echo "EXE_FINGERPRINTER_REQUIRE_SHA256=1 must block missing .sha256" >&2
         exit 1
     fi
-    test "$(cat "$INSTALL_DESTINATION/ASSella.AppImage")" = "existing sentinel appimage"
+    test "$(cat "$INSTALL_DESTINATION/ExeFingerprinter.AppImage")" = "existing sentinel appimage"
 
     # 4) Missing hash tools (notool) aborts when a checksum is present
     NOHASH_BIN="$TEST_HOME/nohash_bin"
@@ -622,7 +622,7 @@ fi
     (
         PATH="$NOHASH_BIN"
         PRESELECTED_VER="v3.1.1"
-        PRESELECTED_URL="https://github.invalid/v3.1.1/ASSella.AppImage"
+        PRESELECTED_URL="https://github.invalid/v3.1.1/ExecutableDownloader.AppImage"
         PRESELECTED_SHA256="$R2_GOOD_SHA"
         PRESELECTED_SHA256_URL=""
         if do_install; then
@@ -630,20 +630,20 @@ fi
             exit 1
         fi
     )
-    test "$(cat "$INSTALL_DESTINATION/ASSella.AppImage")" = "existing sentinel appimage"
+    test "$(cat "$INSTALL_DESTINATION/ExeFingerprinter.AppImage")" = "existing sentinel appimage"
 
     # 5) Same-channel downgrade refused unless ALLOW_DOWNGRADE=true
     LOCAL_VER="v3.1.1"
     TARGET_CHANNEL="stable"
     ALLOW_DOWNGRADE=false
     PRESELECTED_VER="v3.1.0"
-    PRESELECTED_URL="https://github.invalid/v3.1.0/ASSella.AppImage"
+    PRESELECTED_URL="https://github.invalid/v3.1.0/ExecutableDownloader.AppImage"
     PRESELECTED_SHA256="$R2_GOOD_SHA"
     if do_install; then
         echo "Same-channel downgrade v3.1.1 -> v3.1.0 must be refused without --allow-downgrade" >&2
         exit 1
     fi
-    test "$(cat "$INSTALL_DESTINATION/ASSella.AppImage")" = "existing sentinel appimage"
+    test "$(cat "$INSTALL_DESTINATION/ExeFingerprinter.AppImage")" = "existing sentinel appimage"
 
     (
         curl() {
@@ -660,12 +660,12 @@ fi
         }
         ALLOW_DOWNGRADE=true
         PRESELECTED_VER="v3.1.0"
-        PRESELECTED_URL="https://github.invalid/v3.1.0/ASSella.AppImage"
+        PRESELECTED_URL="https://github.invalid/v3.1.0/ExecutableDownloader.AppImage"
         PRESELECTED_SHA256="$R2_GOOD_SHA"
-        ASSELLA_NO_ZSYNC=1 do_install
-        test "$(sha256sum "$INSTALL_DESTINATION/ASSella.AppImage" | awk '{print $1}')" = "$R2_GOOD_SHA"
+        EXE_FINGERPRINTER_NO_ZSYNC=1 do_install
+        test "$(sha256sum "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" | awk '{print $1}')" = "$R2_GOOD_SHA"
     )
-    printf 'existing sentinel appimage' > "$INSTALL_DESTINATION/ASSella.AppImage"
+    printf 'existing sentinel appimage' > "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
 
     # 6) Under UPDATE_SERVER=auto, malformed GitHub .sha256 triggers R2 fallback and installs verified binary
     curl() {
@@ -679,22 +679,22 @@ fi
             esac
         done
         case "$url" in
-            https://github.invalid/v3.1.1/ASSella.AppImage.sha256)
+            https://github.invalid/v3.1.1/ExecutableDownloader.AppImage.sha256)
                 [ -n "$out" ] && printf 'invalid checksum text' > "$out"
                 [ "$write_code" = true ] && printf '200'
                 return 0
                 ;;
-            https://github.invalid/v3.1.1/ASSella.AppImage)
+            https://github.invalid/v3.1.1/ExecutableDownloader.AppImage)
                 [ -n "$out" ] && printf 'gh unverified' > "$out"
                 return 0
                 ;;
             */releases/channels/stable.json)
                 local r2_body
-                r2_body=$(printf '{"tag_name":"v3.1.1","prerelease":false,"target_commitish":"main","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://r2.example.invalid/stable/ASSella.AppImage","sha256":"%s"}]}' "$R2_GOOD_SHA")
+                r2_body=$(printf '{"tag_name":"v3.1.1","prerelease":false,"target_commitish":"main","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://r2.example.invalid/stable/ExecutableDownloader.AppImage","sha256":"%s"}]}' "$R2_GOOD_SHA")
                 if [ -n "$out" ]; then printf '%s' "$r2_body" > "$out"; else printf '%s' "$r2_body"; fi
                 return 0
                 ;;
-            https://r2.example.invalid/stable/ASSella.AppImage)
+            https://r2.example.invalid/stable/ExecutableDownloader.AppImage)
                 [ -n "$out" ] && printf '%s' "$R2_GOOD" > "$out"
                 return 0
                 ;;
@@ -708,14 +708,14 @@ fi
     TARGET_CHANNEL="stable"
     LOCAL_VER="v3.1.0"
     PRESELECTED_VER="v3.1.1"
-    PRESELECTED_URL="https://github.invalid/v3.1.1/ASSella.AppImage"
+    PRESELECTED_URL="https://github.invalid/v3.1.1/ExecutableDownloader.AppImage"
     PRESELECTED_SHA256=""
-    PRESELECTED_SHA256_URL="https://github.invalid/v3.1.1/ASSella.AppImage.sha256"
-    ASSELLA_NO_ZSYNC=1 do_install
-    test "$(sha256sum "$INSTALL_DESTINATION/ASSella.AppImage" | awk '{print $1}')" = "$R2_GOOD_SHA"
+    PRESELECTED_SHA256_URL="https://github.invalid/v3.1.1/ExecutableDownloader.AppImage.sha256"
+    EXE_FINGERPRINTER_NO_ZSYNC=1 do_install
+    test "$(sha256sum "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" | awk '{print $1}')" = "$R2_GOOD_SHA"
 
     # 7) When both GitHub API and R2 fail, do_install fails clearly (linking GitHub Releases) with no hardcoded fallback
-    printf 'keep intact' > "$INSTALL_DESTINATION/ASSella.AppImage"
+    printf 'keep intact' > "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
     fetch_github_json() { return 1; }
     curl() { return 1; }
     out_log="$TEST_HOME/offline_err.log"
@@ -725,7 +725,7 @@ fi
     fi
     unset -f fetch_github_json
     grep -q 'https://github.com/niwia/ASSella/releases' "$out_log"
-    test "$(cat "$INSTALL_DESTINATION/ASSella.AppImage")" = "keep intact"
+    test "$(cat "$INSTALL_DESTINATION/ExeFingerprinter.AppImage")" = "keep intact"
 
     # 8) Beta publication-order upgrade & R2 fallback accept newer-published v2.9.9beta over v3.0.5-beta.1
     _release_satisfies_request beta "v2.9.9beta" "v3.0.5-beta.1" "2026-11-11T15:19:00Z" "2026-10-15T10:00:00Z"
@@ -741,7 +741,7 @@ fi
     BETA_R2_GOOD="verified newer beta r2 payload"
     BETA_R2_SHA=$(printf '%s' "$BETA_R2_GOOD" | sha256sum | awk '{print $1}')
     fetch_github_json() {
-        printf '[{"tag_name":"v3.0.6-beta.1","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-11-10T12:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://github.invalid/v3.0.6-beta.1/ASSella.AppImage"}]}]'
+        printf '[{"tag_name":"v3.0.6-beta.1","prerelease":true,"draft":false,"target_commitish":"beta","published_at":"2026-11-10T12:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://github.invalid/v3.0.6-beta.1/ExecutableDownloader.AppImage"}]}]'
     }
     curl() {
         local out="" url="" write_code=false
@@ -754,17 +754,17 @@ fi
             esac
         done
         case "$url" in
-            https://github.invalid/v3.0.6-beta.1/ASSella.AppImage)
+            https://github.invalid/v3.0.6-beta.1/ExecutableDownloader.AppImage)
                 [ "$write_code" = true ] && printf '403'
                 return 1
                 ;;
             */releases/channels/beta.json)
                 local r2_body
-                r2_body=$(printf '{"tag_name":"v2.9.9beta","prerelease":true,"target_commitish":"beta","published_at":"2026-11-11T15:19:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://r2.example.invalid/beta/ASSella.AppImage","sha256":"%s"}]}' "$BETA_R2_SHA")
+                r2_body=$(printf '{"tag_name":"v2.9.9beta","prerelease":true,"target_commitish":"beta","published_at":"2026-11-11T15:19:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://r2.example.invalid/beta/ExecutableDownloader.AppImage","sha256":"%s"}]}' "$BETA_R2_SHA")
                 if [ -n "$out" ]; then printf '%s' "$r2_body" > "$out"; else printf '%s' "$r2_body"; fi
                 return 0
                 ;;
-            https://r2.example.invalid/beta/ASSella.AppImage)
+            https://r2.example.invalid/beta/ExecutableDownloader.AppImage)
                 [ -n "$out" ] && printf '%s' "$BETA_R2_GOOD" > "$out"
                 return 0
                 ;;
@@ -780,8 +780,8 @@ fi
     LOCAL_VER="v3.0.5-beta.1"
     LOCAL_PUBLISHED_AT="2026-10-15T10:00:00Z"
     PRESELECTED_VER=""; PRESELECTED_URL=""; PRESELECTED_SHA256=""; PRESELECTED_SHA256_URL=""; PRESELECTED_PUBLISHED_AT=""
-    ASSELLA_NO_ZSYNC=1 do_install
-    test "$(sha256sum "$INSTALL_DESTINATION/ASSella.AppImage" | awk '{print $1}')" = "$BETA_R2_SHA"
+    EXE_FINGERPRINTER_NO_ZSYNC=1 do_install
+    test "$(sha256sum "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" | awk '{print $1}')" = "$BETA_R2_SHA"
     test "$(cat "$VERSION_FILE")" = "v2.9.9beta"
     test "$(cat "$VERSION_TS_FILE")" = "2026-11-11T15:19:00Z"
     LOCAL_PUBLISHED_AT=""
@@ -792,7 +792,7 @@ fi
 
     # Older R2 beta release must still be rejected in _fallback_to_r2_release
     curl() {
-        printf '{"tag_name":"v2.7.0beta","prerelease":true,"target_commitish":"beta","published_at":"2026-10-01T10:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://r2.example.invalid/beta/old.AppImage"}]}'
+        printf '{"tag_name":"v2.7.0beta","prerelease":true,"target_commitish":"beta","published_at":"2026-10-01T10:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://r2.example.invalid/beta/old.AppImage"}]}'
     }
     if _fallback_to_r2_release beta "v3.0.6-beta.1" "2026-11-10T12:00:00Z"; then
         echo "_fallback_to_r2_release must reject older-published beta R2 release" >&2
@@ -816,7 +816,7 @@ fi
         fi
     )
 
-    # 9) ASSELLA_REQUIRE_SHA256=1 refuses interactive checksum mismatch bypass in install.sh
+    # 9) EXE_FINGERPRINTER_REQUIRE_SHA256=1 refuses interactive checksum mismatch bypass in install.sh
     python3 - "$REPO_DIR/install.sh" "$INSTALL_DESTINATION" "$TEST_HOME/beta_pty.log" <<'PYEOF'
 import os, pty, subprocess, sys
 script_path, dest, log_path = sys.argv[1:]
@@ -825,7 +825,7 @@ set -euo pipefail
 source "{script_path}"
 INSTALL_DESTINATION="{dest}"
 UPDATE_SERVER="github"
-ASSELLA_NO_ZSYNC=1
+EXE_FINGERPRINTER_NO_ZSYNC=1
 prompt_user() {{ echo "y"; }}
 curl() {{
     local out=""
@@ -839,18 +839,18 @@ curl() {{
     return 0
 }}
 LATEST_VER="v2.9.9beta"
-LATEST_URL="https://github.invalid/v2.9.9beta/ASSella.AppImage"
+LATEST_URL="https://github.invalid/v2.9.9beta/ExecutableDownloader.AppImage"
 LATEST_SHA256="0000000000000000000000000000000000000000000000000000000000000000"
 LATEST_SHA256_URL=""
 DL_TMP=$(mktemp)
 trap 'rm -f "$DL_TMP"' EXIT
 test -t 0
-if ! ASSELLA_REQUIRE_SHA256=0 _attempt_download_and_verify "$DL_TMP" "true"; then
-    echo "Expected interactive mismatch override when ASSELLA_REQUIRE_SHA256=0" >&2
+if ! EXE_FINGERPRINTER_REQUIRE_SHA256=0 _attempt_download_and_verify "$DL_TMP" "true"; then
+    echo "Expected interactive mismatch override when EXE_FINGERPRINTER_REQUIRE_SHA256=0" >&2
     exit 2
 fi
-if ASSELLA_REQUIRE_SHA256=1 _attempt_download_and_verify "$DL_TMP" "true"; then
-    echo "ASSELLA_REQUIRE_SHA256=1 must refuse interactive mismatch bypass" >&2
+if EXE_FINGERPRINTER_REQUIRE_SHA256=1 _attempt_download_and_verify "$DL_TMP" "true"; then
+    echo "EXE_FINGERPRINTER_REQUIRE_SHA256=1 must refuse interactive mismatch bypass" >&2
     exit 3
 fi
 '''
@@ -872,14 +872,14 @@ PYEOF
     trap 'cleanup; rm -rf "$TEST_HOME"' EXIT INT TERM
 
     STABLE_ORDER_JSON='[
-      {"tag_name":"v4.0.0","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-10T10:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v4.0.0/ASSella.AppImage","digest":"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"},{"name":"ASSella.AppImage.sha256","browser_download_url":"https://example.invalid/v4.0.0/ASSella.AppImage.sha256"}]},
-      {"tag_name":"v3.9.9","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-12T10:00:00Z","assets":[{"name":"ASSella.AppImage","browser_download_url":"https://example.invalid/v3.9.9/ASSella.AppImage"}]}
+      {"tag_name":"v4.0.0","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-10T10:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v4.0.0/ExecutableDownloader.AppImage","digest":"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"},{"name":"ExeFingerprinter.AppImage.sha256","browser_download_url":"https://example.invalid/v4.0.0/ExecutableDownloader.AppImage.sha256"}]},
+      {"tag_name":"v3.9.9","prerelease":false,"draft":false,"target_commitish":"main","published_at":"2026-11-12T10:00:00Z","assets":[{"name":"ExeFingerprinter.AppImage","browser_download_url":"https://example.invalid/v3.9.9/ExecutableDownloader.AppImage"}]}
     ]'
     LATEST_VER=""; LATEST_URL=""; LATEST_SHA256=""; LATEST_SHA256_URL=""
     _parse_release_manifest_json "$STABLE_ORDER_JSON"
     test "$LATEST_VER" = "v4.0.0"
     test "$LATEST_SHA256" = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-    test "$LATEST_SHA256_URL" = "https://example.invalid/v4.0.0/ASSella.AppImage.sha256"
+    test "$LATEST_SHA256_URL" = "https://example.invalid/v4.0.0/ExecutableDownloader.AppImage.sha256"
 
     if command -v jq &>/dev/null; then
         JQ_STABLE_BIN="$TEST_HOME/jq_stable_ord_bin"
@@ -893,20 +893,20 @@ PYEOF
             _parse_release_manifest_json "$STABLE_ORDER_JSON"
             test "$LATEST_VER" = "v4.0.0"
             test "$LATEST_SHA256" = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-            test "$LATEST_SHA256_URL" = "https://example.invalid/v4.0.0/ASSella.AppImage.sha256"
+            test "$LATEST_SHA256_URL" = "https://example.invalid/v4.0.0/ExecutableDownloader.AppImage.sha256"
         )
     fi
 
     mkdir -p "$INSTALL_DESTINATION"
-    printf 'stable sentinel' > "$INSTALL_DESTINATION/ASSella.AppImage"
+    printf 'stable sentinel' > "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
 
     # Malformed .sha256 in install_stable.sh fails strictly
     (
         get_latest_github_version() {
             LATEST_VER="v4.0.0"
-            LATEST_URL="https://github.invalid/v4.0.0/ASSella.AppImage"
+            LATEST_URL="https://github.invalid/v4.0.0/ExecutableDownloader.AppImage"
             LATEST_SHA256=""
-            LATEST_SHA256_URL="https://github.invalid/v4.0.0/ASSella.AppImage.sha256"
+            LATEST_SHA256_URL="https://github.invalid/v4.0.0/ExecutableDownloader.AppImage.sha256"
         }
         curl() {
             local out="" url="" write_code=false
@@ -933,7 +933,7 @@ PYEOF
             exit 1
         fi
     )
-    test "$(cat "$INSTALL_DESTINATION/ASSella.AppImage")" = "stable sentinel"
+    test "$(cat "$INSTALL_DESTINATION/ExeFingerprinter.AppImage")" = "stable sentinel"
 
     # Same-channel downgrade refused in install_stable.sh unless ALLOW_DOWNGRADE=true
     (
@@ -941,7 +941,7 @@ PYEOF
         PAYLOAD_STABLE_SHA=$(printf '%s' "$PAYLOAD_STABLE" | sha256sum | awk '{print $1}')
         get_latest_github_version() {
             LATEST_VER="v3.1.0"
-            LATEST_URL="https://github.invalid/v3.1.0/ASSella.AppImage"
+            LATEST_URL="https://github.invalid/v3.1.0/ExecutableDownloader.AppImage"
             LATEST_SHA256="$PAYLOAD_STABLE_SHA"
             LATEST_SHA256_URL=""
         }
@@ -964,13 +964,13 @@ PYEOF
             echo "install_stable.sh must refuse same-channel downgrade v3.1.1 -> v3.1.0" >&2
             exit 1
         fi
-        test "$(cat "$INSTALL_DESTINATION/ASSella.AppImage")" = "stable sentinel"
+        test "$(cat "$INSTALL_DESTINATION/ExeFingerprinter.AppImage")" = "stable sentinel"
 
         ALLOW_DOWNGRADE=true
-        ASSELLA_NO_ZSYNC=1 do_install
-        test "$(sha256sum "$INSTALL_DESTINATION/ASSella.AppImage" | awk '{print $1}')" = "$PAYLOAD_STABLE_SHA"
+        EXE_FINGERPRINTER_NO_ZSYNC=1 do_install
+        test "$(sha256sum "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" | awk '{print $1}')" = "$PAYLOAD_STABLE_SHA"
     )
-    printf 'stable sentinel' > "$INSTALL_DESTINATION/ASSella.AppImage"
+    printf 'stable sentinel' > "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
 
     # Offline GitHub + R2 fails cleanly with GitHub Releases link
     (
@@ -984,9 +984,9 @@ PYEOF
         fi
         grep -q 'https://github.com/niwia/ASSella/releases' "$out_stable_log"
     )
-    test "$(cat "$INSTALL_DESTINATION/ASSella.AppImage")" = "stable sentinel"
+    test "$(cat "$INSTALL_DESTINATION/ExeFingerprinter.AppImage")" = "stable sentinel"
 
-    # Interactive ASSELLA_REQUIRE_SHA256=1 mismatch refuses bypass in install_stable.sh
+    # Interactive EXE_FINGERPRINTER_REQUIRE_SHA256=1 mismatch refuses bypass in install_stable.sh
     python3 - "$REPO_DIR/install_stable.sh" "$INSTALL_DESTINATION" "$TEST_HOME/stable_pty.log" <<'PYEOF'
 import os, pty, subprocess, sys
 script_path, dest, log_path = sys.argv[1:]
@@ -995,7 +995,7 @@ set -euo pipefail
 source "{script_path}"
 INSTALL_DESTINATION="{dest}"
 UPDATE_SERVER="github"
-ASSELLA_NO_ZSYNC=1
+EXE_FINGERPRINTER_NO_ZSYNC=1
 prompt_user() {{ echo "y"; }}
 curl() {{
     local out=""
@@ -1009,18 +1009,18 @@ curl() {{
     return 0
 }}
 LATEST_VER="v4.0.0"
-LATEST_URL="https://github.invalid/v4.0.0/ASSella.AppImage"
+LATEST_URL="https://github.invalid/v4.0.0/ExecutableDownloader.AppImage"
 LATEST_SHA256="0000000000000000000000000000000000000000000000000000000000000000"
 LATEST_SHA256_URL=""
 DL_TMP=$(mktemp)
 trap 'rm -f "$DL_TMP"' EXIT
 test -t 0
-if ! ASSELLA_REQUIRE_SHA256=0 _attempt_download_and_verify "$DL_TMP" "true"; then
-    echo "Expected interactive mismatch override when ASSELLA_REQUIRE_SHA256=0" >&2
+if ! EXE_FINGERPRINTER_REQUIRE_SHA256=0 _attempt_download_and_verify "$DL_TMP" "true"; then
+    echo "Expected interactive mismatch override when EXE_FINGERPRINTER_REQUIRE_SHA256=0" >&2
     exit 2
 fi
-if ASSELLA_REQUIRE_SHA256=1 _attempt_download_and_verify "$DL_TMP" "true"; then
-    echo "ASSELLA_REQUIRE_SHA256=1 must refuse interactive mismatch bypass in install_stable.sh" >&2
+if EXE_FINGERPRINTER_REQUIRE_SHA256=1 _attempt_download_and_verify "$DL_TMP" "true"; then
+    echo "EXE_FINGERPRINTER_REQUIRE_SHA256=1 must refuse interactive mismatch bypass in install_stable.sh" >&2
     exit 3
 fi
 '''

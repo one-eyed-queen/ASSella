@@ -1,6 +1,6 @@
 # Optional components
 
-Goldberg, Steamless and SLScheevo are **not** bundled with ASSella. They are
+Goldberg, Steamless and SLScheevo are **not** bundled with EXE-fingerprinter. They are
 downloaded on demand from Cloudflare R2 the first time they are needed.
 
 Goldberg alone was 81 MB of the 98 MB in `src/deps/` — 34.8 MB compressed — and

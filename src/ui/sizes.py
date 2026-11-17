@@ -1,4 +1,4 @@
-"""Shared control sizes so buttons and dropdowns line up across ASSella.
+"""Shared control sizes so buttons and dropdowns line up across EXE-fingerprinter.
 
 Use ``size_control(widget, "md")`` instead of ad-hoc setFixedWidth/Height:
 

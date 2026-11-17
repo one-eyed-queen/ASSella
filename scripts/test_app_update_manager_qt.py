@@ -93,8 +93,8 @@ def _release_urlopen(tag_name="v3.0.4"):
         release = {
             "tag_name": tag_name,
             "assets": [{
-                "name": "ASSella.AppImage",
-                "browser_download_url": "https://release.test/ASSella.AppImage",
+                "name": "ExeFingerprinter.AppImage",
+                "browser_download_url": "https://release.test/ExeFingerprinter.AppImage",
             }],
         }
         return _FakeResponse(json.dumps(release).encode())
@@ -146,8 +146,8 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
             if "api.github.com" in url:
                 release = {
                     "assets": [{
-                        "name": "ASSella.AppImage",
-                        "browser_download_url": "https://release.test/ASSella.AppImage",
+                        "name": "ExeFingerprinter.AppImage",
+                        "browser_download_url": "https://release.test/ExeFingerprinter.AppImage",
                     }]
                 }
                 return _FakeResponse(json.dumps(release).encode())
@@ -156,9 +156,9 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
             return _FakeResponse(payload)
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"old AppImage")
-            stale_part = Path(temp_dir) / "ASSella.AppImage.autoupdate.part"
+            stale_part = Path(temp_dir) / "ExeFingerprinter.AppImage.autoupdate.part"
             stale_part.write_bytes(b"stale partial data")
             with (
                 patch.dict(os.environ, {"APPIMAGE": str(appimage)}),
@@ -180,7 +180,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
     def test_appimageupdatetool_invoked_with_overwrite_and_target(self):
         parent = _make_parent("3.0.4")
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"old AppImage")
             fake_updater = Path(temp_dir) / "fake_appimageupdatetool"
             fake_updater.write_text("#!/bin/sh\nexit 0\n")
@@ -226,19 +226,19 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
             self.assertTrue(parent.finished.is_set())
             self.assertIsNone(parent.error)
             self.assertEqual(appimage.read_bytes(), b"new updated AppImage")
-            self.assertFalse((Path(temp_dir) / "ASSella.AppImage.autoupdate").exists())
-            self.assertFalse((Path(temp_dir) / "ASSella.AppImage.autoupdate.zs-old").exists())
-            self.assertFalse((Path(temp_dir) / "ASSella.AppImage.autoupdate.part").exists())
+            self.assertFalse((Path(temp_dir) / "ExeFingerprinter.AppImage.autoupdate").exists())
+            self.assertFalse((Path(temp_dir) / "ExeFingerprinter.AppImage.autoupdate.zs-old").exists())
+            self.assertFalse((Path(temp_dir) / "ExeFingerprinter.AppImage.autoupdate.part").exists())
             self.assertTrue(len(invoked_cmds) > 0)
             self.assertIn("-O", invoked_cmds[0])
             self.assertIn("-u", invoked_cmds[0])
-            self.assertIn("gh-releases-zsync|niwia|ASSella|v3.0.4|ASSella.AppImage.zsync", invoked_cmds[0])
+            self.assertIn("gh-releases-zsync|niwia|EXE-fingerprinter|v3.0.4|ExeFingerprinter.AppImage.zsync", invoked_cmds[0])
             self.assertNotIn("--self-update", invoked_cmds[0])
 
     def test_delta_streams_live_progress_over_pipe(self):
         parent = _make_parent("3.1.0")
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"old AppImage")
 
             fake_updater = Path(temp_dir) / "stream_updater.py"
@@ -294,7 +294,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
     def test_cancel_terminates_delta_subprocess_and_cleans_part_files(self):
         parent = _make_parent("3.1.0")
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"original 3.0.6 bytes")
             pid_file = Path(temp_dir) / "updater.pid"
 
@@ -335,7 +335,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                 mgr.run_self_update()
                 _pump_until(
                     self.app,
-                    lambda: pid_file.exists() and (Path(temp_dir) / "ASSella.AppImage.autoupdate.part").exists(),
+                    lambda: pid_file.exists() and (Path(temp_dir) / "ExeFingerprinter.AppImage.autoupdate.part").exists(),
                     timeout=5.0,
                 )
                 self.assertTrue(pid_file.exists())
@@ -351,8 +351,8 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
             self.assertFalse(fallback_called, "cancelled delta fell through to full download")
             self.assertFalse(parent.finished.is_set(), "cancel should not emit success or failure dialog")
             self.assertEqual(appimage.read_bytes(), b"original 3.0.6 bytes")
-            self.assertFalse((Path(temp_dir) / "ASSella.AppImage.autoupdate").exists())
-            self.assertFalse((Path(temp_dir) / "ASSella.AppImage.autoupdate.part").exists())
+            self.assertFalse((Path(temp_dir) / "ExeFingerprinter.AppImage.autoupdate").exists())
+            self.assertFalse((Path(temp_dir) / "ExeFingerprinter.AppImage.autoupdate.part").exists())
 
             # Verify child process was actually killed and reaped (doesn't exist).
             with self.assertRaises(ProcessLookupError):
@@ -361,7 +361,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
     def test_concurrent_run_self_update_is_ignored(self):
         parent = _make_parent("3.1.0")
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"old bytes")
             fake_updater = Path(temp_dir) / "slow_updater.py"
             fake_updater.write_text(
@@ -399,7 +399,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
     def test_symlinked_appimage_updates_target_and_preserves_symlink(self):
         parent = _make_parent("3.1.0")
         with tempfile.TemporaryDirectory() as temp_dir:
-            real_appimage = Path(temp_dir) / "ASSella.AppImage"
+            real_appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             real_appimage.write_bytes(b"old target bytes")
             symlink_appimage = Path(temp_dir) / "ACCELA.AppImage"
             symlink_appimage.symlink_to(real_appimage.name)
@@ -440,7 +440,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
 
     def test_resolve_appimage_path_ignores_apprun_sentinel_and_follows_argv0_symlink(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            real_appimage = Path(temp_dir) / "ASSella.AppImage"
+            real_appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             real_appimage.write_bytes(b"img")
             symlink_appimage = Path(temp_dir) / "ACCELA.AppImage"
             symlink_appimage.symlink_to(real_appimage.name)
@@ -451,7 +451,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
     def test_zsync_fallback_cleans_failed_autoupdate_and_streams_delta(self):
         parent = _make_parent("3.1.0")
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"old bytes")
             fake_updater = Path(temp_dir) / "fake_updater"
             fake_zsync = Path(temp_dir) / "fake_zsync"
@@ -511,11 +511,11 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
             self.assertEqual(len(cmds), 2)
             self.assertEqual(appimage.read_bytes(), b"zsync updated image")
             for leftover in (
-                "ASSella.AppImage.autoupdate",
-                "ASSella.AppImage.autoupdate.part",
-                "ASSella.AppImage.zsync-seed",
-                "ASSella.AppImage.zsync-out",
-                "ASSella.AppImage.zsync-out.part",
+                "ExeFingerprinter.AppImage.autoupdate",
+                "ExeFingerprinter.AppImage.autoupdate.part",
+                "ExeFingerprinter.AppImage.zsync-seed",
+                "ExeFingerprinter.AppImage.zsync-out",
+                "ExeFingerprinter.AppImage.zsync-out.part",
             ):
                 self.assertFalse((Path(temp_dir) / leftover).exists(), f"leftover not removed: {leftover}")
 
@@ -525,7 +525,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         expected_sha = hashlib.sha256(expected_bytes).hexdigest()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"old seed bytes")
 
             cmds = []
@@ -556,13 +556,13 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "tag_name": "v3.1.0",
                         "assets": [
                             {
-                                "name": "ASSella.AppImage",
-                                "browser_download_url": "https://r2.test/releases/stable/v3.1.0/ASSella.AppImage",
+                                "name": "ExeFingerprinter.AppImage",
+                                "browser_download_url": "https://r2.test/releases/stable/v3.1.0/ExeFingerprinter.AppImage",
                                 "sha256": expected_sha,
                             },
                             {
-                                "name": "ASSella.AppImage.zsync",
-                                "browser_download_url": "https://r2.test/releases/stable/v3.1.0/ASSella.AppImage.zsync",
+                                "name": "ExeFingerprinter.AppImage.zsync",
+                                "browser_download_url": "https://r2.test/releases/stable/v3.1.0/ExeFingerprinter.AppImage.zsync",
                             },
                         ],
                     }
@@ -594,8 +594,8 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
             self.assertEqual(len(cmds), 1)
             self.assertEqual(cmds[0][0], "/usr/bin/zsync")
             self.assertIn("-u", cmds[0])
-            self.assertIn("https://r2.test/releases/stable/v3.1.0/ASSella.AppImage", cmds[0])
-            self.assertEqual(cmds[0][-1], "https://r2.test/releases/stable/v3.1.0/ASSella.AppImage.zsync")
+            self.assertIn("https://r2.test/releases/stable/v3.1.0/ExeFingerprinter.AppImage", cmds[0])
+            self.assertEqual(cmds[0][-1], "https://r2.test/releases/stable/v3.1.0/ExeFingerprinter.AppImage.zsync")
             self.assertEqual(appimage.read_bytes(), expected_bytes)
 
     def test_r2_sha_mismatch_rejects_corrupt_download(self):
@@ -603,7 +603,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         expected_sha = hashlib.sha256(b"authentic binary").hexdigest()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"original binary")
 
             class FakePopen:
@@ -626,13 +626,13 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                     manifest = {
                         "tag_name": "v3.1.0",
                         "assets": [{
-                            "name": "ASSella.AppImage",
-                            "browser_download_url": "https://r2.test/releases/stable/v3.1.0/ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
+                            "browser_download_url": "https://r2.test/releases/stable/v3.1.0/ExeFingerprinter.AppImage",
                             "sha256": expected_sha,
                         }],
                     }
                     return _FakeResponse(json.dumps(manifest).encode())
-                if url == "https://r2.test/releases/stable/v3.1.0/ASSella.AppImage":
+                if url == "https://r2.test/releases/stable/v3.1.0/ExeFingerprinter.AppImage":
                     return _FakeResponse(b"corrupt full binary")
                 raise AssertionError(f"Unexpected URL: {url}")
 
@@ -662,7 +662,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         expected_sha = hashlib.sha256(expected_bytes).hexdigest()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"old seed")
 
             requested_urls = []
@@ -690,8 +690,8 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                     manifest = {
                         "tag_name": "v3.1.0",
                         "assets": [{
-                            "name": "ASSella.AppImage",
-                            "browser_download_url": "https://r2.test/releases/stable/v3.1.0/ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
+                            "browser_download_url": "https://r2.test/releases/stable/v3.1.0/ExeFingerprinter.AppImage",
                             "sha256": expected_sha,
                         }],
                     }
@@ -722,7 +722,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
     def test_auto_mode_does_not_fallback_to_r2_when_cancelled(self):
         parent = _make_parent("3.1.0", update_server="auto", update_channel="stable")
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"original bytes")
             pid_file = Path(temp_dir) / "child.pid"
             fake_updater = Path(temp_dir) / "slow_github_updater.py"
@@ -768,7 +768,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
     def test_github_mode_does_not_fallback_to_r2_on_error(self):
         parent = _make_parent("3.1.0", update_server="github", update_channel="stable")
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"original bytes")
 
             requested_urls = []
@@ -811,7 +811,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         expected_sha = hashlib.sha256(expected_bytes).hexdigest()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"2.9.9beta seed bytes")
             requested_urls = []
 
@@ -838,8 +838,8 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "prerelease": True,
                         "channel": "beta",
                         "assets": [{
-                            "name": "ASSella.AppImage",
-                            "browser_download_url": "https://r2.test/releases/beta/v3.2.0beta/ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
+                            "browser_download_url": "https://r2.test/releases/beta/v3.2.0beta/ExeFingerprinter.AppImage",
                             "sha256": expected_sha,
                         }],
                     }
@@ -873,7 +873,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         parent._latest_update_channel = "stable"
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"2.9.9beta local bytes")
             fake_updater = Path(temp_dir) / "fake_appimageupdatetool"
             fake_updater.write_text("#!/bin/sh\nexit 0\n")
@@ -904,7 +904,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                             "target_commitish": "main",
                             "published_at": "2026-11-11T22:00:00Z",
                             "assets": [{
-                                "name": "ASSella.AppImage",
+                                "name": "ExeFingerprinter.AppImage",
                                 "browser_download_url": "https://github.com/stable.AppImage",
                             }],
                         },
@@ -914,7 +914,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                             "target_commitish": "beta",
                             "published_at": "2026-11-11T21:30:00Z",
                             "assets": [{
-                                "name": "ASSella.AppImage",
+                                "name": "ExeFingerprinter.AppImage",
                                 "browser_download_url": "https://github.com/beta.AppImage",
                             }],
                         },
@@ -922,7 +922,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                     return _FakeResponse(json.dumps(releases).encode())
                 if url == "https://github.com/beta.AppImage.sha256":
                     digest = hashlib.sha256(b"updated beta bytes").hexdigest()
-                    return _FakeResponse(f"{digest}  ASSella.AppImage\n".encode())
+                    return _FakeResponse(f"{digest}  ExeFingerprinter.AppImage\n".encode())
                 raise AssertionError(f"Unexpected HTTP call: {url}")
 
             with (
@@ -944,7 +944,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
             self.assertTrue(parent.succeeded, f"unexpected error: {parent.error}")
             self.assertEqual(len(invoked_cmds), 1)
             self.assertIn(
-                "gh-releases-zsync|niwia|ASSella|v3.0.0-beta.2|ASSella.AppImage.zsync",
+                "gh-releases-zsync|niwia|EXE-fingerprinter|v3.0.0-beta.2|ExeFingerprinter.AppImage.zsync",
                 invoked_cmds[0],
             )
 
@@ -956,7 +956,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         expected_sha = hashlib.sha256(expected_gh).hexdigest()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"3.1.0 old binary")
             requested_urls = []
 
@@ -969,7 +969,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                     "target_commitish": "main",
                     "published_at": "2026-11-11T16:00:00Z",
                     "assets": [{
-                        "name": "ASSella.AppImage",
+                        "name": "ExeFingerprinter.AppImage",
                         "browser_download_url": "https://github.com/niwia/ASSella/releases/download/v3.1.1/ASSella.AppImage",
                     }],
                 }
@@ -980,7 +980,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                 if url == "https://github.com/niwia/ASSella/releases/download/v3.1.1/ASSella.AppImage":
                     return _FakeResponse(expected_gh)
                 if url == "https://github.com/niwia/ASSella/releases/download/v3.1.1/ASSella.AppImage.sha256":
-                    return _FakeResponse(f"{expected_sha}  ASSella.AppImage\n".encode())
+                    return _FakeResponse(f"{expected_sha}  ExeFingerprinter.AppImage\n".encode())
                 if "releases/channels/" in url:
                     raise AssertionError(f"Auto must not prefer R2 when GitHub succeeds: {url}")
                 raise AssertionError(f"Unexpected HTTP call: {url}")
@@ -1004,7 +1004,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         # Part 2: GitHub download fails 403 and R2 holds older v3.1.0 -> rejects stale R2 fallback cleanly.
         parent_fallback = _make_parent("3.1.1", update_server="auto", update_channel="stable")
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"3.1.0 old binary")
 
             def fake_urlopen_fail(request, timeout=None):
@@ -1015,7 +1015,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                     "target_commitish": "main",
                     "published_at": "2026-11-11T16:00:00Z",
                     "assets": [{
-                        "name": "ASSella.AppImage",
+                        "name": "ExeFingerprinter.AppImage",
                         "browser_download_url": "https://github.com/niwia/ASSella/releases/download/v3.1.1/ASSella.AppImage",
                     }],
                 }
@@ -1031,8 +1031,8 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "prerelease": False,
                         "channel": "stable",
                         "assets": [{
-                            "name": "ASSella.AppImage",
-                            "browser_download_url": "https://r2.test/releases/stable/v3.1.0/ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
+                            "browser_download_url": "https://r2.test/releases/stable/v3.1.0/ExeFingerprinter.AppImage",
                         }],
                     }
                     return _FakeResponse(json.dumps(manifest).encode())
@@ -1063,7 +1063,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         r2_sha = hashlib.sha256(r2_bytes).hexdigest()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"3.1.0 old binary")
 
             def fake_urlopen(request, timeout=None):
@@ -1076,13 +1076,13 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "prerelease": False,
                         "channel": "stable",
                         "assets": [{
-                            "name": "ASSella.AppImage",
-                            "browser_download_url": "https://r2.test/releases/stable/v3.1.1/ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
+                            "browser_download_url": "https://r2.test/releases/stable/v3.1.1/ExeFingerprinter.AppImage",
                             "sha256": r2_sha,
                         }],
                     }
                     return _FakeResponse(json.dumps(manifest).encode())
-                if url == "https://r2.test/releases/stable/v3.1.1/ASSella.AppImage":
+                if url == "https://r2.test/releases/stable/v3.1.1/ExeFingerprinter.AppImage":
                     return _FakeResponse(r2_bytes)
                 raise AssertionError(f"Unexpected HTTP call: {url}")
 
@@ -1172,7 +1172,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         verified_sha = hashlib.sha256(verified_bytes).hexdigest()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"old appimage")
             fake_ait = Path(temp_dir) / "appimageupdatetool"
             fake_ait.write_text("#!/bin/sh\nexit 0\n")
@@ -1216,7 +1216,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                     "target_commitish": "main",
                     "published_at": "2026-11-11T12:00:00Z",
                     "assets": [{
-                        "name": "ASSella.AppImage",
+                        "name": "ExeFingerprinter.AppImage",
                         "browser_download_url": "https://github.com/v3.0.4/ASSella.AppImage",
                     }],
                 }
@@ -1225,7 +1225,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                 if "/releases?per_page=100" in url:
                     return _FakeResponse(json.dumps([release_obj]).encode())
                 if url == "https://github.com/v3.0.4/ASSella.AppImage.sha256":
-                    return _FakeResponse(f"{verified_sha}  ASSella.AppImage\n".encode())
+                    return _FakeResponse(f"{verified_sha}  ExeFingerprinter.AppImage\n".encode())
                 raise AssertionError(f"Full download should not run when verified zsync2 succeeds: {url}")
 
             with (
@@ -1252,7 +1252,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         full_sha = hashlib.sha256(full_bytes).hexdigest()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"old appimage")
             fake_zsync2 = Path(temp_dir) / "zsync2"
             fake_zsync2.write_text("#!/bin/sh\nexit 0\n")
@@ -1280,7 +1280,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                     "target_commitish": "main",
                     "published_at": "2026-11-11T12:00:00Z",
                     "assets": [{
-                        "name": "ASSella.AppImage",
+                        "name": "ExeFingerprinter.AppImage",
                         "browser_download_url": "https://github.com/v3.0.4/ASSella.AppImage",
                     }],
                 }
@@ -1289,7 +1289,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                 if "/releases?per_page=100" in url:
                     return _FakeResponse(json.dumps([release_obj]).encode())
                 if url == "https://github.com/v3.0.4/ASSella.AppImage.sha256":
-                    return _FakeResponse(f"{full_sha}  ASSella.AppImage\n".encode())
+                    return _FakeResponse(f"{full_sha}  ExeFingerprinter.AppImage\n".encode())
                 if url == "https://github.com/v3.0.4/ASSella.AppImage":
                     return _FakeResponse(full_bytes)
                 raise AssertionError(f"Unexpected HTTP call: {url}")
@@ -1323,7 +1323,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 parent = _make_parent("3.1.1", update_server="github", update_channel="stable")
                 with tempfile.TemporaryDirectory() as temp_dir:
-                    appimage = Path(temp_dir) / "ASSella.AppImage"
+                    appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
                     appimage.write_bytes(original_bytes)
                     seen_urls = []
 
@@ -1331,12 +1331,12 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         url = getattr(request, "full_url", "") or ""
                         _seen.append(url)
                         assets = [{
-                            "name": "ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
                             "browser_download_url": "https://github.com/v3.1.1/ASSella.AppImage",
                         }]
                         if _mode == "advertised_404":
                             assets.append({
-                                "name": "ASSella.AppImage.sha256",
+                                "name": "ExeFingerprinter.AppImage.sha256",
                                 "browser_download_url": "https://github.com/v3.1.1/ASSella.AppImage.sha256",
                             })
                         release_obj = {
@@ -1385,7 +1385,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         # Under UPDATE_SERVER="auto", malformed GitHub .sha256 must trigger R2 fallback and verify!
         parent_auto = _make_parent("3.1.1", update_server="auto", update_channel="stable")
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(original_bytes)
             seen_auto = []
 
@@ -1398,8 +1398,8 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "prerelease": False,
                         "target_commitish": "main",
                         "assets": [
-                            {"name": "ASSella.AppImage", "browser_download_url": "https://github.com/v3.1.1/ASSella.AppImage"},
-                            {"name": "ASSella.AppImage.sha256", "browser_download_url": "https://github.com/v3.1.1/ASSella.AppImage.sha256"},
+                            {"name": "ExeFingerprinter.AppImage", "browser_download_url": "https://github.com/v3.1.1/ASSella.AppImage"},
+                            {"name": "ExeFingerprinter.AppImage.sha256", "browser_download_url": "https://github.com/v3.1.1/ASSella.AppImage.sha256"},
                         ],
                     }).encode())
                 if url == "https://github.com/v3.1.1/ASSella.AppImage":
@@ -1411,12 +1411,12 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "tag_name": "v3.1.1",
                         "prerelease": False,
                         "assets": [{
-                            "name": "ASSella.AppImage",
-                            "browser_download_url": "https://r2.test/stable/ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
+                            "browser_download_url": "https://r2.test/stable/ExeFingerprinter.AppImage",
                             "sha256": r2_sha,
                         }],
                     }).encode())
-                if url == "https://r2.test/stable/ASSella.AppImage":
+                if url == "https://r2.test/stable/ExeFingerprinter.AppImage":
                     return _FakeResponse(r2_bytes)
                 raise AssertionError(f"Unexpected HTTP call: {url}")
 
@@ -1437,10 +1437,10 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
             self.assertEqual(appimage.read_bytes(), r2_bytes)
 
     def test_require_sha256_env_blocks_unverified_404_and_confirmation_warns_on_channel_downgrade(self):
-        """ASSELLA_REQUIRE_SHA256=1 rejects 404 sidecars; cross-channel downgrade shows explicit warning."""
+        """EXE_FINGERPRINTER_REQUIRE_SHA256=1 rejects 404 sidecars; cross-channel downgrade shows explicit warning."""
         parent = _make_parent("3.1.1", update_server="github", update_channel="stable")
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"intact binary")
             seen_urls = []
 
@@ -1452,7 +1452,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "tag_name": "v3.1.1",
                         "prerelease": False,
                         "target_commitish": "main",
-                        "assets": [{"name": "ASSella.AppImage", "browser_download_url": "https://github.com/v3.1.1/ASSella.AppImage"}],
+                        "assets": [{"name": "ExeFingerprinter.AppImage", "browser_download_url": "https://github.com/v3.1.1/ASSella.AppImage"}],
                     }).encode())
                 if url == "https://github.com/v3.1.1/ASSella.AppImage":
                     return _FakeResponse(b"unsigned bytes")
@@ -1461,7 +1461,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                 raise AssertionError(f"Unexpected HTTP call: {url}")
 
             with (
-                patch.dict(os.environ, {"APPIMAGE": str(appimage), "ASSELLA_REQUIRE_SHA256": "1"}),
+                patch.dict(os.environ, {"APPIMAGE": str(appimage), "EXE_FINGERPRINTER_REQUIRE_SHA256": "1"}),
                 patch("managers.app_update_manager._find_bundled_or_system_tool", return_value=""),
                 patch(
                     "managers.app_update_manager.ThemedMessageBox.question",
@@ -1481,7 +1481,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
         captured_prompts = []
         parent_dg = _make_parent("2.9.9beta", update_server="github", update_channel="beta")
         with (
-            patch.dict(os.environ, {"APPIMAGE": "/tmp/ASSella.AppImage"}),
+            patch.dict(os.environ, {"APPIMAGE": "/tmp/ExeFingerprinter.AppImage"}),
             patch("managers.app_update_manager.app_version", "3.1.1"),
             patch("managers.app_update_manager.Path.exists", return_value=True),
             patch("managers.app_update_manager.Path.is_file", return_value=True),
@@ -1502,7 +1502,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
     def test_beta_auto_fallback_accepts_newer_published_r2_and_rejects_older_r2(self):
         """Beta auto-fallback uses publication order: newer v2.9.9beta beats v3.0.5-beta.1, older SemVer is rejected."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            appimage = Path(temp_dir) / "ASSella.AppImage"
+            appimage = Path(temp_dir) / "ExeFingerprinter.AppImage"
             appimage.write_bytes(b"old beta binary")
             r2_bytes = b"r2 newer beta appimage payload"
             r2_sha = hashlib.sha256(r2_bytes).hexdigest()
@@ -1518,7 +1518,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "target_commitish": "beta",
                         "published_at": "2026-11-10T10:00:00Z",
                         "assets": [{
-                            "name": "ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
                             "browser_download_url": "https://github.com/v3.0.5-beta.1/ASSella.AppImage",
                         }],
                     }).encode())
@@ -1531,12 +1531,12 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "target_commitish": "beta",
                         "published_at": "2026-11-11T15:19:00Z",
                         "assets": [{
-                            "name": "ASSella.AppImage",
-                            "browser_download_url": "https://r2.test/beta/ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
+                            "browser_download_url": "https://r2.test/beta/ExeFingerprinter.AppImage",
                             "sha256": r2_sha,
                         }],
                     }).encode())
-                if url == "https://r2.test/beta/ASSella.AppImage":
+                if url == "https://r2.test/beta/ExeFingerprinter.AppImage":
                     return _FakeResponse(r2_bytes)
                 raise AssertionError(f"Unexpected HTTP call: {url}")
 
@@ -1568,7 +1568,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "target_commitish": "beta",
                         "published_at": "2026-11-10T10:00:00Z",
                         "assets": [{
-                            "name": "ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
                             "browser_download_url": "https://github.com/v3.0.5-beta.1/ASSella.AppImage",
                         }],
                     }).encode())
@@ -1581,7 +1581,7 @@ class AppUpdateProgressBridgeTests(unittest.TestCase):
                         "target_commitish": "beta",
                         "published_at": "2026-10-01T10:00:00Z",
                         "assets": [{
-                            "name": "ASSella.AppImage",
+                            "name": "ExeFingerprinter.AppImage",
                             "browser_download_url": "https://r2.test/beta/old.AppImage",
                             "sha256": r2_sha,
                         }],

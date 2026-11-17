@@ -506,7 +506,7 @@ class DepotTableMixin:
                 id_item.setFlags(id_item.flags() & ~Qt.ItemFlag.ItemIsEditable & ~Qt.ItemFlag.ItemIsUserCheckable)
                 id_item.setForeground(darker_grey)
                 id_item.setToolTip(
-                    "ASSella suspects this depot is owned on Steam. Toggle only if you do not own it on Steam."
+                    "EXE-fingerprinter suspects this depot is owned on Steam. Toggle only if you do not own it on Steam."
                 )
             else:
                 is_checked = True if self.is_single_depot else (str(depot_id) in pre_selected_set)
@@ -544,7 +544,7 @@ class DepotTableMixin:
                 config_item.setFlags(config_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 config_item.setForeground(darker_grey)
                 config_item.setToolTip(
-                    "ASSella suspects this depot is owned on Steam. Toggle only if you do not own it on Steam."
+                    "EXE-fingerprinter suspects this depot is owned on Steam. Toggle only if you do not own it on Steam."
                 )
                 from utils.depot_tag_helpers import get_os_icon
                 os_ic = get_os_icon(depot_data.get("oslist"), tint_color=darker_grey)
@@ -614,7 +614,7 @@ class DepotTableMixin:
                 d_id_item.setFlags(d_id_item.flags() & ~Qt.ItemFlag.ItemIsEditable & ~Qt.ItemFlag.ItemIsUserCheckable)
                 d_id_item.setForeground(darker_grey)
                 d_id_item.setToolTip(
-                    "ASSella suspects this DLC is owned on Steam. Toggle only if you do not own it on Steam."
+                    "EXE-fingerprinter suspects this DLC is owned on Steam. Toggle only if you do not own it on Steam."
                 )
             else:
                 if self.selected_depots is not None:
@@ -630,7 +630,7 @@ class DepotTableMixin:
                 d_cfg_item.setFlags(d_cfg_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 d_cfg_item.setForeground(darker_grey)
                 d_cfg_item.setToolTip(
-                    "ASSella suspects this DLC is owned on Steam. Toggle only if you do not own it on Steam."
+                    "EXE-fingerprinter suspects this DLC is owned on Steam. Toggle only if you do not own it on Steam."
                 )
             else:
                 d_cfg_item.setFlags(d_cfg_item.flags() & ~Qt.ItemFlag.ItemIsEditable)

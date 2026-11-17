@@ -155,7 +155,7 @@ def create_shortcut(appid: str, game_name: str) -> Tuple[bool, str]:
         f"Icon={icon}\n"
         "Terminal=false\n"
         "Categories=Game;\n"
-        "X-ASSella-AppID=" + appid + "\n"
+        "X-Executable-Downloader-AppID=" + appid + "\n"
     )
     try:
         path.parent.mkdir(parents=True, exist_ok=True)

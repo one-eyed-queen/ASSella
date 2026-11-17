@@ -77,7 +77,7 @@ def ensure_sls_plugin_config_sections(config_path: Optional[Path] = None) -> boo
             logger.info(f"ensure_sls_plugin_config_sections: Added missing sections to {config_path}")
 
         # The plugins' shared config (katamari.conf.lua) lives next to
-        # config.yaml; ASSella writes it so every plugin finds the same
+        # config.yaml; EXE-fingerprinter writes it so every plugin finds the same
         # Hubcap key and proxy/worker routes.
         try:
             from managers.katamari_config_manager import KatamariConfigManager
@@ -137,14 +137,14 @@ def are_sls_plugins_deployed() -> bool:
     return are_all_plugins_installed()
 
 def is_slssteam_plugins_enabled() -> bool:
-    """Check if the user has enabled SLSsteam plugins in ASSella or in config.yaml.
+    """Check if the user has enabled SLSsteam plugins in EXE-fingerprinter or in config.yaml.
 
     Returns:
         bool: True if plugins are enabled in settings or config.yaml.
     """
     settings = get_settings()
 
-    # 1. Check ASSella explicit user settings (enable_vapor / enable_at0m)
+    # 1. Check EXE-fingerprinter explicit user settings (enable_vapor / enable_at0m)
     vapor_val = settings.value("enable_vapor", None)
     if vapor_val is not None:
         return settings.value("enable_vapor", type=bool)

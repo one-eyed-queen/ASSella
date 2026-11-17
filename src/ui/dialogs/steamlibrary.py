@@ -2,7 +2,7 @@
 steamlibrary.py
 ===============
 Dialog for selecting a Steam library folder.
-Revamped with ASSella custom title bar, large storage card tabs,
+Revamped with EXE-fingerprinter custom title bar, large storage card tabs,
 borderless styling, and full-width Cancel/Proceed buttons.
 """
 

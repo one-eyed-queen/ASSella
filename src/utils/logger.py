@@ -14,7 +14,7 @@ from utils.activity import is_our_logger
 from utils.helpers import get_base_path
 
 # Constants
-APP_NAME = "assella"
+APP_NAME = "exe_fingerprinter"
 MAX_PREVIOUS_LOGS = 3
 
 logger = logging.getLogger(__name__)
@@ -483,7 +483,7 @@ def _install_stderr_tee(handler=None, file_stream=None) -> None:
 def _install_global_exception_hooks() -> None:
     """Install sys.excepthook and threading.excepthook to route unhandled
     exceptions from all threads into the logger instead of stderr."""
-    _exc_logger = logging.getLogger("assella.crash")
+    _exc_logger = logging.getLogger("exe_fingerprinter.crash")
 
     def _handle_exception(exc_type, exc_value, exc_tb):
         """Main thread unhandled exception hook."""
@@ -719,10 +719,10 @@ def cleanup_old_logs() -> None:
     if not log_dir.exists():
         return
 
-    # Match both new assella_*.log and legacy accela_*.log files
+    # Match both new exe_fingerprinter_*.log and legacy accela_*.log files
     log_files = [
         f for f in log_dir.glob("*.log")
-        if f.is_file() and (f.name.startswith("assella_") or f.name.startswith("accela_"))
+        if f.is_file() and (f.name.startswith("exe_fingerprinter_") or f.name.startswith("accela_"))
     ]
 
     if not log_files:

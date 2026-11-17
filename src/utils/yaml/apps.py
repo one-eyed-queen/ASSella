@@ -210,7 +210,7 @@ def get_additional_depots(config_path: Path) -> List[str]:
 def has_game_config_entries(
     appid: Union[str, int], game_data: Optional[Dict[str, Any]] = None
 ) -> bool:
-    """Check if an ASSella-mode game has active entries in SLSsteam config.yaml.
+    """Check if an EXE-fingerprinter-mode game has active entries in SLSsteam config.yaml.
     Strictly ignores universal shared redistributables.
 
     Returns True if the game qualifies by having:

@@ -1,5 +1,5 @@
 """
-Lightweight, high-performance 60 FPS snow particle simulation for ASSella.
+Lightweight, high-performance 60 FPS snow particle simulation for EXE-fingerprinter.
 Provides atmospheric falling snow with depth layering, subtle horizontal sway,
 and zero-overhead automatic sleep when widgets are hidden or minimized.
 """

@@ -433,7 +433,7 @@ class MainWindow(QMainWindow):
             layout.setContentsMargins(20, 20, 20, 20)
             layout.setSpacing(10)
 
-            title_lbl = QLabel("Try ASSella Experimental Features!", dlg)
+            title_lbl = QLabel("Try EXE-fingerprinter Experimental Features!", dlg)
             title_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #7aa2f7;")
             layout.addWidget(title_lbl)
 
@@ -501,12 +501,12 @@ class MainWindow(QMainWindow):
 
     def _setup_window_properties(self) -> None:
         """Configure basic window properties."""
-        self.setWindowTitle("ASSELA")
+        self.setWindowTitle("EXE-fingerprinter")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setGeometry(100, 100, 800, 350)
 
-        from utils.color_utils import load_assella_app_icon
-        app_icon = load_assella_app_icon()
+        from utils.color_utils import load_exe_fingerprinter_app_icon
+        app_icon = load_exe_fingerprinter_app_icon()
         if not app_icon.isNull():
             self.setWindowIcon(app_icon)
         else:
@@ -750,7 +750,7 @@ class MainWindow(QMainWindow):
             try:
                 import subprocess
                 res = subprocess.run(
-                    ["systemctl", "--user", "is-active", "assella-testing.service"],
+                    ["systemctl", "--user", "is-active", "exe_fingerprinter-testing.service"],
                     capture_output=True,
                     text=True,
                     timeout=2.0,
@@ -1393,16 +1393,16 @@ class MainWindow(QMainWindow):
         steam_updates_item.addWidget(self.steam_updates_value)
         row2_layout.addLayout(steam_updates_item)
 
-        # 3. ASSella Status
-        assella_lbl = QLabel("ASSella:")
-        assella_lbl.setStyleSheet("color: rgba(255, 255, 255, 0.70); font-size: 11px; background: transparent; border: none;")
-        self.assella_status_value = QLabel("Checking...")
-        self.assella_status_value.setStyleSheet(self._get_status_style("neutral"))
-        assella_item = QHBoxLayout()
-        assella_item.setSpacing(4)
-        assella_item.addWidget(assella_lbl)
-        assella_item.addWidget(self.assella_status_value)
-        row2_layout.addLayout(assella_item)
+        # 3. EXE-fingerprinter Status
+        exe_fingerprinter_lbl = QLabel("EXE-fingerprinter:")
+        exe_fingerprinter_lbl.setStyleSheet("color: rgba(255, 255, 255, 0.70); font-size: 11px; background: transparent; border: none;")
+        self.exe_fingerprinter_status_value = QLabel("Checking...")
+        self.exe_fingerprinter_status_value.setStyleSheet(self._get_status_style("neutral"))
+        exe_fingerprinter_item = QHBoxLayout()
+        exe_fingerprinter_item.setSpacing(4)
+        exe_fingerprinter_item.addWidget(exe_fingerprinter_lbl)
+        exe_fingerprinter_item.addWidget(self.exe_fingerprinter_status_value)
+        row2_layout.addLayout(exe_fingerprinter_item)
 
         # 4. Library Size
         library_lbl = QLabel("Library:")
@@ -1613,7 +1613,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def refresh_system_status(self) -> None:
-        """Schedule a refresh of the local Steam/SLS/ASSella status labels.
+        """Schedule a refresh of the local Steam/SLS/EXE-fingerprinter status labels.
 
         The actual work runs in _apply_system_status_refresh(), coalesced to at
         most one pass per second. A bulk update check rebuilds the dashboard
@@ -1641,7 +1641,7 @@ class MainWindow(QMainWindow):
         self._apply_system_status_refresh()
 
     def _apply_system_status_refresh(self) -> None:
-        """Refresh local Steam updates, SLS, and ASSella status labels."""
+        """Refresh local Steam updates, SLS, and EXE-fingerprinter status labels."""
         if not hasattr(self, "steam_updates_value") or not self.steam_updates_value:
             return
 
@@ -1652,7 +1652,7 @@ class MainWindow(QMainWindow):
             self._gui_phase = "idle"
 
     def _collect_system_status(self) -> None:
-        """Collect and render the Steam/SLS/ASSella status labels."""
+        """Collect and render the Steam/SLS/EXE-fingerprinter status labels."""
         if not hasattr(self, "steam_updates_value") or not self.steam_updates_value:
             return
 
@@ -1821,8 +1821,8 @@ class MainWindow(QMainWindow):
             except Exception:
                 pass
 
-        # ASSella Status
-        if hasattr(self, "assella_status_value") and self.assella_status_value:
+        # EXE-fingerprinter Status
+        if hasattr(self, "exe_fingerprinter_status_value") and self.exe_fingerprinter_status_value:
             tool_status = getattr(self, "_tool_update_status", "checking")
             source_label = {
                 "github": "GitHub",
@@ -1831,25 +1831,25 @@ class MainWindow(QMainWindow):
             }.get(getattr(self, "_latest_update_source", ""), "")
             via_suffix = f" (via {source_label})" if source_label else ""
             if tool_status == "update_available":
-                self.assella_status_value.setText("Update!")
-                self.assella_status_value.setStyleSheet(self._get_status_style("warning"))
-                self.assella_status_value.setToolTip(
+                self.exe_fingerprinter_status_value.setText("Update!")
+                self.exe_fingerprinter_status_value.setStyleSheet(self._get_status_style("warning"))
+                self.exe_fingerprinter_status_value.setToolTip(
                     f"New version available: {getattr(self, '_latest_remote_version', '')}{via_suffix}"
                 )
             elif tool_status == "up_to_date":
-                self.assella_status_value.setText("Latest")
-                self.assella_status_value.setStyleSheet(self._get_status_style("success"))
-                self.assella_status_value.setToolTip(f"ASSella is up to date (v{app_version}{via_suffix})")
+                self.exe_fingerprinter_status_value.setText("Latest")
+                self.exe_fingerprinter_status_value.setStyleSheet(self._get_status_style("success"))
+                self.exe_fingerprinter_status_value.setToolTip(f"EXE-fingerprinter is up to date (v{app_version}{via_suffix})")
             elif tool_status in ("offline", "error", "cant_check"):
-                self.assella_status_value.setText("Can't Check")
-                self.assella_status_value.setStyleSheet(self._get_status_style("error"))
-                self.assella_status_value.setToolTip(
-                    f"Could not check for ASSella updates (update server unreachable)\nCurrent version: v{app_version}"
+                self.exe_fingerprinter_status_value.setText("Can't Check")
+                self.exe_fingerprinter_status_value.setStyleSheet(self._get_status_style("error"))
+                self.exe_fingerprinter_status_value.setToolTip(
+                    f"Could not check for EXE-fingerprinter updates (update server unreachable)\nCurrent version: v{app_version}"
                 )
             else:
-                self.assella_status_value.setText("Checking...")
-                self.assella_status_value.setStyleSheet(self._get_status_style("neutral"))
-                self.assella_status_value.setToolTip("Checking for tool updates...")
+                self.exe_fingerprinter_status_value.setText("Checking...")
+                self.exe_fingerprinter_status_value.setStyleSheet(self._get_status_style("neutral"))
+                self.exe_fingerprinter_status_value.setToolTip("Checking for tool updates...")
 
         # Library Size Stats
         if hasattr(self, "library_size_value") and self.library_size_value:
@@ -2155,7 +2155,7 @@ class MainWindow(QMainWindow):
     def sync_at0m_keys(self, appid: str) -> None:
         """Syncs the Hubcap decryption keys of a Steam-managed (AT0-M) game.
 
-        ASSella never downloads an AT0-M game - Steam does. What ASSella does
+        EXE-fingerprinter never downloads an AT0-M game - Steam does. What EXE-fingerprinter does
         is make sure SLSsteam holds the decryption keys of the depots the game
         needs, so Steam can actually decrypt them.
         """
@@ -2250,7 +2250,7 @@ class MainWindow(QMainWindow):
                     continue
                 if is_atom_managed(g):
                     # Steam-managed games are downloaded by Steam, never by
-                    # DepotDownloader. All ASSella does is sync the keys.
+                    # DepotDownloader. All EXE-fingerprinter does is sync the keys.
                     at0m_key_games.append(g)
                 else:
                     updateable_games.append(g)
@@ -2287,7 +2287,7 @@ class MainWindow(QMainWindow):
             key_processed = 0
 
             # --- Phase 1: sync the keys of the Steam-managed games ---
-            # Steam downloads those games itself, so all ASSella can do is
+            # Steam downloads those games itself, so all EXE-fingerprinter can do is
             # make sure SLSsteam holds the decryption keys.
             if at0m_key_games:
                 from managers.at0m_update_checker import At0mUpdateChecker
@@ -2999,7 +2999,7 @@ class MainWindow(QMainWindow):
             self,
             "Update Installed",
             "The update has been downloaded and installed successfully.\n\n"
-            "Please restart ASSella to use the new version.",
+            "Please restart EXE-fingerprinter to use the new version.",
         )
 
     @pyqtSlot(str)

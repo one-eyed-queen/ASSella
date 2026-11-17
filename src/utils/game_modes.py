@@ -1,9 +1,9 @@
-"""Single source of truth for ASSella-managed vs AT0-M game classification.
+"""Single source of truth for EXE-fingerprinter-managed vs AT0-M game classification.
 
-An ASSella-managed install is identified by a physical marker (resolved from
-.DepotDownloader, with legacy .ACCELA/.assella still recognised on read) or
+An EXE-fingerprinter-managed install is identified by a physical marker (resolved from
+.DepotDownloader, with legacy .ACCELA/.exe_fingerprinter still recognised on read) or
 an explicit ``source == "ACCELA"``. Everything else with atom/vapor/plugin
-signals is Steam-managed (AT0-M): ASSella must never check it for updates —
+signals is Steam-managed (AT0-M): EXE-fingerprinter must never check it for updates —
 only At0mUpdateChecker watches those for newly added depots.
 
 Keep this logic here, not copy-pasted per call site, so the guard
@@ -15,7 +15,7 @@ from typing import Any, Dict
 
 
 def is_accela_managed(game: Any) -> bool:
-    """True when the game dict describes an ASSella-managed install."""
+    """True when the game dict describes an EXE-fingerprinter-managed install."""
     if not isinstance(game, dict):
         return False
     return bool(game.get("accela_marker_path") or game.get("source") == "ACCELA")

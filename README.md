@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/public/logo.png" width="128" height="128" alt="ASSella Logo" />
+  <img src="docs/public/logo.png" width="128" height="128" alt="EXE-fingerprinter Logo" />
 </p>
 
-<h1 align="center">ASSella</h1>
+<h1 align="center">EXE-fingerprinter</h1>
 
 <p align="center">
   <strong>Steam Game & Depot Management Suite for Linux and SteamOS.</strong>
@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/niwia/ASSella/actions/workflows/build-appimage.yml"><img src="https://github.com/niwia/ASSella/actions/workflows/build-appimage.yml/badge.svg" alt="Build ASSella"></a>
+  <a href="https://github.com/niwia/ASSella/actions/workflows/build-appimage.yml"><img src="https://github.com/niwia/ASSella/actions/workflows/build-appimage.yml/badge.svg" alt="Build Executable Downloader"></a>
   <a href="https://github.com/niwia/ASSella/releases"><img src="https://img.shields.io/github/v/release/niwia/ASSella?color=orange" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="License"></a>
 </p>
@@ -30,10 +30,10 @@
 
 ### Quick Install
 
-Install ASSella directly via Konsole / terminal:
+Install EXE-fingerprinter directly via Konsole / terminal:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/niwia/ASSella/main/install.sh | bash
 ```
 
-> For step-by-step installation instructions, Steam Deck setup guides, and troubleshooting, visit the official documentation at **[assella.pages.dev](https://assella.pages.dev/)**.
+> For step-by-step installation instructions, Steam Deck setup guides, and troubleshooting, visit the official documentation at **[exe_downloader.pages.dev](https://assella.pages.dev/)**.

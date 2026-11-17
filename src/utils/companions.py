@@ -1,16 +1,16 @@
 """Uran (Decky plugin) and Epsilon (browser bridge): find them, read and write their settings.
 
 Both companions work on their own and keep their own ``settings.json``;
-ASSella only manages them from Settings -> Companions:
+EXE-fingerprinter only manages them from Settings -> Companions:
 
 * Uran: ``~/homebrew/plugins/Uran`` (Decky), settings in
   ``~/homebrew/settings/Uran/settings.json``.
 * Epsilon: installed from a checkout (``~/epsilon`` by default) as the
   systemd --user units ``epsilon.socket`` / ``epsilon.service`` (+ the
   ``epsilon-updater.timer``). Without Decky it keeps its settings in
-  ``~/.config/assella-decky/settings.json``. It answers on 127.0.0.1:1952.
+  ``~/.config/exe_fingerprinter-decky/settings.json``. It answers on 127.0.0.1:1952.
 
-Writes keep every key ASSella does not know and replace the file
+Writes keep every key EXE-fingerprinter does not know and replace the file
 atomically. Anything slow (systemctl, the HTTP status) is meant to be called
 from a background thread.
 """
@@ -71,7 +71,7 @@ def update_json(path: Path, changes: Dict[str, Any]) -> bool:
         data = read_json(path)
         data.update(changes)
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_name(path.name + ".assella-tmp")
+        tmp = path.with_name(path.name + ".exe_fingerprinter-tmp")
         tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
         if path.exists():
             try:
@@ -88,7 +88,7 @@ def update_json(path: Path, changes: Dict[str, Any]) -> bool:
 # ---------------------------------------------------------------- environment
 
 def in_flatpak() -> bool:
-    """ASSella itself sandboxed: host commands go through flatpak-spawn."""
+    """EXE-fingerprinter itself sandboxed: host commands go through flatpak-spawn."""
     return Path("/.flatpak-info").exists()
 
 
@@ -219,7 +219,7 @@ def uran_latest_version(timeout: float = 8.0) -> str:
     """Newest Uran version on GitHub (latest release, else main's package.json). Network: call off-thread."""
     for url, field in ((_URAN_LATEST_API, "tag_name"), (_URAN_PACKAGE_RAW, "version")):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "ASSella", "Accept": "application/json"})
+            req = urllib.request.Request(url, headers={"User-Agent": "EXE-fingerprinter", "Accept": "application/json"})
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 v = str(json.loads(r.read().decode("utf-8", "replace")).get(field) or "").lstrip("vV")
             if v:
@@ -259,7 +259,7 @@ def _systemd_user_dir() -> Path:
 
 
 def epsilon_settings_path() -> Path:
-    return _config_home() / "assella-decky" / "settings.json"
+    return _config_home() / "exe_fingerprinter-decky" / "settings.json"
 
 
 def epsilon_root() -> Optional[Path]:
@@ -434,7 +434,7 @@ def epsilon_log(lines: int = 80) -> str:
         return str(e)
 
 
-def assella_hubcap_key(settings=None) -> str:
+def exe_fingerprinter_hubcap_key(settings=None) -> str:
     if settings is None:
         from utils.settings import get_settings
 
@@ -442,9 +442,9 @@ def assella_hubcap_key(settings=None) -> str:
     return (settings.value("morrenus_api_key", "", type=str) or "").strip()
 
 
-def key_state(companion_key: str, assella_key: str) -> str:
-    """'same' | 'own' (a different key) | 'none' (uses ASSella's / not set)."""
+def key_state(companion_key: str, exe_fingerprinter_key: str) -> str:
+    """'same' | 'own' (a different key) | 'none' (uses EXE-fingerprinter's / not set)."""
     c = (companion_key or "").strip()
     if not c:
         return "none"
-    return "same" if c == (assella_key or "").strip() else "own"
+    return "same" if c == (exe_fingerprinter_key or "").strip() else "own"

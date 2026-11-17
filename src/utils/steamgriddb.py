@@ -48,7 +48,7 @@ def get_api_key(settings=None) -> str:
 
 
 def _headers(key: str) -> Dict[str, str]:
-    return {"Authorization": f"Bearer {key}", "User-Agent": "ASSella"}
+    return {"Authorization": f"Bearer {key}", "User-Agent": "EXE-fingerprinter"}
 
 
 def check_key(key: str) -> Tuple[bool, str]:

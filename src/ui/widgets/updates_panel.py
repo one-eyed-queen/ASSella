@@ -144,7 +144,7 @@ class UpdateItemWidget(QFrame):
 
     A row can carry a badge ("AT0-M", "Awaiting Hubcap Key") and an action
     button ("Sync Keys"). Steam-managed (AT0-M) games are never downloaded by
-    ASSella - Steam does that - so their action syncs the decryption keys
+    EXE-fingerprinter - Steam does that - so their action syncs the decryption keys
     into SLSsteam instead of queueing a DepotDownloader job.
     """
 

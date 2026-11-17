@@ -1,9 +1,9 @@
 """
-themed_dialog.py - give any dialog ASSella's own frame and title bar.
+themed_dialog.py - give any dialog EXE-fingerprinter's own frame and title bar.
 
-Most of ASSella's dialogs are plain QDialog subclasses, so the window manager
+Most of EXE-fingerprinter's dialogs are plain QDialog subclasses, so the window manager
 draws their decorations; on a Linux desktop that means the desktop's title bar,
-close button and colours instead of ASSella's. Window managers also refuse to
+close button and colours instead of EXE-fingerprinter's. Window managers also refuse to
 let a program draw its own decorations there, so the fix is the one the rest of
 the app already uses: a frameless window with DialogTitleBar on top.
 
@@ -61,7 +61,7 @@ def install_themed_frame(
     margins: tuple = (16, 12, 16, 16),
     spacing: int = 10,
 ) -> QVBoxLayout:
-    """Put ASSella's frame and title bar around a dialog; return its body layout.
+    """Put EXE-fingerprinter's frame and title bar around a dialog; return its body layout.
 
     Call this instead of building the dialog's first ``QVBoxLayout``. The
     returned layout takes the widgets the dialog would have added to that

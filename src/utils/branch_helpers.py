@@ -7,7 +7,7 @@ Steam appinfo lists, per depot, one manifest per branch that includes that depot
     depots/<depot_id>/manifests/<branch> -> {"gid": ..., "size": ...}   (PICS)
     depots/<depot_id>/manifests/<branch> -> "<gid>"                    (SteamCMD REST)
 
-The convenience key ``manifest_id`` that ASSella attaches to each depot entry is
+The convenience key ``manifest_id`` that EXE-fingerprinter attaches to each depot entry is
 ALWAYS the *public* GID. A depot with no entry for a branch is not part of that
 branch's build, so falling back to the public GID for a beta install produces a
 false "update available" that then installs the public build on top of the beta.

@@ -125,14 +125,14 @@ class TestSlsLuaConfigAndDialogs(unittest.TestCase):
                 settings.setValue("morrenus_api_key_timestamp", "20261023101200")
                 synced, msg = sync_hubcap_api_key(settings, conf)
                 self.assertTrue(synced)
-                self.assertIn("katamari.conf.lua to ASSella", msg)
+                self.assertIn("katamari.conf.lua to EXE-fingerprinter", msg)
                 self.assertEqual(settings.value("morrenus_api_key"), "lua-newer-key-1234567890")
 
                 settings.setValue("morrenus_api_key", "local-newer-key-9876543210")
                 settings.setValue("morrenus_api_key_timestamp", "20261026195500")
                 synced2, msg2 = sync_hubcap_api_key(settings, conf)
                 self.assertTrue(synced2)
-                self.assertIn("ASSella to katamari.conf.lua", msg2)
+                self.assertIn("EXE-fingerprinter to katamari.conf.lua", msg2)
                 hub = KatamariConfigManager.load_config(conf)["hubcap"]
                 self.assertEqual(hub["api_key"], "local-newer-key-9876543210")
                 self.assertEqual(hub["api_key_timestamp"], 20261026195500)
@@ -162,7 +162,7 @@ class TestSlsLuaConfigAndDialogs(unittest.TestCase):
             with patch("utils.yaml_config_manager.get_user_config_path", return_value=fake_cfg), \
                  patch("utils.yaml.core.get_user_config_path", return_value=fake_cfg), \
                  patch("utils.plugin_games.get_user_config_path", return_value=fake_cfg):
-                for tab_name in ("general", "downloads", "assella", "at0m", "morrenus", "tools", "advanced"):
+                for tab_name in ("general", "downloads", "exe_fingerprinter", "at0m", "morrenus", "tools", "advanced"):
                     dlg = SettingsDialog(initial_tab=tab_name)
                     self.assertIsNotNone(dlg)
                     dlg.close()

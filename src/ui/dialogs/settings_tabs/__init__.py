@@ -9,7 +9,7 @@ from ui.dialogs.settings_tabs.morrenus_tab import (
     on_isp_gateway_changed,
     create_isp_gateway_card,
 )
-from ui.dialogs.settings_tabs.assela_tab import create_assela_tab, uninstall_assela
+from ui.dialogs.settings_tabs.exe_fingerprinter_tab import create_exe_fingerprinter_tab, uninstall_exe_fingerprinter
 from ui.dialogs.settings_tabs.downloads_tab import create_downloads_tab
 from ui.dialogs.settings_tabs.advanced_tab import (
     create_advanced_tab,
@@ -92,7 +92,7 @@ __all__ = [
     "MorrenusStatsWidget",
     "WindowsDepotWarningDialog",
     "HealthStatusTile",
-    "create_assela_tab",
+    "create_exe_fingerprinter_tab",
     "create_downloads_tab",
     "create_advanced_tab",
     "create_morrenus_tab",

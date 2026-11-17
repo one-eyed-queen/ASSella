@@ -1,3 +1,3 @@
 """
-Native Steam integration package for ASSella.
+Native Steam integration package for EXE-fingerprinter.
 """

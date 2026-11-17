@@ -2,7 +2,7 @@
 ZIP Import SteamDB Inspection & Confirmation Dialog
 ====================================================
 Replaces the basic "Pin Build Option" prompt when users drag-and-drop
-a ZIP, LUA, or manifest bundle into ASSella.
+a ZIP, LUA, or manifest bundle into EXE-fingerprinter.
 
 Features:
 - Content-First Identification: Extracts AppIDs, depot IDs, manifest GIDs, and build metadata
@@ -562,10 +562,10 @@ class ZipImportConfirmationDialog(QDialog):
 
         self.mode_group = QButtonGroup(self)
 
-        self.radio_mode_assella = QRadioButton("ASSella Downloader")
-        self.radio_mode_assella.setChecked(True)
-        self.radio_mode_assella.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.radio_mode_assella.setStyleSheet(f"""
+        self.radio_mode_exe_fingerprinter = QRadioButton("EXE-fingerprinter Downloader")
+        self.radio_mode_exe_fingerprinter.setChecked(True)
+        self.radio_mode_exe_fingerprinter.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.radio_mode_exe_fingerprinter.setStyleSheet(f"""
             QRadioButton {{
                 color: #FFFFFF;
                 font-size: 8.6pt;
@@ -586,12 +586,12 @@ class ZipImportConfirmationDialog(QDialog):
                 border: 1px solid {self.accent_color};
             }}
         """)
-        self.mode_group.addButton(self.radio_mode_assella)
-        mode_layout.addWidget(self.radio_mode_assella)
+        self.mode_group.addButton(self.radio_mode_exe_fingerprinter)
+        mode_layout.addWidget(self.radio_mode_exe_fingerprinter)
 
-        self.mode_assella_sub = QLabel("Direct isolated download via DepotDownloader")
-        self.mode_assella_sub.setStyleSheet("color: rgba(255, 255, 255, 0.55); font-size: 7.8pt; border: none; background: transparent; margin-left: 23px;")
-        mode_layout.addWidget(self.mode_assella_sub)
+        self.mode_exe_fingerprinter_sub = QLabel("Direct isolated download via DepotDownloader")
+        self.mode_exe_fingerprinter_sub.setStyleSheet("color: rgba(255, 255, 255, 0.55); font-size: 7.8pt; border: none; background: transparent; margin-left: 23px;")
+        mode_layout.addWidget(self.mode_exe_fingerprinter_sub)
 
         self.radio_mode_atom = QRadioButton("AT0-M (Native Steam)")
         self.radio_mode_atom.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -624,7 +624,7 @@ class ZipImportConfirmationDialog(QDialog):
         self.mode_atom_sub.setWordWrap(True)
         mode_layout.addWidget(self.mode_atom_sub)
 
-        self.radio_mode_assella.toggled.connect(self._on_mode_changed)
+        self.radio_mode_exe_fingerprinter.toggled.connect(self._on_mode_changed)
         self.confirm_layout.addWidget(self.mode_frame)
 
         # 6. Pin Build Tile
@@ -707,7 +707,7 @@ class ZipImportConfirmationDialog(QDialog):
         installed_info_layout.setContentsMargins(0, 0, 0, 0)
         installed_info_layout.setSpacing(8)
 
-        self.installed_method_pill = QLabel("Method: ASSella Downloader")
+        self.installed_method_pill = QLabel("Method: EXE-fingerprinter Downloader")
         self.installed_method_pill.setStyleSheet("""
             QLabel {
                 background-color: rgba(255, 255, 255, 0.04);
@@ -1333,7 +1333,7 @@ class ZipImportConfirmationDialog(QDialog):
         imported_date = format_dd_mm_yy(data.get("patch_date"))
         date_str = f" ({imported_date})" if imported_date else ""
         if data.get("is_installed"):
-            mode_tag = " (AT0-M)" if data.get("is_atom_installed") else " (ASSella)"
+            mode_tag = " (AT0-M)" if data.get("is_atom_installed") else " (EXE-fingerprinter)"
             is_inst_str = f"yes{mode_tag}"
         else:
             is_inst_str = "no"
@@ -1395,7 +1395,7 @@ class ZipImportConfirmationDialog(QDialog):
             if is_atom_inst:
                 self.radio_mode_atom.setChecked(True)
             else:
-                self.radio_mode_assella.setChecked(True)
+                self.radio_mode_exe_fingerprinter.setChecked(True)
         elif is_atom_avail:
             self.mode_frame.setVisible(True)
             self.mode_installed_tag.setVisible(False)
@@ -1403,7 +1403,7 @@ class ZipImportConfirmationDialog(QDialog):
             if def_action == "native":
                 self.radio_mode_atom.setChecked(True)
             else:
-                self.radio_mode_assella.setChecked(True)
+                self.radio_mode_exe_fingerprinter.setChecked(True)
             self._update_mode_subtitles()
         else:
             self.mode_frame.setVisible(False)
@@ -1485,8 +1485,8 @@ class ZipImportConfirmationDialog(QDialog):
                 self.installed_method_pill.setText("Method: AT0-M (Native Steam)")
                 self.installed_method_pill.setToolTip("Installed and managed via AT0-M / SLSsteam")
             else:
-                self.installed_method_pill.setText("Method: ASSella Downloader")
-                self.installed_method_pill.setToolTip("Installed and managed via ASSella Downloader")
+                self.installed_method_pill.setText("Method: EXE-fingerprinter Downloader")
+                self.installed_method_pill.setToolTip("Installed and managed via EXE-fingerprinter Downloader")
 
             # Determine human-friendly storage label
             storage_label = "Primary Drive"
@@ -1607,7 +1607,7 @@ class ZipImportConfirmationDialog(QDialog):
 
         is_downgrade = (not use_latest) and (self.result_data.get("intent") in ("Rollback", "Downgrade"))
         if is_downgrade:
-            self.mode_atom_sub.setText("Native Steam cannot fetch historical manifests. ASSella Downloader will install pinned files and link with SLSsteam.")
+            self.mode_atom_sub.setText("Native Steam cannot fetch historical manifests. EXE-fingerprinter Downloader will install pinned files and link with SLSsteam.")
         else:
             self.mode_atom_sub.setText("Direct download through Steam client with SLSsteam plugin integration.")
 
@@ -1886,17 +1886,17 @@ class ZipImportConfirmationDialog(QDialog):
 
         # Download backend and AT0-M link:
         # Native Steam can only fetch the live public branch. For downgrades/rollbacks,
-        # ASSella Downloader must always be used to fetch the historical payload, while
+        # EXE-fingerprinter Downloader must always be used to fetch the historical payload, while
         # AT0-M integration syncs keys with SLSsteam and pins the ACF manifest.
         if is_atom_selected:
             if is_rollback:
-                download_backend = "assella"
+                download_backend = "exe_fingerprinter"
                 register_at0m = True
             else:
                 download_backend = "native"
                 register_at0m = True
         else:
-            download_backend = "assella"
+            download_backend = "exe_fingerprinter"
             register_at0m = False
 
         meta = {

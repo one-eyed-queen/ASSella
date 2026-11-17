@@ -221,7 +221,7 @@ def resolve_pinned_manifests(game_data: Dict[str, Any], appid: str) -> Dict[str,
         from utils.plugin_games import _resolve_install_path
         install_path = _resolve_install_path(game_data)
         if install_path:
-            for sub in (".DepotDownloader", ".assella", ".accela"):
+            for sub in (".DepotDownloader", ".exe_fingerprinter", ".accela"):
                 dd_dir = os.path.join(install_path, sub)
                 if os.path.isdir(dd_dir):
                     for fname in os.listdir(dd_dir):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test the themed message box: the drop-in replacement for QMessageBox.
 
-The dialog has to look like ASSella and behave like the native box it replaces,
+The dialog has to look like EXE-fingerprinter and behave like the native box it replaces,
 so these checks pin the QMessageBox parity (button names and values, the four
 classmethods and their default buttons) as well as the parts the previous
 implementation got wrong: the window title, the requested default button, an

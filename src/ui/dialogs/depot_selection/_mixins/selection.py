@@ -273,7 +273,7 @@ class SelectionMixin:
             yield i, id_item
 
     def _confirm_dlcdata_unlock(self, id_item) -> bool:
-        """DLC-only (ASSella) mode: warn once before unlocking a DLC that has no depot."""
+        """DLC-only (EXE-fingerprinter) mode: warn once before unlocking a DLC that has no depot."""
         if not getattr(self, "_dlc_only_mode", False) or getattr(self, "_is_atom_mode", False):
             return True
         if not bool(id_item.data(Qt.ItemDataRole.UserRole + 21)):  # not a DlcData row

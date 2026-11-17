@@ -1,9 +1,9 @@
 ---
-title: ASSella vs ACCELA
+title: EXE-fingerprinter vs ACCELA
 outline: false
 ---
 
-# ASSella vs ACCELA
+# EXE-fingerprinter vs ACCELA
 
 <script setup>
 const Y = 'yes', N = 'no', P = 'part'
@@ -50,7 +50,7 @@ const groups = [
     ['SLSonline (Fake AppID 480)', Y, Y],
     ['Netsock & EOS proxy', N, Y],
     ['Launcher bypass', N, Y],
-    ['Steamless & Goldberg', Y, Y, 'Downloaded only when you need them in ASSella'],
+    ['Steamless & Goldberg', Y, Y, 'Downloaded only when you need them in EXE-fingerprinter'],
     ['Achievements (SLScheevo)', Y, Y],
   ]},
   { title: 'Ecosystem', rows: [
@@ -69,7 +69,7 @@ const groups = [
   ]},
 ]
 const highlights = [
-  { t: 'No Steam restarts, ever', d: 'ASSella talks to Steam live through the SLSsteam API. Games you install show up in Steam at once, uninstalls vanish at once, and config changes apply while Steam keeps running.', wide: true },
+  { t: 'No Steam restarts, ever', d: 'EXE-fingerprinter talks to Steam live through the SLSsteam API. Games you install show up in Steam at once, uninstalls vanish at once, and config changes apply while Steam keeps running.', wide: true },
   { t: 'Steam does the downloading', d: 'With AT0-M the real Steam client downloads and updates your games, like games you own.', link: '/at0m' },
   { t: 'Only what changed', d: 'Updates download just the changed parts (delta updates), and the download speed tunes itself.' },
   { t: 'Smarter updates', d: 'SteamCMD and Steam PICS are checked side by side, and all your games update in one click.' },
@@ -88,13 +88,13 @@ const icon = v => v === 'yes' ? '✓' : v === 'no' ? '—' : 'Partly'
   </div>
   <div class="vs-mid">VS</div>
   <div class="vs-side vs-new">
-    <img src="/logo.png" alt="ASSella" />
-    <div class="vs-name">ASSella</div>
+    <img src="/logo.png" alt="EXE-fingerprinter" />
+    <div class="vs-name">EXE-fingerprinter</div>
     <div class="vs-sub">Built on top of it</div>
   </div>
 </div>
 
-<p class="vs-intro">ASSella is built on <b>ACCELA</b> and keeps everything that made it good. Here's what each one can do, side by side.</p>
+<p class="vs-intro">EXE-fingerprinter is built on <b>ACCELA</b> and keeps everything that made it good. Here's what each one can do, side by side.</p>
 
 <div class="vs-hl">
   <component :is="h.link ? 'a' : 'div'" v-for="h in highlights" :key="h.t" :class="['vs-card', { 'vs-wide': h.wide }]" :href="h.link">
@@ -108,7 +108,7 @@ const icon = v => v === 'yes' ? '✓' : v === 'no' ? '—' : 'Partly'
 <div class="vs-legend"><span><b class="yes">✓</b> Yes</span><span><b class="part pill">Partly</b> In part</span><span><b class="no">—</b> No</span></div>
 
 <div v-for="g in groups" :key="g.title" class="vs-group">
-  <div class="vs-head"><span>{{ g.title }}</span><span>ACCELA</span><span>ASSella</span></div>
+  <div class="vs-head"><span>{{ g.title }}</span><span>ACCELA</span><span>EXE-fingerprinter</span></div>
   <div v-for="r in g.rows" :key="r[0]" class="vs-row">
     <div class="vs-feat">{{ r[0] }}<small v-if="r[3]">{{ r[3] }}</small></div>
     <div :class="['vs-cell', r[1]]">{{ icon(r[1]) }}</div>
@@ -158,19 +158,19 @@ a.vs-card:hover { border-color:var(--vp-c-brand-1); transform:translateY(-2px); 
 
 ## Moving from ACCELA
 
-Moving over is painless, because ASSella reads the same places ACCELA used:
+Moving over is painless, because EXE-fingerprinter reads the same places ACCELA used:
 
-- **Settings** (API keys, colours, download folder): ASSella uses ACCELA's settings file, so everything carries over.
+- **Settings** (API keys, colours, download folder): EXE-fingerprinter uses ACCELA's settings file, so everything carries over.
 - **Downloaded games:** the same Steam libraries and the same `~/.local/share/ACCELA` data folder, so your library shows up straight away.
 - **Manifests and keys:** ACCELA's cached manifest bundles are moved from `morrenus_manifests/` to `hubcap_manifests/` on first start. Your SLSsteam `config.yaml` (depots and decryption keys) is kept as it is.
 
 **To switch:**
 
 1. Close ACCELA.
-2. Install ASSella ([Installation Guide](/install)).
+2. Install EXE-fingerprinter ([Installation Guide](/install)).
 3. Open it. Your games and settings are already there.
 4. Optional: turn on [AT0-M](/at0m) so Steam downloads and updates games for you.
 
-::: tip What ASSella doesn't have (yet)
-ACCELA's `accela://` links and `.zip` right-click menu on Windows, and its sound effects, aren't in ASSella yet. If you rely on one of these, keep ACCELA around for it. Both apps can be installed side by side.
+::: tip What EXE-fingerprinter doesn't have (yet)
+ACCELA's `accela://` links and `.zip` right-click menu on Windows, and its sound effects, aren't in EXE-fingerprinter yet. If you rely on one of these, keep ACCELA around for it. Both apps can be installed side by side.
 :::

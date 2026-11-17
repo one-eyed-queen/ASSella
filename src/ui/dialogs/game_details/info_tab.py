@@ -359,7 +359,7 @@ def init_info_tab(dialog) -> None:
 
     lay.addWidget(bottom_tiles_widget)
     lay.addSpacing(14)
-    # ── AT0-M Mode Transition Buttons (Move to AT0-M / Move to ASSella) ───
+    # ── AT0-M Mode Transition Buttons (Move to AT0-M / Move to EXE-fingerprinter) ───
     vapor_actions_widget = QWidget()
     vapor_actions_layout = QHBoxLayout(vapor_actions_widget)
     vapor_actions_widget.setObjectName("modeLine")
@@ -373,7 +373,7 @@ def init_info_tab(dialog) -> None:
     dialog.move_to_vapor_btn.setFixedHeight(36)
     dialog.move_to_vapor_btn.setCursor(Qt.CursorShape.PointingHandCursor if not is_vapor_mode else Qt.CursorShape.ArrowCursor)
 
-    dialog.remove_from_vapor_btn = QPushButton("Move to ASSella")
+    dialog.remove_from_vapor_btn = QPushButton("Move to EXE-fingerprinter")
     dialog.remove_from_vapor_btn.setFixedHeight(36)
     dialog.remove_from_vapor_btn.setCursor(Qt.CursorShape.PointingHandCursor if is_vapor_mode else Qt.CursorShape.ArrowCursor)
 
@@ -423,7 +423,7 @@ def init_info_tab(dialog) -> None:
 
         dialog.remove_from_vapor_btn.setEnabled(True)
         dialog.remove_from_vapor_btn.setStyleSheet(accent_trans_active_style)
-        dialog.remove_from_vapor_btn.setToolTip("Convert game back to ASSella managed.")
+        dialog.remove_from_vapor_btn.setToolTip("Convert game back to EXE-fingerprinter managed.")
     else:
         dialog.move_to_vapor_btn.setEnabled(True)
         dialog.move_to_vapor_btn.setStyleSheet(accent_trans_active_style)
@@ -431,14 +431,14 @@ def init_info_tab(dialog) -> None:
 
         dialog.remove_from_vapor_btn.setEnabled(False)
         dialog.remove_from_vapor_btn.setStyleSheet(trans_disabled_style)
-        dialog.remove_from_vapor_btn.setToolTip("Game is currently ASSella managed, not in plugin AT0-M.")
+        dialog.remove_from_vapor_btn.setToolTip("Game is currently EXE-fingerprinter managed, not in plugin AT0-M.")
 
     dialog.move_to_vapor_btn.clicked.connect(lambda: on_move_to_vapor_clicked(dialog))
     dialog.remove_from_vapor_btn.clicked.connect(lambda: on_remove_from_vapor_clicked(dialog))
 
     mode_text = QLabel(
         "Managed by <b>AT0-M</b> (Steam native)." if is_vapor_mode
-        else "Managed by <b>ASSella</b>. Updates come from ASSella."
+        else "Managed by <b>EXE-fingerprinter</b>. Updates come from EXE-fingerprinter."
     )
     mode_text.setStyleSheet("color: rgba(255,255,255,0.6); font-size: 9pt; background: transparent; border: none;")
     vapor_actions_layout.addWidget(mode_text, 1)
@@ -1959,7 +1959,7 @@ def update_status_ui(dialog, status) -> None:
         sub = "Updates Managed by Steam"
         dialog.status_tile.title_lbl.setText(title)
         dialog.status_tile.sub_lbl.setText(sub)
-        dialog.status_tile.setToolTip("AT0-M games are updated natively by the Steam client. Update checks are disabled in ASSella.")
+        dialog.status_tile.setToolTip("AT0-M games are updated natively by the Steam client. Update checks are disabled in EXE-fingerprinter.")
 
         tonal_bg = "rgba(186, 104, 200, 0.22)"
         tonal_hover = "rgba(186, 104, 200, 0.32)"
@@ -2437,7 +2437,7 @@ def _atom_move_summary(game_name: str, res: dict) -> str:
             "Steam cannot download them without a key; add them from the Depots tab once Hubcap has one.",
         ]
     if res.get("marker_retained"):
-        lines += ["", f"Note: {res.get('marker_retained_reason') or 'the ASSella marker was kept for a retry.'}"]
+        lines += ["", f"Note: {res.get('marker_retained_reason') or 'the EXE-fingerprinter marker was kept for a retry.'}"]
     lines += [
         "",
         "Next: restart Steam. It verifies the existing files and adds the game to your library.",
@@ -2569,7 +2569,7 @@ def on_move_to_vapor_clicked(dialog) -> None:
             f"Move '{game_name}' to AT0-M (Steam Native)?\n\n"
             "• Its depots and decryption keys are added to SLSsteam's config.yaml.\n"
             "• The .DepotDownloader folder in the install is removed.\n"
-            "• Steam handles updates for it from now on, instead of ASSella.\n\n"
+            "• Steam handles updates for it from now on, instead of EXE-fingerprinter.\n\n"
             "Steam is told to verify the existing files after a restart; nothing is downloaded again.",
             ThemedMessageBox.StandardButton.Yes | ThemedMessageBox.StandardButton.No,
             ThemedMessageBox.StandardButton.No,
@@ -2585,7 +2585,7 @@ def on_move_to_vapor_clicked(dialog) -> None:
             "Move Failed",
             f"'{game_name}' was not moved to AT0-M.\n\n"
             f"{res.get('error', 'Unknown error')}\n\n"
-            "It is still an ASSella install. See the log for details.",
+            "It is still an EXE-fingerprinter install. See the log for details.",
         )
         return
 
@@ -2628,10 +2628,10 @@ def on_remove_from_vapor_clicked(dialog) -> None:
 
     reply = ThemedMessageBox.question(
         dialog,
-        "Move to ASSella",
-        f"Move '{game_name}' from AT0-M to ASSella Managed?\n\n"
+        "Move to EXE-fingerprinter",
+        f"Move '{game_name}' from AT0-M to EXE-fingerprinter Managed?\n\n"
         "• Unlinks depots and decryption keys from SLSsteam config\n"
-        "• Marks the install as ASSella-managed (.DepotDownloader)\n"
+        "• Marks the install as EXE-fingerprinter-managed (.DepotDownloader)\n"
         "• Prompts for depot selection and verifies game files\n\n"
         "Do you want to proceed?",
         ThemedMessageBox.StandardButton.Yes | ThemedMessageBox.StandardButton.No,
@@ -2645,15 +2645,15 @@ def on_remove_from_vapor_clicked(dialog) -> None:
     # 1. Unregister from AT0-M plugin mode and clean config.yaml (keeps game in AdditionalApps!)
     convert_plugin_game_to_accela(appid)
 
-    # 2. Mark the install as ASSella-managed via .DepotDownloader (the sole
-    # marker; no .ACCELA/.assella folders are created anymore). Drop any
+    # 2. Mark the install as EXE-fingerprinter-managed via .DepotDownloader (the sole
+    # marker; no .ACCELA/.exe_fingerprinter folders are created anymore). Drop any
     # legacy markers so detection is unambiguous going forward.
     install_path = game_data.get("install_path")
     if install_path and os.path.isdir(install_path):
         import json as _json
         import shutil as _shutil
         import time as _time
-        for _legacy in (".ACCELA", ".accela", ".ASSELLA", ".assella"):
+        for _legacy in (".ACCELA", ".accela", ".EXE-FINGERPRINTER", ".exe_fingerprinter"):
             try:
                 _lp = os.path.join(install_path, _legacy)
                 if os.path.isdir(_lp) and not os.path.islink(_lp):
@@ -2674,7 +2674,7 @@ def on_remove_from_vapor_clicked(dialog) -> None:
                         "buildid": str(game_data.get("buildid") or ""),
                         "last_updated": int(_time.time()),
                     }, _mf, indent=4)
-            logger.info(f"[AtomTransition] Marked {install_path} as ASSella-managed (.DepotDownloader)")
+            logger.info(f"[AtomTransition] Marked {install_path} as EXE-fingerprinter-managed (.DepotDownloader)")
         except Exception as e:
             logger.error(f"[AtomTransition] Failed to mark install as managed: {e}")
 

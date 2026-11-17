@@ -508,6 +508,17 @@ class BuildUIMixin:
             browse_files_button.setToolTip("Customize downloaded files within the selected depots")
             browse_files_button.clicked.connect(self._on_select_files_clicked)
             button_layout.addWidget(browse_files_button, 1)
+
+            exe_fingerprinter_button = QPushButton("EXE-fingerprinter…")
+            exe_fingerprinter_button.setFixedHeight(28)
+            exe_fingerprinter_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            exe_fingerprinter_button.setCursor(Qt.CursorShape.PointingHandCursor)
+            exe_fingerprinter_button.setStyleSheet(btn_style)
+            exe_fingerprinter_button.setToolTip(
+                "Scan the selected depots for Windows executables (.exe) and download only those"
+            )
+            exe_fingerprinter_button.clicked.connect(self._on_exe_fingerprinter_clicked)
+            button_layout.addWidget(exe_fingerprinter_button, 1)
             content_widget.addLayout(button_layout)
 
             from utils.edition_helpers import (

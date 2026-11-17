@@ -1426,7 +1426,7 @@ def repair_and_sync_config(
             f.flush()
             os.fsync(f.fileno())
 
-        # Ensure ASSella prerequisites (API: yes, LogLevels: 0x2)
+        # Ensure EXE-fingerprinter prerequisites (API: yes, LogLevels: 0x2)
         try:
             from utils.yaml_config_manager import ensure_slssteam_prerequisites
             ensure_slssteam_prerequisites(config_path)

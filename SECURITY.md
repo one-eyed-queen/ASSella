@@ -15,7 +15,7 @@ Security updates are prioritized for the latest official stable release and acti
 
 ## Reporting a Vulnerability
 
-The ASSella team takes security and privacy seriously. If you discover a vulnerability, please disclose it responsibly so we can fix it before public disclosure.
+The EXE-fingerprinter team takes security and privacy seriously. If you discover a vulnerability, please disclose it responsibly so we can fix it before public disclosure.
 
 > [!IMPORTANT]
 > **DO NOT** report security vulnerabilities via public GitHub Issues, Pull Requests, or public Discord channels.
@@ -32,7 +32,7 @@ To help us triage and resolve the issue quickly, please provide:
 1. **Summary**: A clear description of the vulnerability and its potential impact.
 2. **Reproduction Steps**: Step-by-step instructions or a safe Proof of Concept (PoC).
 3. **Affected Components**: Which files, modules, or release channels are impacted.
-4. **Environment Details**: Operating system (SteamOS, Arch, Bazzite, NixOS, etc.) and ASSella version.
+4. **Environment Details**: Operating system (SteamOS, Arch, Bazzite, NixOS, etc.) and EXE-fingerprinter version.
 
 ---
 
@@ -51,4 +51,4 @@ To help us triage and resolve the issue quickly, please provide:
 - **Investigation & Patching**: We will work with you to verify the vulnerability and prepare a patch in private.
 - **Coordinated Disclosure**: Once a patch is released, a public security advisory will be published, and you will be credited for the discovery (unless you request anonymity).
 
-Thank you for helping keep ASSella and its users safe!
+Thank you for helping keep EXE-fingerprinter and its users safe!

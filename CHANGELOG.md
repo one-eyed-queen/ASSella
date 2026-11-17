@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Project renamed to Executable Downloader.** Every user-facing name, the window title, desktop entry, AppImage, installer and the AppImage self-updater now identify as "Executable Downloader" (`ExecutableDownloader.AppImage`, `exe_downloader.desktop`, `X-Executable Downloader-Token`). Historical changelog entries are intentionally left untouched. Internal code identifiers moved with the product name (`exe_downloader`, `get_exe_downloader_proxy_token()`); GitHub/Pages URLs to the original ASSella repo/docs were deliberately kept so existing links keep working. The Hubcap Wirecutter protocol constants (`ASSella_Hubcap_Bypass_v261`, `ASSella_Worker_Token_Salt_v261`) remain unchanged, as do `ACCELA` data paths, `accela_fetch_*` manifest bundles, the `X-Assella-Token` header and the `ACCELA.AppImage` compatibility symlink — all are protocol/compat identifiers, not branding.
+- AppImage build workflow now derives the embedded `gh-releases-zsync` update string from `github.repository_owner` / `github.event.repository.name` instead of a hard-coded upstream name.
+- `extract_semver`, the installer `_detect_branch_of_tag` channel detection and the dated-build-stamp regex now tolerate spaces in the codename (e.g. `20261109+Executable Downloader-3.1.0`).
+
+### Added
+- **Executable Downloader mode** (`src/core/exe_scan.py`, `src/ui/dialogs/exe_scan_runner.py`, `src/ui/dialogs/executable_chooser.py`): selecting a game with its `.lua` / depot keys / manifest bundle now scans the checked depots for Windows executables (`.exe` only, from `-manifest-only` dumps of each depot) and lets the user confirm exactly which executables to ship. Multiple executables across depots are shown as a grouped, filterable checklist with every entry pre-checked; per-depot `-filelist` hand-off to DepotDownloader limits the install to only the chosen executables. Wired into the multi-depot selector, single-depot selector, and the modern depot selector — every selected `.exe` is pre-checked by default and the install is skipped for depots with no selected executables.
+- SteamDB App Parser (`src/steamdb_app_parser.py`, Python port of the GreasyFork 543010-steamdb-app-parser userscript): parses DLC and related/linked app tables from SteamDB app pages into SLSsteam-compatible `DlcData` / `AdditionalApps` YAML.
+- SteamDB scraper (`src/core/steamdb_scraper.py`) additionally exposes `get_latest_build`, `get_base_game_depot`, `get_folder_structure`, `get_game_image`, `search_by_appid`, `search_by_name` and `parse_steamdb_dlc` for AppID/name-driven lookups.
+
 ## [3.1.0] - 2026-11-09
 
 ### Added
@@ -37,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Custom launcher bypass binary picker and config injection.
 - **Storage & Auto-Tuning**:
   - Real-world wire-speed adaptive auto-tuning with hill climbing.
-  - Install library selection memory for both ASSella and AT0-M modes.
+  - Install library selection memory for both Executable Downloader and AT0-M modes.
 
 ### Changed
 - Promoted seasonal holiday theme to `Christmas(beta)` and cleaned up audio playback toggles.
@@ -48,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **DLC Mode Persistence & Invariants**:
-  - Symmetrical DLC mode memory: ASSella records `dlc_mode_source/{appid}` to distinguish between native Steam Play and AT0-M DLC configurations.
+  - Symmetrical DLC mode memory: Executable Downloader records `dlc_mode_source/{appid}` to distinguish between native Steam Play and AT0-M DLC configurations.
   - Strictly guarded base/parent AppIDs from entering `AdditionalApps` or `AdditionalDepots` in DLC-only mode.
   - Scrubbed stale base AppIDs automatically during library scans.
   - Resolved `DepotSelectionDialog` kwarg crashes and false native routing.
@@ -56,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Install & Verify Protections**:
   - Strictly bypassed remote verify checks for pinned builds to protect against upstream manifest clobbering.
   - Decoupled stale bundle freshness from rollback flag to prevent build ID and update cache poisoning.
-  - Strictly enforced no-ACF invariant during handoff: ASSella delegates manifest creation natively to Steam and SLSsteam.
+  - Strictly enforced no-ACF invariant during handoff: Executable Downloader delegates manifest creation natively to Steam and SLSsteam.
 - **Performance & Stalls**:
   - Cached smoothly scaled wallpaper pixmap on resize (`_cached_scaled_bg`), completely eliminating the 4.95s GUI thread stall.
   - Lazy-loaded Settings tabs (`addLazyTab`) and asynchronous Game Details artwork/depots loading.

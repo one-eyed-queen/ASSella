@@ -1,10 +1,10 @@
 """
-themed_input_dialog.py - ASSella's own one-question dialog.
+themed_input_dialog.py - EXE-fingerprinter's own one-question dialog.
 
 QInputDialog draws the desktop's dialog, so asking for one line of text or one
 choice shows a window that does not look like the rest of the app. This module
 is the themed replacement, framed by the same DialogTitleBar as every other
-ASSella window.
+EXE-fingerprinter window.
 
     ThemedInputDialog.getText(parent, title, label, text="")   -> (text, ok)
     ThemedInputDialog.getItem(parent, title, label, items, current=0)

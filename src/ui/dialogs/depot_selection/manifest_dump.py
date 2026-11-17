@@ -16,9 +16,10 @@ import logging
 import os
 import re
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable, Dict, Optional, Union
 
 from utils.lua_parsing import find_live
 
@@ -44,18 +45,27 @@ class ManifestDump:
     txt_path: str
 
     def command(self, dotnet_path: str, dll_path: str) -> list:
-        """The DepotDownloader invocation that writes the file listing."""
-        return [
+        """The DepotDownloader invocation that writes the file listing.
+
+        ``-manifestfile`` is only passed when the bundle actually carried a
+        ``.manifest``; without one DepotDownloader fetches the manifest itself
+        from the Steam CDN using the manifest id.
+        """
+        cmd = [
             dotnet_path,
             dll_path,
             "-app", str(self.app_id),
             "-depot", str(self.depot_id),
             "-manifest", str(self.manifest_id),
-            "-manifestfile", self.manifest_file,
+        ]
+        if self.manifest_file:
+            cmd += ["-manifestfile", self.manifest_file]
+        cmd += [
             "-depotkeys", self.keys_path,
             "-manifest-only",
             "-dir", self.temp_dir,
         ]
+        return cmd
 
 
 def find_manifest_bundle(app_id: AppId, manifests_dir: Optional[Path] = None) -> Path:
@@ -91,11 +101,57 @@ def extract_bundle(zip_path: str, temp_dir: str) -> None:
         raise ManifestDumpError(f"Failed to extract manifest zip: {e}") from e
 
 
+_API_CACHE: Dict[str, tuple] = {}
+_API_CACHE_TTL = 300.0
+_API_TIMEOUT = 6.0
+
+
+def _api_depot_map(app_id: AppId) -> Dict[str, Dict[str, str]]:
+    """Depot keys and manifests from the private API, cached for a few minutes.
+
+    This is the last resort when neither the bundle's LUA nor the local key
+    database knows a depot. The API is optional: when the user has not signed
+    in, or the service is unreachable, this returns an empty map and the
+    caller reports the original local error.
+    """
+    cache_key = str(app_id)
+    now = time.monotonic()
+    cached = _API_CACHE.get(cache_key)
+    if cached and now - cached[0] < _API_CACHE_TTL:
+        return cached[1]
+
+    try:
+        from core import exe_fingerprinter_api as api
+
+        if not api.is_configured():
+            return {}
+        result = api.depots(int(app_id), timeout=_API_TIMEOUT)
+        if not result.ok or not isinstance(result.data, dict):
+            if result.error:
+                logger.debug("[ManifestDump] API depot lookup failed: %s", result.error)
+            return {}
+        mapping = {
+            str(entry.get("depot_id")): {
+                "key": entry.get("depot_key") or "",
+                "manifest": str(entry.get("manifest_id") or ""),
+            }
+            for entry in result.data.get("depots", [])
+            if entry.get("depot_id")
+        }
+    except (ImportError, ValueError, TypeError) as exc:
+        logger.debug("[ManifestDump] API depot lookup unavailable: %s", exc)
+        return {}
+
+    _API_CACHE[cache_key] = (now, mapping)
+    return mapping
+
+
 def read_depot_key(
     temp_dir: str,
     depot_id: str,
     app_id: AppId,
     key_lookup: Optional[Callable[[str], Optional[str]]] = None,
+    use_api: bool = True,
 ) -> Optional[str]:
     """The depot key, from the bundle's LUA file or the local key database.
 
@@ -104,7 +160,8 @@ def read_depot_key(
     smart-generated bundle carries none, so the local database is tried too.
 
     ``key_lookup`` replaces the database for one call; it is given the depot id
-    and returns the key or None.
+    and returns the key or None. When everything local misses and ``use_api``
+    is set, the private API is asked as a last resort.
     """
     try:
         lua_files = list(Path(temp_dir).glob("*.lua"))
@@ -139,6 +196,12 @@ def read_depot_key(
             f"Failed to load key from depot_keys.db for depot {depot_id}: {dkm_e}"
         )
 
+    if use_api and key_lookup is None:
+        api_key = _api_depot_map(app_id).get(str(depot_id), {}).get("key")
+        if api_key:
+            logger.info("[ManifestDump] Depot %s key served by the private API", depot_id)
+            return api_key
+
     return None
 
 
@@ -146,7 +209,12 @@ def find_manifest_file(temp_dir: str, depot_id: str) -> Path:
     """The bundle's ``.manifest`` for ``depot_id``, or the only one there is."""
     manifest_files = list(Path(temp_dir).glob(f"{depot_id}_*.manifest"))
     if not manifest_files:
-        manifest_files = list(Path(temp_dir).glob("*.manifest"))
+        candidates = list(Path(temp_dir).glob("*.manifest"))
+        # Only accept an un-prefixed bundle when there is exactly one file:
+        # the temp dir is reused across dumps, so picking any manifest would
+        # risk attaching another depot's manifest to this one.
+        if len(candidates) == 1:
+            manifest_files = candidates
     if not manifest_files:
         raise ManifestDumpError(
             f"No manifest file (*.manifest) found for depot {depot_id} in the extracted manifest bundle."
@@ -190,39 +258,58 @@ def prepare_manifest_dump(
 
     The optional arguments exist so this can be exercised against a scratch
     directory; the dialog passes none of them.
+
+    A local Hubcap bundle is preferred, but it is not required: when the
+    private API knows the depot, its key and manifest id are enough for
+    DepotDownloader to fetch the manifest from Steam itself.
     """
-    zip_path = find_manifest_bundle(app_id, manifests_dir)
+    try:
+        zip_path: Optional[Path] = find_manifest_bundle(app_id, manifests_dir)
+    except ManifestDumpError:
+        zip_path = None
 
     temp_dir = os.path.join(
         temp_root or tempfile.gettempdir(), f"selective_manifests_{app_id}"
     )
     os.makedirs(temp_dir, exist_ok=True)
-    extract_bundle(str(zip_path), temp_dir)
+    if zip_path is not None:
+        extract_bundle(str(zip_path), temp_dir)
 
     depot_key = read_depot_key(temp_dir, depot_id, app_id, key_lookup)
     if not depot_key:
         raise ManifestDumpError(
-            f"Could not find depot key for depot {depot_id} in LUA config or local key database."
+            f"Could not find depot key for depot {depot_id} in the manifest bundle, "
+            f"the local key database, or the EXE-fingerprinter API."
         )
 
     keys_path = os.path.join(temp_dir, "depot.keys")
     write_keys_file(keys_path, depot_id, depot_key)
 
+    manifest_file = ""
     try:
         manifest_path = find_manifest_file(temp_dir, depot_id)
+        manifest_file = str(manifest_path)
+        manifest_id = manifest_id_from_name(manifest_path.name)
     except ManifestDumpError:
-        # A key on disk outlives the dialog, so never leave one behind for a
-        # dump that cannot be used.
-        discard_keys_file(keys_path)
-        raise
-
-    manifest_id = manifest_id_from_name(manifest_path.name)
+        # No local .manifest: the API's manifest id lets DepotDownloader fetch
+        # it by itself. Without that there is nothing usable to scan.
+        api_manifest = (
+            _api_depot_map(app_id).get(str(depot_id), {}).get("manifest", "")
+            if key_lookup is None
+            else ""
+        )
+        if not api_manifest:
+            # A key on disk outlives the dialog, so never leave one behind for
+            # a dump that cannot be used.
+            discard_keys_file(keys_path)
+            raise
+        manifest_id = str(api_manifest)
 
     return ManifestDump(
         app_id=app_id,
         depot_id=depot_id,
         manifest_id=manifest_id,
-        manifest_file=str(manifest_path),
+        manifest_file=manifest_file,
         keys_path=keys_path,
         temp_dir=temp_dir,
         txt_path=os.path.join(temp_dir, f"manifest_{depot_id}_{manifest_id}.txt"),

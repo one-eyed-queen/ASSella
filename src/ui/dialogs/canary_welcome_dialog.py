@@ -410,7 +410,7 @@ class CanaryWelcomeDialog(QDialog):
         """)
         titles_layout.addWidget(self.awake_title_lbl)
 
-        self.awake_sub_lbl = QLabel(f"Welcome to ASSella {app_version}. Let's configure your setup.")
+        self.awake_sub_lbl = QLabel(f"Welcome to EXE-fingerprinter {app_version}. Let's configure your setup.")
         self.awake_sub_lbl.setStyleSheet("""
             color: rgba(255, 255, 255, 0.75);
             font-size: 9pt;
@@ -1091,7 +1091,7 @@ class CanaryWelcomeDialog(QDialog):
         )
 
     # at0-m toggle: on = set Plugins: yes and deploy the plugin family (from
-    # R2, or the plugins packed with ASSella when R2 is unreachable); off =
+    # R2, or the plugins packed with EXE-fingerprinter when R2 is unreachable); off =
     # put the plugins folder and config.yaml back as they were before.
 
     def _at0m_feedback(self, text: str, error: bool = False) -> None:
@@ -1208,7 +1208,7 @@ class CanaryWelcomeDialog(QDialog):
         self._set_at0m_state(False)
         self._at0m_feedback(
             "Could not install the plugins (the plugin server was unreachable and the copies packed with "
-            f"ASSella could not be used), so at0-m was left off.\n{problems}".rstrip(),
+            f"EXE-fingerprinter could not be used), so at0-m was left off.\n{problems}".rstrip(),
             error=True,
         )
 
@@ -1312,7 +1312,7 @@ class CanaryWelcomeDialog(QDialog):
         self.combo_behavior.setFixedHeight(30)
         self.combo_behavior.addItem("Ask every time (Default)", "ask")
         self.combo_behavior.addItem("Always Native Steam (at0-m)", "native")
-        self.combo_behavior.addItem("Always ASSella Downloader", "assella")
+        self.combo_behavior.addItem("Always EXE-fingerprinter Downloader", "exe_fingerprinter")
 
         cur_act = self.settings.value(
             "at0m_default_download_action",

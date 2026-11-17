@@ -160,7 +160,7 @@ class LibraryFilterSortMixin:
         elif active_tab == TAB_ATOM:
             tab_label = "AT0-M"
         else:
-            tab_label = "ASSella"
+            tab_label = "EXE-fingerprinter"
 
         loaded_count = self.games_list.count()
         total_count = getattr(self, "_tab_total_games_count", loaded_count)
@@ -316,7 +316,7 @@ class LibraryFilterSortMixin:
             aid = str(g.get("appid", "")).strip()
             if aid and aid not in ("0", "N/A", "unknown"):
                 if game_is_dlc_only(g):
-                    # Only ASSella DLC-only games bypass managed_appids to appear on the Steam tab.
+                    # Only EXE-fingerprinter DLC-only games bypass managed_appids to appear on the Steam tab.
                     # AT0-M DLC-only games remain managed and stay on the AT0-M tab.
                     if not (g.get("is_atom") or g.get("is_vapor") or g.get("is_plugin_game")):
                         continue
@@ -330,7 +330,7 @@ class LibraryFilterSortMixin:
         except Exception as _silent_err:
             logger.debug("[Library] Could not read plugin_library in filter_sort: %s", _silent_err)
 
-        # Steam tab games: owned Steam games not in AdditionalApps, plus owned ASSella DLC-only games
+        # Steam tab games: owned Steam games not in AdditionalApps, plus owned EXE-fingerprinter DLC-only games
         seen_steam_aids = set()
         steam_unmanaged = []
 
@@ -356,8 +356,8 @@ class LibraryFilterSortMixin:
         for g in steam_games:
             aid = str(g.get("appid", "")).strip()
             is_atom_game = bool(g.get("is_atom") or g.get("is_vapor") or g.get("is_plugin_game") or aid in managed_appids)
-            is_assella_dlc_only = game_is_dlc_only(g) and not is_atom_game
-            if is_assella_dlc_only:
+            is_exe_fingerprinter_dlc_only = game_is_dlc_only(g) and not is_atom_game
+            if is_exe_fingerprinter_dlc_only:
                 prepared = _prepare_steam_entry(g, aid)
                 if prepared is not None:
                     steam_unmanaged.append(prepared)
@@ -372,7 +372,7 @@ class LibraryFilterSortMixin:
                     steam_unmanaged.append(prepared)
                     seen_steam_aids.add(aid)
 
-        # Include any owned ASSella DLC-only games from manager that might not have been in steam_games
+        # Include any owned EXE-fingerprinter DLC-only games from manager that might not have been in steam_games
         for g in all_manager_games:
             aid = str(g.get("appid", "")).strip()
             is_atom_game = bool(g.get("is_atom") or g.get("is_vapor") or g.get("is_plugin_game") or aid in managed_appids)

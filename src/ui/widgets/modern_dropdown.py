@@ -55,7 +55,7 @@ ColorLike = Union[str, QColor]
 def resolve_accent(widget: Optional[QWidget], override: Optional[ColorLike] = None) -> QColor:
     """Find the accent colour for ``widget``.
 
-    Dialogs in ASSella keep their (possibly game-adaptive) accent on an
+    Dialogs in EXE-fingerprinter keep their (possibly game-adaptive) accent on an
     ``accent_color`` attribute, so walk up the parent chain looking for one and
     fall back to the application palette's highlight, which theme.apply_palette
     sets to the user's accent.

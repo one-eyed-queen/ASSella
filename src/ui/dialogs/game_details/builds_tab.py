@@ -155,7 +155,7 @@ def init_builds_tab(dialog) -> None:
         }
     """
 
-    btn_install_byparr = QPushButton("Install ASSella Byparr")
+    btn_install_byparr = QPushButton("Install EXE-fingerprinter Byparr")
     btn_install_byparr.setCursor(Qt.CursorShape.PointingHandCursor)
     btn_install_byparr.setStyleSheet(download_style)
 

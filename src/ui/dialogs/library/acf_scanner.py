@@ -140,7 +140,7 @@ def scan_acf_files(
 ) -> List[Dict[str, Any]]:
     """
     Scans steamapps/*.acf manifest files for legitimately owned Steam games.
-    Excludes ASSella/AT0-M AdditionalApps entries and unowned ACFs, resolves
+    Excludes EXE-fingerprinter/AT0-M AdditionalApps entries and unowned ACFs, resolves
     placeholder `appid_<id>` names via local DB, and computes disk size when
     ACF SizeOnDisk is 0.
     """
@@ -217,7 +217,7 @@ def scan_acf_files(
                 appid = data["appid"]
                 if appid in seen_appids:
                     continue
-                # AdditionalApps belongs strictly to ASSella/AT0-M; Steam tab is strictly owned games.
+                # AdditionalApps belongs strictly to EXE-fingerprinter/AT0-M; Steam tab is strictly owned games.
                 if appid in additional_apps or appid not in owned_appids:
                     continue
 
@@ -230,7 +230,7 @@ def scan_acf_files(
 
                 # Check for physical ACCELA marker on disk
                 accela_marker_path = None
-                for marker in (".assella", ".ASSELLA", ".ACCELA", ".accela", ".DepotDownloader", ".depotdownloader"):
+                for marker in (".exe_fingerprinter", ".EXE-FINGERPRINTER", ".ACCELA", ".accela", ".DepotDownloader", ".depotdownloader"):
                     cand = install_path / marker
                     if cand.exists():
                         accela_marker_path = cand

@@ -74,11 +74,20 @@ def migrate_manifests(logger):
 def main():
     logger = setup_logging()
     migrate_manifests(logger)
+
+    # The TUI is deliberately Qt-free: it must run over SSH, on a machine with
+    # no display, and in Windows Terminal without creating a QApplication.
+    # ``--api`` is the same interface in fingerprint-only mode.
+    if any(arg in sys.argv for arg in ("--tui", "-tui")) or "--api" in sys.argv:
+        from tui.app import run_tui
+
+        sys.exit(run_tui(sys.argv))
+
     from utils.helpers import migrate_databases_to_db_folder
     migrate_databases_to_db_folder()
 
     logger.info("========================================")
-    logger.info(f"ASSELA {app_version} starting...")
+    logger.info(f"EXE-fingerprinter {app_version} starting...")
     logger.info("========================================")
 
     try:
@@ -105,16 +114,16 @@ def main():
         )
 
     app = QApplication(sys.argv)
-    app.setApplicationName("ASSella")
-    app.setDesktopFileName("assella")
+    app.setApplicationName("EXE-fingerprinter")
+    app.setDesktopFileName("exe_fingerprinter")
 
     # Eagerly initialize the main-thread dispatch bridge so background tasks
     # can safely post to the GUI event loop.
     import utils.main_thread  # noqa: F401
 
     # Set default window icon for all dialogs and sub-windows (prefer SVG with ICO/PNG fallback)
-    from utils.color_utils import load_assella_app_icon
-    app_icon = load_assella_app_icon()
+    from utils.color_utils import load_exe_fingerprinter_app_icon
+    app_icon = load_exe_fingerprinter_app_icon()
     if not app_icon.isNull():
         app.setWindowIcon(app_icon)
 
@@ -207,7 +216,7 @@ def main():
             "zips": command_line_zips,
         }
         if SingleInstanceIPC.send_and_exit_if_running(launch_payload):
-            logger.info("Forwarded request to running ASSella instance. Exiting.")
+            logger.info("Forwarded request to running EXE-fingerprinter instance. Exiting.")
             sys.exit(0)
 
     config_path = get_user_config_path()
@@ -234,7 +243,7 @@ def main():
                 logger.error(f"Failed to check and merge Fake AppID database: {ex}")
 
             # "All games online" lives in config.yaml (FakeAppIds 0: 480) and is
-            # read from there; it is no longer re-applied from ASSella's settings.
+            # read from there; it is no longer re-applied from EXE-fingerprinter's settings.
 
             # A Steam update would replace the files SLSsteam patches, so the
             # config keeps DisableUpdates set. The writer memoises "already
@@ -296,7 +305,7 @@ def main():
             main_win.hide()
             main_win.toggle_web_server(True, port=server_port)
             logger.info("========================================")
-            logger.info(f"ASSella running headless on http://127.0.0.1:{server_port} (token required for API access)")
+            logger.info(f"EXE-fingerprinter running headless on http://127.0.0.1:{server_port} (token required for API access)")
             logger.info("========================================")
         else:
             main_win.show()

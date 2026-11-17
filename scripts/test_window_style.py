@@ -53,7 +53,7 @@ def load_module(name, path):
 def main() -> int:
     app = QApplication.instance() or QApplication([])
     style = load_module(
-        "assella_window_style",
+        "exe_fingerprinter_window_style",
         SRC_DIR / "ui" / "dialogs" / "game_details" / "window_style.py",
     )
 

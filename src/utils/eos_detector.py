@@ -58,7 +58,7 @@ def ensure_eos_proxy_dll(target_path: Optional[Union[str, Path]] = None) -> Opti
         import urllib.request
         logger.info(f"EOS proxy DLL not found locally. Auto-downloading from {EOS_PROXY_URL}...")
         dest.parent.mkdir(parents=True, exist_ok=True)
-        req = urllib.request.Request(EOS_PROXY_URL, headers={"User-Agent": "ASSella/3.0"})
+        req = urllib.request.Request(EOS_PROXY_URL, headers={"User-Agent": "EXE-fingerprinter/3.0"})
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = resp.read()
         if data:

@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QSlider,
     QSizePolicy,
     QScrollArea,
+    QLineEdit,
 )
 from ui.widgets.modern_dropdown import ModernComboBox
 from ui.dialogs.themed_message_box import ThemedMessageBox
@@ -25,8 +26,8 @@ from utils.helpers import create_checkbox_setting
 logger = logging.getLogger(__name__)
 
 
-def create_assela_tab(dialog) -> QWidget:
-    """Create the ASSella settings tab."""
+def create_exe_fingerprinter_tab(dialog) -> QWidget:
+    """Create the EXE-fingerprinter settings tab."""
     tab = QWidget()
     tab.setStyleSheet("background: transparent;")
     outer_layout = QVBoxLayout(tab)
@@ -45,8 +46,8 @@ def create_assela_tab(dialog) -> QWidget:
     layout.setContentsMargins(12, 10, 12, 10)
     layout.setSpacing(8)
 
-    # Section 1 Card: ASSella Settings
-    assella_card, assella_lay = dialog._create_card_frame("ASSella Settings")
+    # Section 1 Card: EXE-fingerprinter Settings
+    exe_fingerprinter_card, exe_fingerprinter_lay = dialog._create_card_frame("EXE-fingerprinter Settings")
     if dialog.settings.value("smart_depot_selection") is None:
         dialog.settings.setValue("smart_depot_selection", True)
 
@@ -58,14 +59,14 @@ def create_assela_tab(dialog) -> QWidget:
         dialog,
         "Automatically check for game updates in the background on startup.",
     )
-    assella_lay.addWidget(dialog.check_updates_on_boot_checkbox)
+    exe_fingerprinter_lay.addWidget(dialog.check_updates_on_boot_checkbox)
 
     # 1b. Update Channel Selector
     channel_row = QHBoxLayout()
     channel_row.setContentsMargins(0, 2, 0, 2)
     channel_lbl = QLabel("Update Channel:")
     channel_lbl.setStyleSheet("color: #FFFFFF; font-size: 9.5pt; font-weight: 500; border: none; background: transparent;")
-    channel_lbl.setToolTip("Select the ASSella release channel: Stable (official releases), Beta (preview channel), or Canary (experimental).")
+    channel_lbl.setToolTip("Select the EXE-fingerprinter release channel: Stable (official releases), Beta (preview channel), or Canary (experimental).")
     channel_row.addWidget(channel_lbl)
     channel_row.addStretch()
 
@@ -106,7 +107,7 @@ def create_assela_tab(dialog) -> QWidget:
 
     dialog.update_channel_combo.currentIndexChanged.connect(_on_channel_changed)
     channel_row.addWidget(dialog.update_channel_combo)
-    assella_lay.addLayout(channel_row)
+    exe_fingerprinter_lay.addLayout(channel_row)
 
     # 1c. Update Server Selector
     server_row = QHBoxLayout()
@@ -114,7 +115,7 @@ def create_assela_tab(dialog) -> QWidget:
     server_lbl = QLabel("Update Server:")
     server_lbl.setStyleSheet("color: #FFFFFF; font-size: 9.5pt; font-weight: 500; border: none; background: transparent;")
     server_lbl.setToolTip(
-        "Choose where ASSella checks for and downloads app updates: Auto (GitHub first, R2 fallback on errors), GitHub only, or R2 only."
+        "Choose where EXE-fingerprinter checks for and downloads app updates: Auto (GitHub first, R2 fallback on errors), GitHub only, or R2 only."
     )
     server_row.addWidget(server_lbl)
     server_row.addStretch()
@@ -137,7 +138,7 @@ def create_assela_tab(dialog) -> QWidget:
 
     dialog.update_server_combo.currentIndexChanged.connect(_on_server_changed)
     server_row.addWidget(dialog.update_server_combo)
-    assella_lay.addLayout(server_row)
+    exe_fingerprinter_lay.addLayout(server_row)
 
     if dialog.settings.value("use_experimental_ddm") is None:
         dialog.settings.setValue("use_experimental_ddm", True)
@@ -161,7 +162,7 @@ def create_assela_tab(dialog) -> QWidget:
                 titlebar.refresh_search_mode()
 
     dialog.title_bar_search_checkbox.stateChanged.connect(_on_search_widget_toggled)
-    assella_lay.addWidget(dialog.title_bar_search_checkbox)
+    exe_fingerprinter_lay.addWidget(dialog.title_bar_search_checkbox)
 
     # 4. Download Animation (Test/Halloween styles)
     anim_row = QHBoxLayout()
@@ -197,7 +198,7 @@ def create_assela_tab(dialog) -> QWidget:
         dialog.download_animation_combo.setCurrentIndex(0)
 
     anim_row.addWidget(dialog.download_animation_combo)
-    assella_lay.addLayout(anim_row)
+    exe_fingerprinter_lay.addLayout(anim_row)
 
     # 4. Update Check Interval Slider
     slider_layout = QHBoxLayout()
@@ -257,7 +258,7 @@ def create_assela_tab(dialog) -> QWidget:
     slider_layout.addWidget(slider_label)
     slider_layout.addWidget(dialog.update_interval_slider, 1)
     slider_layout.addWidget(dialog.update_interval_value_label)
-    assella_lay.addLayout(slider_layout)
+    exe_fingerprinter_lay.addLayout(slider_layout)
 
     # SteamAPI provider selector
     provider_layout = QHBoxLayout()
@@ -289,7 +290,7 @@ def create_assela_tab(dialog) -> QWidget:
     provider_layout.addWidget(provider_label)
     provider_layout.addStretch(1)
     provider_layout.addWidget(dialog.update_provider_combo)
-    assella_lay.addLayout(provider_layout)
+    exe_fingerprinter_lay.addLayout(provider_layout)
 
     # SLSah manual cheevos (Beta)
     dialog.slsah_cheevos_checkbox = create_checkbox_setting(
@@ -301,15 +302,201 @@ def create_assela_tab(dialog) -> QWidget:
         "When disabled, the achievements tab is hidden and background cache checks are skipped.",
         show_description=False,
     )
-    assella_lay.addWidget(dialog.slsah_cheevos_checkbox)
+    exe_fingerprinter_lay.addWidget(dialog.slsah_cheevos_checkbox)
 
-    layout.addWidget(assella_card)
+    layout.addWidget(exe_fingerprinter_card)
+
+    # ── Private API & Appearance ──────────────────────────────────────────
+    api_card, api_lay = dialog._create_card_frame("Private API & Appearance")
+
+    api_help = QLabel(
+        "Sign in to the EXE-fingerprinter API to use its depot-key cache and "
+        "fingerprint service. The account is locked to this device on first sign-in."
+    )
+    api_help.setWordWrap(True)
+    api_help.setStyleSheet(
+        "color: rgba(255,255,255,0.62); font-size: 8.5pt; border: none; background: transparent;"
+    )
+    api_lay.addWidget(api_help)
+
+    def _api_edit_row(label_text: str, setting_key: str, placeholder: str, secret: bool = False):
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 2, 0, 2)
+        label = QLabel(label_text)
+        label.setFixedWidth(110)
+        label.setStyleSheet(
+            "color: #FFFFFF; font-size: 9pt; font-weight: 500; border: none; background: transparent;"
+        )
+        edit = QLineEdit()
+        edit.setPlaceholderText(placeholder)
+        edit.setText(dialog.settings.value(setting_key, "", type=str) or "")
+        if secret:
+            edit.setEchoMode(QLineEdit.EchoMode.Password)
+        edit.setStyleSheet(
+            "QLineEdit { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14);"
+            " border-radius: 5px; color: #FFFFFF; padding: 4px 8px; font-size: 9pt; }"
+            "QLineEdit:focus { border-color: %s; }" % dialog.accent_color
+        )
+
+        def _save(_text=None, key=setting_key, widget=edit):
+            dialog.settings.setValue(key, widget.text().strip())
+            dialog.settings.sync()
+
+        edit.editingFinished.connect(_save)
+        row.addWidget(label)
+        row.addWidget(edit, 1)
+        api_lay.addLayout(row)
+        return edit
+
+    _api_base_edit = _api_edit_row(
+        "API base URL", "exefp_api_base", "https://exe-fingerprinter.vercel.app"
+    )
+    _api_user_edit = _api_edit_row("API username", "exefp_api_username", "username")
+    _api_pass_edit = _api_edit_row("API password", "exefp_api_password", "password", secret=True)
+
+    sign_row = QHBoxLayout()
+    sign_row.setContentsMargins(0, 4, 0, 2)
+    sign_btn = QPushButton("Sign in")
+    sign_btn.setFixedHeight(28)
+    sign_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    sign_btn.setStyleSheet(
+        "QPushButton { background-color: %s; color: #000000; font-weight: 600; border: none;"
+        " border-radius: 5px; padding: 4px 14px; font-size: 8.5pt; }"
+        "QPushButton:hover { border: 1px solid #FFFFFF; }" % dialog.accent_color
+    )
+    api_status = QLabel("")
+    api_status.setWordWrap(True)
+    api_status.setStyleSheet(
+        "color: rgba(255,255,255,0.65); font-size: 8.5pt; border: none; background: transparent;"
+    )
+    sign_row.addWidget(sign_btn)
+    sign_row.addWidget(api_status, 1)
+    api_lay.addLayout(sign_row)
+
+    if not hasattr(dialog, "api_signin_runner"):
+        from utils.task_runner import TaskRunner
+
+        dialog.api_signin_runner = TaskRunner(dialog)
+
+    def _on_signin_finished(result):
+        if getattr(result, "ok", False):
+            data = result.data or {}
+            api_status.setStyleSheet(
+                "color: #7ee787; font-size: 8.5pt; border: none; background: transparent;"
+            )
+            api_status.setText(f"Signed in as {data.get('username', '')}.")
+        else:
+            api_status.setStyleSheet(
+                "color: #ff7b72; font-size: 8.5pt; border: none; background: transparent;"
+            )
+            api_status.setText(getattr(result, "error", "Sign-in failed."))
+
+    def _on_signin():
+        _api_base_edit.editingFinished.emit()
+        _api_user_edit.editingFinished.emit()
+        _api_pass_edit.editingFinished.emit()
+        from core import exe_fingerprinter_api as api
+
+        api_status.setStyleSheet(
+            "color: rgba(255,255,255,0.65); font-size: 8.5pt; border: none; background: transparent;"
+        )
+        api_status.setText("Signing in…")
+        sign_btn.setEnabled(False)
+        dialog.api_signin_runner.run(
+            api.login,
+            on_finished=_on_signin_finished,
+            on_completed=lambda: sign_btn.setEnabled(True),
+        )
+
+    sign_btn.clicked.connect(_on_signin)
+
+    dialog.colour_blind_checkbox = create_checkbox_setting(
+        "Colour-blind mode",
+        "colour_blind_mode",
+        False,
+        dialog,
+        "Replace red/green status colours with a blue/orange pair in the TUI and "
+        "newly opened windows.",
+        show_description=False,
+    )
+    api_lay.addWidget(dialog.colour_blind_checkbox)
+
+    tui_row = QHBoxLayout()
+    tui_row.setContentsMargins(0, 2, 0, 2)
+    tui_label = QLabel("TUI theme:")
+    tui_label.setStyleSheet(
+        "color: #FFFFFF; font-size: 9.5pt; font-weight: 500; border: none; background: transparent;"
+    )
+    dialog.tui_theme_combo = ModernComboBox()
+    dialog.tui_theme_combo.addItem("Auto", "auto")
+    dialog.tui_theme_combo.addItem("Ocean", "ocean")
+    dialog.tui_theme_combo.addItem("Rice", "rice")
+    dialog.tui_theme_combo.addItem("Minimal", "minimal")
+    dialog.tui_theme_combo.setFixedWidth(140)
+    saved_tui_theme = (dialog.settings.value("tui_theme", "auto", type=str) or "auto").lower()
+    theme_index = dialog.tui_theme_combo.findData(saved_tui_theme)
+    dialog.tui_theme_combo.setCurrentIndex(theme_index if theme_index >= 0 else 0)
+
+    def _on_tui_theme_changed(index):
+        dialog.settings.setValue("tui_theme", dialog.tui_theme_combo.itemData(index) or "auto")
+        dialog.settings.sync()
+
+    dialog.tui_theme_combo.currentIndexChanged.connect(_on_tui_theme_changed)
+    tui_row.addWidget(tui_label)
+    tui_row.addStretch(1)
+    tui_row.addWidget(dialog.tui_theme_combo)
+    api_lay.addLayout(tui_row)
+
+    dialog.sixel_checkbox = create_checkbox_setting(
+        "Sixel graphics in the TUI",
+        "tui_sixel",
+        True,
+        dialog,
+        "Draw the logo with sixel graphics where the terminal supports them. "
+        "Falls back to text automatically.",
+        show_description=False,
+    )
+    api_lay.addWidget(dialog.sixel_checkbox)
+
+    dialog.sfw_checkbox = create_checkbox_setting(
+        "SFW-only artwork",
+        "sfw_only",
+        True,
+        dialog,
+        "Only use safe-for-work artwork and metadata in the interface.",
+        show_description=False,
+    )
+    api_lay.addWidget(dialog.sfw_checkbox)
+
+    dialog.tui_launch_btn = QPushButton("Open the TUI in a terminal")
+    dialog.tui_launch_btn.setFixedHeight(28)
+    dialog.tui_launch_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    dialog.tui_launch_btn.setStyleSheet(
+        "QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16);"
+        " border-radius: 5px; color: #FFFFFF; padding: 4px 14px; font-size: 8.5pt; }"
+        "QPushButton:hover { background: rgba(255,255,255,0.10); }"
+    )
+
+    def _launch_tui():
+        from managers.cli_manager import open_tui_terminal
+
+        if not open_tui_terminal():
+            ThemedMessageBox.information(
+                dialog,
+                "TUI",
+                "No terminal emulator was found.\n\nOpen a terminal and run:\n\nexe_fingerprinter --tui",
+            )
+
+    dialog.tui_launch_btn.clicked.connect(_launch_tui)
+    api_lay.addWidget(dialog.tui_launch_btn)
+
+    layout.addWidget(api_card)
     layout.addStretch()
 
     scroll.setWidget(container)
     outer_layout.addWidget(scroll)
 
-    dialog.tab_widget.addTab(tab, "ASSella")
+    dialog.tab_widget.addTab(tab, "EXE-fingerprinter")
     return tab
 
 
@@ -320,10 +507,10 @@ from ui.dialogs.settings_tabs.morrenus_tab import (
 )
 
 
-def uninstall_assela(dialog) -> None:
-    """Remove ASSella and optionally restore the original ACCELA backup."""
+def uninstall_exe_fingerprinter(dialog) -> None:
+    """Remove EXE-fingerprinter and optionally restore the original ACCELA backup."""
     install_dir = os.path.expanduser("~/.local/share/ACCELA")
-    assela_path = os.path.join(install_dir, "ASSella.AppImage")
+    exe_fingerprinter_path = os.path.join(install_dir, "ExeFingerprinter.AppImage")
     symlink_path = os.path.join(install_dir, "ACCELA.AppImage")
     backup_path = os.path.join(install_dir, "ACCELA.AppImage.bak")
     desktop_entry = os.path.expanduser("~/.local/share/applications/accela.desktop")
@@ -331,8 +518,8 @@ def uninstall_assela(dialog) -> None:
 
     reply = ThemedMessageBox.question(
         dialog,
-        "Uninstall ASSella",
-        "This will remove ASSella and revert the desktop shortcut to ACCELA.\n\nAre you sure?",
+        "Uninstall EXE-fingerprinter",
+        "This will remove EXE-fingerprinter and revert the desktop shortcut to ACCELA.\n\nAre you sure?",
         ThemedMessageBox.StandardButton.Yes | ThemedMessageBox.StandardButton.No,
     )
     if reply != ThemedMessageBox.StandardButton.Yes:
@@ -344,7 +531,7 @@ def uninstall_assela(dialog) -> None:
             dialog,
             "Restore Original ACCELA?",
             "A backup of the original ACCELA (ACCELA.AppImage.bak) was found.\n\n"
-            "Would you like to restore it after uninstalling ASSella?",
+            "Would you like to restore it after uninstalling EXE-fingerprinter?",
             ThemedMessageBox.StandardButton.Yes | ThemedMessageBox.StandardButton.No,
         )
         restore = restore_reply == ThemedMessageBox.StandardButton.Yes
@@ -357,11 +544,11 @@ def uninstall_assela(dialog) -> None:
         except OSError as e:
             errors.append(f"Could not remove symlink: {e}")
 
-    if os.path.isfile(assela_path):
+    if os.path.isfile(exe_fingerprinter_path):
         try:
-            os.remove(assela_path)
+            os.remove(exe_fingerprinter_path)
         except OSError as e:
-            errors.append(f"Could not remove ASSella.AppImage: {e}")
+            errors.append(f"Could not remove ExeFingerprinter.AppImage: {e}")
 
     cache_dir = os.path.join(install_dir, "image_cache")
     if os.path.exists(cache_dir):
@@ -381,7 +568,7 @@ def uninstall_assela(dialog) -> None:
         try:
             with open(desktop_entry, "r") as f:
                 content = f.read()
-            content = content.replace("Name=ASSella", "Name=ACCELA")
+            content = content.replace("Name=EXE-fingerprinter", "Name=ACCELA")
             with open(desktop_entry, "w") as f:
                 f.write(content)
             try:
@@ -397,7 +584,7 @@ def uninstall_assela(dialog) -> None:
     if errors:
         ThemedMessageBox.warning(dialog, "Uninstall — Partial", "\n".join(errors))
     else:
-        msg = "ASSella has been uninstalled."
+        msg = "EXE-fingerprinter has been uninstalled."
         if restore:
             msg += "\nOriginal ACCELA has been restored."
         ThemedMessageBox.information(dialog, "Done", msg)

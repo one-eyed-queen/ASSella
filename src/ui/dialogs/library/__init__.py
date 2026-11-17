@@ -1,5 +1,5 @@
 """
-Modular Game Library package for ASSella.
+Modular Game Library package for EXE-fingerprinter.
 """
 
 from ui.dialogs.library.widgets import (

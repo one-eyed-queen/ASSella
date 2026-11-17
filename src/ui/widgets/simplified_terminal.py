@@ -316,8 +316,8 @@ class SimplifiedTerminalWidget(QWidget):
             return
 
         # Split the pending work by who owns it:
-        #  - ASSella-managed games are downloaded by DepotDownloader.
-        #  - Steam-managed (AT0-M) games are downloaded by Steam; ASSella only
+        #  - EXE-fingerprinter-managed games are downloaded by DepotDownloader.
+        #  - Steam-managed (AT0-M) games are downloaded by Steam; EXE-fingerprinter only
         #    syncs the decryption keys SLSsteam needs.
         from utils.game_modes import is_atom_managed
 

@@ -122,7 +122,7 @@ def build_payload(
     commit_field_val = f"[`{short_sha}`](https://github.com/{repo}/commit/{commit})" if short_sha else "N/A"
 
     embed = {
-        "title": f"{cfg['emoji']} ASSella {tag} Released! ({cfg['name']})",
+        "title": f"{cfg['emoji']} EXE-fingerprinter {tag} Released! ({cfg['name']})",
         "url": release_url,
         "description": format_changelog(body),
         "color": cfg["color"],
@@ -130,7 +130,7 @@ def build_payload(
             {
                 "name": "📥 Downloads",
                 "value": (
-                    f"• [ASSella.AppImage]({download_appimage})\n"
+                    f"• [ExeFingerprinter.AppImage]({download_appimage})\n"
                     f"• [Delta Update (.zsync)]({download_zsync})"
                 ),
                 "inline": False,
@@ -152,14 +152,14 @@ def build_payload(
             },
         ],
         "footer": {
-            "text": "ASSella CI/CD • GitHub Actions",
+            "text": "EXE-fingerprinter CI/CD • GitHub Actions",
             "icon_url": avatar_url,
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     payload: dict = {
-        "username": "ASSella Releases",
+        "username": "EXE-fingerprinter Releases",
         "avatar_url": avatar_url,
         "embeds": [embed],
     }
@@ -178,7 +178,7 @@ def send_discord_notification(webhook_url: str, payload: dict) -> bool:
         data=data,
         headers={
             "Content-Type": "application/json",
-            "User-Agent": "ASSella-ReleaseBot/1.0 (GitHubActions)",
+            "User-Agent": "EXE-fingerprinter-ReleaseBot/1.0 (GitHubActions)",
         },
         method="POST",
     )

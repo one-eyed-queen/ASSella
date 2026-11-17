@@ -159,7 +159,7 @@ class BottomTitleBar(QFrame):
                         break
         if not pixmap.isNull():
             self.logo_label.setPixmap(pixmap)
-        self.logo_label.setToolTip("ASSella")
+        self.logo_label.setToolTip("EXE-fingerprinter")
         layout.addWidget(self.logo_label, alignment=Qt.AlignmentFlag.AlignLeft)
         layout.addSpacing(6)
 
@@ -229,7 +229,7 @@ class BottomTitleBar(QFrame):
         layout.addWidget(self.discord_button)
 
         self.github_button = self._create_svg_button(
-            GITHUB_SVG, self._open_github_page, "Open ASSella on GitHub"
+            GITHUB_SVG, self._open_github_page, "Open EXE-fingerprinter on GitHub"
         )
         self.github_button.setCursor(Qt.CursorShape.PointingHandCursor)
         layout.addWidget(self.github_button)
@@ -517,7 +517,7 @@ class BottomTitleBar(QFrame):
         self._open_url("https://discord.gg/hubcapsmanifest")
 
     def _open_github_page(self) -> None:
-        """Open the ASSella GitHub repository."""
+        """Open the EXE-fingerprinter GitHub repository."""
         self._open_url("https://github.com/niwia/ASSella")
 
     def mousePressEvent(self, event: QMouseEvent) -> None:

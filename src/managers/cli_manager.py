@@ -133,6 +133,52 @@ def open_cli_terminal(
         return False
 
 
+def _tui_launch_command() -> list[str]:
+    """The command that starts the TUI from this installation."""
+    appimage = os.environ.get("APPIMAGE")
+    if appimage:
+        return [appimage, "--tui"]
+    installed = shutil.which("exe_fingerprinter")
+    if installed:
+        return [installed, "--tui"]
+    main_py = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "main.py")
+    return [sys.executable, main_py, "--tui"]
+
+
+def open_tui_terminal() -> bool:
+    """Open a terminal emulator running the EXE-fingerprinter TUI.
+
+    Returns True when a terminal was launched. On Windows there is no terminal
+    list to choose from, so callers fall back to telling the user to run
+    ``exe_fingerprinter --tui`` themselves.
+    """
+    if sys.platform == "win32":
+        try:
+            subprocess.Popen(
+                ["cmd.exe", "/c", "start", "cmd.exe", "/k"]
+                + _tui_launch_command(),
+                start_new_session=True,
+            )
+            return True
+        except OSError:
+            return False
+
+    base = _tui_launch_command()
+    for terminal in LINUX_TERMINALS:
+        term_path = shutil.which(terminal[0])
+        if not term_path:
+            continue
+        try:
+            subprocess.Popen(
+                [str(term_path)] + [str(part) for part in terminal[1:]] + base,
+                start_new_session=True,
+            )
+            return True
+        except OSError:
+            continue
+    return False
+
+
 def _clean_shutdown(app: QApplication):
     """Ensure clean shutdown of Qt threads and logging handlers."""
     TaskRunner.stop_all_active()
@@ -152,10 +198,10 @@ def _clean_shutdown(app: QApplication):
 def _print_cli_help(console: Console):
     """Print formatted CLI command reference."""
     panel = Panel(
-        "[bold white]ASSella CLI — Command Reference[/bold white]\n\n"
-        "[bold cyan]Usage:[/bold cyan] assella -cli <command> [arguments] [options]\n\n"
+        "[bold white]EXE-fingerprinter CLI — Command Reference[/bold white]\n\n"
+        "[bold cyan]Usage:[/bold cyan] exe_fingerprinter -cli <command> [arguments] [options]\n\n"
         "[bold yellow]Commands:[/bold yellow]\n"
-        "  [bold green]update-all[/bold green]                Check for updates across all installed ASSella games\n"
+        "  [bold green]update-all[/bold green]                Check for updates across all installed EXE-fingerprinter games\n"
         "  [bold green]library search[/bold green] <query>    Search installed games in local Steam libraries\n"
         "  [bold green]list[/bold green] [query]              List / search local installed games\n"
         "  [bold green]search[/bold green] <query>            Search online Hubcap manifest repository\n"
@@ -165,8 +211,14 @@ def _print_cli_help(console: Console):
         "  [cyan]--auto, --smart[/cyan]           Auto-select recommended depots for current OS\n"
         "  [cyan]--all[/cyan]                     Select all available depots\n"
         "  [cyan]--branch <name>[/cyan]           Specify target Steam branch (e.g. public, beta)\n"
-        "  [cyan]--dest <path>[/cyan]             Custom destination folder\n",
-        title="[bold magenta]ASSella Command Line Interface[/bold magenta]",
+        "  [cyan]--dest <path>[/cyan]             Custom destination folder\n\n"
+        "[bold yellow]Terminal UI:[/bold yellow]\n"
+        "  [cyan]--tui[/cyan]                     Full-screen search / fingerprint / download UI\n"
+        "  [cyan]--api [--appid ID][/cyan]        Fingerprint-only mode (no game management)\n"
+        "  [cyan]--download[/cyan]                With --api: fetch the .exe files without asking\n"
+        "  [cyan]--theme auto|ocean|rice|minimal[/cyan]  TUI palette\n"
+        "  [cyan]--no-sixel[/cyan]                Draw a text banner instead of a sixel logo\n",
+        title="[bold magenta]EXE-fingerprinter Command Line Interface[/bold magenta]",
         border_style="magenta",
     )
     console.print()
@@ -250,11 +302,11 @@ def run_download_with_rich_progress(
 
 
 def run_cli_update_check(logger: logging.Logger, console: Optional[Console] = None) -> int:
-    """Check all installed ASSella games for updates and display a Rich status table."""
+    """Check all installed EXE-fingerprinter games for updates and display a Rich status table."""
     if console is None:
         console = Console()
 
-    console.print(Panel("[bold magenta]ASSella Library Update Check[/bold magenta]", border_style="magenta"))
+    console.print(Panel("[bold magenta]EXE-fingerprinter Library Update Check[/bold magenta]", border_style="magenta"))
 
     from managers.game_manager import GameManager
     from core.tasks.manifest_check_task import ManifestCheckTask
@@ -276,7 +328,7 @@ def run_cli_update_check(logger: logging.Logger, console: Optional[Console] = No
     ]
 
     if not accela_games:
-        console.print("[yellow]No ASSella-managed games found in Steam libraries.[/yellow]")
+        console.print("[yellow]No EXE-fingerprinter-managed games found in Steam libraries.[/yellow]")
         return 0
 
     console.print(f"Found [bold cyan]{len(accela_games)}[/bold cyan] managed game(s). Checking for updates...")
@@ -315,7 +367,7 @@ def run_cli_update_check(logger: logging.Logger, console: Optional[Console] = No
 
     # Build results table
     table = Table(
-        title="[bold white]ASSella Library Update Status[/bold white]",
+        title="[bold white]EXE-fingerprinter Library Update Status[/bold white]",
         header_style="bold magenta",
         border_style="bright_black",
         show_header=True,
@@ -469,7 +521,7 @@ def run_cli_manifest_search(query: str, logger: logging.Logger, console: Optiona
     console.print(table)
     console.print(
         f"[dim]Showing {min(len(results), 25)} of {len(results)} match(es). "
-        f"To download: [bold cyan]assella -cli download <AppID>[/bold cyan][/dim]"
+        f"To download: [bold cyan]exe_fingerprinter -cli download <AppID>[/bold cyan][/dim]"
     )
     return 0
 
@@ -674,7 +726,7 @@ def run_cli_download_flow(
         f"• [bold white]Path:[/bold white] {target_dest}\n"
         f"• [bold white]Depots:[/bold white] {len(selected_depots)} downloaded\n"
         f"• [bold white]Branch:[/bold white] {target_branch}",
-        title="[bold magenta]ASSella Installation Complete[/bold magenta]",
+        title="[bold magenta]EXE-fingerprinter Installation Complete[/bold magenta]",
         border_style="green",
     )
     console.print()
@@ -689,7 +741,7 @@ def run_cli_dispatcher(
     command_line_appid: Optional[int] = None,
     command_line_zips: Optional[list[str]] = None,
 ) -> int:
-    """Main CLI dispatcher for ASSella."""
+    """Main CLI dispatcher for EXE-fingerprinter."""
     console = Console()
     cli_args = [a for a in raw_args if a not in ("-cli", "--cli", "-v", "--verbose", "-debug", "--debug")]
 
@@ -728,7 +780,7 @@ def run_cli_dispatcher(
 
     if first in ("search", "find"):
         if len(cli_args) < 2:
-            console.print("[bold red]Error: 'search' requires a search term (e.g. assella -cli search Elden)[/bold red]")
+            console.print("[bold red]Error: 'search' requires a search term (e.g. exe_fingerprinter -cli search Elden)[/bold red]")
             _clean_shutdown(app)
             return 1
         query = " ".join(cli_args[1:])
@@ -741,17 +793,17 @@ def run_cli_dispatcher(
         if not sub_args or any(a in ("-h", "--help", "help") for a in sub_args):
             console.print(
                 Panel(
-                    "[bold white]ASSella CLI — Download Command[/bold white]\n\n"
-                    "[bold cyan]Usage:[/bold cyan] assella -cli download <title|appid> [options]\n\n"
+                    "[bold white]EXE-fingerprinter CLI — Download Command[/bold white]\n\n"
+                    "[bold cyan]Usage:[/bold cyan] exe_fingerprinter -cli download <title|appid> [options]\n\n"
                     "[bold yellow]Options:[/bold yellow]\n"
                     "  [green]--auto, --smart[/green]    Auto-select recommended depots for current OS\n"
                     "  [green]--all[/green]              Select all available depots\n"
                     "  [green]--branch <name>[/green]    Specify target Steam branch (e.g. public, beta)\n"
                     "  [green]--dest <path>[/green]      Custom destination folder\n\n"
                     "[bold yellow]Examples:[/bold yellow]\n"
-                    "  assella -cli download 1091500 --smart\n"
-                    "  assella -cli download \"Hollow Knight\" --branch beta\n"
-                    "  assella -cli download 2868840 --dest /mnt/games",
+                    "  exe_fingerprinter -cli download 1091500 --smart\n"
+                    "  exe_fingerprinter -cli download \"Hollow Knight\" --branch beta\n"
+                    "  exe_fingerprinter -cli download 2868840 --dest /mnt/games",
                     title="[bold magenta]Download Options[/bold magenta]",
                     border_style="magenta",
                 )
@@ -811,7 +863,7 @@ def run_cli_dispatcher(
     if zips_to_process:
         return run_cli_mode(app, zips_to_process, logger)
 
-    # If first argument looks like an AppID directly (e.g. assella -cli 1245620)
+    # If first argument looks like an AppID directly (e.g. exe_fingerprinter -cli 1245620)
     if first.isdigit():
         code = run_cli_download_flow(first, logger=logger, console=console)
         _clean_shutdown(app)
@@ -1079,7 +1131,7 @@ class CLITaskManager:
 
         # 1. Always write/update our local metadata.json fallback
         try:
-            from utils.assella_metadata import write_accela_metadata
+            from utils.exe_fingerprinter_metadata import write_accela_metadata
             write_accela_metadata(self.current_dest_path, self.game_data, size_on_disk)
         except Exception as e:
             self.logger.error(f"Failed to write metadata JSON file: {e}")

@@ -210,7 +210,7 @@ def create_api_key_setting(
         sync_state["toggle"] = atom_sync_toggle
         sync_lbl = QLabel("AT0-M Sync")
         sync_lbl.setToolTip(
-            "Keep the Hubcap API key in ASSella and in katamari.conf.lua (used by the AT0-M plugins) the same; "
+            "Keep the Hubcap API key in EXE-fingerprinter and in katamari.conf.lua (used by the AT0-M plugins) the same; "
             "the newer one wins."
         )
         conf_exists = get_hubcap_key_conf_path().is_file()
@@ -383,7 +383,7 @@ def create_isp_gateway_card(dialog) -> Tuple[QFrame, QVBoxLayout]:
     isp_row.setContentsMargins(0, 0, 0, 0)
     isp_lbl = QLabel("Hubcap Gateway Mode:")
     isp_lbl.setStyleSheet("color: #FFFFFF; font-size: 9.5pt; font-weight: 500; border: none; background: transparent;")
-    isp_lbl.setToolTip("Select how ASSella routes requests to Hubcap API (Auto Smart Fallback, Direct, DoH, Tor, or Wire).")
+    isp_lbl.setToolTip("Select how EXE-fingerprinter routes requests to Hubcap API (Auto Smart Fallback, Direct, DoH, Tor, or Wire).")
     isp_row.addWidget(isp_lbl)
     isp_row.addStretch()
 
@@ -542,7 +542,7 @@ def create_morrenus_tab(dialog) -> QWidget:
     key_layout.addLayout(morrenus_layout)
     hubcap_layout.addWidget(key_card)
 
-    # 2. Hubcap Gateway & Health Check Card (moved from ASSella tab)
+    # 2. Hubcap Gateway & Health Check Card (moved from EXE-fingerprinter tab)
     gateway_card, _ = create_isp_gateway_card(dialog)
     hubcap_layout.addWidget(gateway_card)
 

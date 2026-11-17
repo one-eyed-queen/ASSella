@@ -852,12 +852,28 @@ class FetchManifestDialog(QDialog):
         worker.error.connect(self.on_task_error)
 
     def _search_and_filter_results(self, query: str) -> Dict[str, Any]:
-        """Worker: search Morrenus and apply fast local relevance filtering."""
-        results = morrenus_api.search_games(query)
-        if isinstance(results, dict) and "error" in results:
-            return results
+        """Worker: search every available source and apply local relevance filtering.
 
-        game_results = results.get("results", []) if isinstance(results, dict) else []
+        Sources: Steam Store (incl. direct AppID), SteamDB, the EXE-fingerprinter
+        API when signed in, and Hubcap. Results are merged by AppID and ranked so
+        an exact AppID or exact-name match is always first.
+        """
+        from core import unified_search
+
+        try:
+            combined = unified_search.search(query)
+        except Exception as exc:
+            logger.warning(f"[Search] Unified search failed, falling back to Hubcap: {exc}")
+            combined = []
+
+        if not combined:
+            results = morrenus_api.search_games(query)
+            if isinstance(results, dict) and "error" in results:
+                return results
+            game_results = results.get("results", []) if isinstance(results, dict) else []
+        else:
+            game_results = combined
+
         from utils.settings import get_settings
         filter_blacklist = get_settings().value("filter_search_blacklist", False, type=bool)
         return filter_and_rank_results(game_results, query, filter_blacklist=filter_blacklist)
@@ -1350,7 +1366,7 @@ class FetchManifestDialog(QDialog):
             self._end_selection()
             raise
         # Synchronous routes (native flow, backend dialog cancelled) are over
-        # here; the ASSella flow keeps the lock until it finishes.
+        # here; the EXE-fingerprinter flow keeps the lock until it finishes.
         if not getattr(self, "_async_pending", False) and self.isVisible() and self.result() == 0:
             self._end_selection()
 
@@ -1375,7 +1391,7 @@ class FetchManifestDialog(QDialog):
         )
 
         if not enable_at0m:
-            self._start_assella_flow(aid_str)
+            self._start_exe_fingerprinter_flow(aid_str)
             return
 
         at0m_action = self.settings.value(
@@ -1387,14 +1403,14 @@ class FetchManifestDialog(QDialog):
         if at0m_action == "native":
             self._start_native_steam_flow(aid_str, name)
             return
-        elif at0m_action == "assella":
-            self._start_assella_flow(aid_str)
+        elif at0m_action == "exe_fingerprinter":
+            self._start_exe_fingerprinter_flow(aid_str)
             return
         else:  # "ask"
             from ui.dialogs.download_backend_dialog import (
                 DownloadBackendDialog,
                 BACKEND_CANCEL,
-                BACKEND_ASSELLA,
+                BACKEND_EXE_FINGERPRINTER,
                 BACKEND_NATIVE_STEAM,
             )
             dlg = DownloadBackendDialog(
@@ -1405,8 +1421,8 @@ class FetchManifestDialog(QDialog):
             )
             dlg.exec()
             choice = dlg.get_choice()
-            if choice == BACKEND_ASSELLA:
-                self._start_assella_flow(aid_str)
+            if choice == BACKEND_EXE_FINGERPRINTER:
+                self._start_exe_fingerprinter_flow(aid_str)
             elif choice == BACKEND_NATIVE_STEAM:
                 self._start_native_steam_flow(aid_str, name)
             else:
@@ -1427,7 +1443,7 @@ class FetchManifestDialog(QDialog):
             from ui.dialogs.platform_mismatch_dialog import (
                 PlatformMismatchDialog,
                 ACTION_PROCEED,
-                ACTION_ASSELLA_DOWNLOAD,
+                ACTION_EXE_FINGERPRINTER_DOWNLOAD,
                 ACTION_CANCEL,
             )
             is_mismatch, mismatch_details = check_native_steam_platform_mismatch(
@@ -1446,8 +1462,8 @@ class FetchManifestDialog(QDialog):
                 m_act = m_dlg.get_action()
                 if m_act == ACTION_PROCEED:
                     self._show_loading_overlay(f"Preparing Steam handoff for {name}...")
-                elif m_act == ACTION_ASSELLA_DOWNLOAD:
-                    self._start_assella_flow(aid_str)
+                elif m_act == ACTION_EXE_FINGERPRINTER_DOWNLOAD:
+                    self._start_exe_fingerprinter_flow(aid_str)
                     return
                 else:  # ACTION_CANCEL
                     self._dismiss_loading_overlay()
@@ -1596,7 +1612,7 @@ class FetchManifestDialog(QDialog):
                 self,
                 "No Steam Library Found",
                 "Steam has not initialized any library folders yet.\n\n"
-                "Please install at least one free game using the Steam client to generate your library folders, then restart ASSella to continue."
+                "Please install at least one free game using the Steam client to generate your library folders, then restart EXE-fingerprinter to continue."
             )
             self.status_label.setText("No Steam library found.")
             return
@@ -1641,8 +1657,8 @@ class FetchManifestDialog(QDialog):
                 platform_checked=True,
             )
 
-    def _start_assella_flow(self, app_id: str):
-        """Standard ASSella downloader flow: branch selection -> manifest fetch -> depot selection."""
+    def _start_exe_fingerprinter_flow(self, app_id: str):
+        """Standard EXE-fingerprinter downloader flow: branch selection -> manifest fetch -> depot selection."""
         aid_str = str(app_id).strip()
         name = getattr(self, "_selected_game_name", "") or f"App {aid_str}"
         self._async_pending = True
@@ -1669,7 +1685,7 @@ class FetchManifestDialog(QDialog):
                 self._cached_app_ids.add(m.group(1))
         
         branch = getattr(self, "_current_selected_branch", "public")
-        metadata = {"branch": branch, "download_backend": "assella"}
+        metadata = {"branch": branch, "download_backend": "exe_fingerprinter"}
         
         self._update_loading_overlay("Processing manifests...")
         self._toggle_inputs(False)
@@ -2085,7 +2101,7 @@ class FetchManifestDialog(QDialog):
                     self,
                     "No Steam Library Found",
                     "Steam has not initialized any library folders yet.\n\n"
-                    "Please install at least one free game using the Steam client to generate your library folders, then restart ASSella to continue."
+                    "Please install at least one free game using the Steam client to generate your library folders, then restart EXE-fingerprinter to continue."
                 )
                 return
         else:

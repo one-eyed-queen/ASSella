@@ -1,4 +1,4 @@
-# Ruff configuration for ASSella.
+# Ruff configuration for EXE-fingerprinter.
 #
 # target-version matches the Python used in CI (.github/workflows/ci.yml) and
 # the AppImage runtime. Keeping it in one place avoids ruff flagging valid

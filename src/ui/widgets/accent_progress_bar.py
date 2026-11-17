@@ -1,5 +1,5 @@
 """
-accent_progress_bar.py - Drop-in animated QProgressBar for ASSella (PyQt6).
+accent_progress_bar.py - Drop-in animated QProgressBar for EXE-fingerprinter (PyQt6).
 
 Replace `QProgressBar` with `AccentProgressBar` and existing code keeps working
 (setRange / setValue / setFormat / valueChanged / reset all behave as before).

@@ -484,8 +484,8 @@ def render_svg_pixmap(
         return QPixmap()
 
 
-def load_assella_app_icon():
-    """Load the ASSella window/application QIcon, preferring icon.svg with ICO/PNG fallbacks."""
+def load_exe_fingerprinter_app_icon():
+    """Load the EXE-fingerprinter window/application QIcon, preferring icon.svg with ICO/PNG fallbacks."""
     from PyQt6.QtGui import QIcon
     from utils.paths import Paths
 

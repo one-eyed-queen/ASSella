@@ -18,9 +18,9 @@ Fixes # <!-- Issue number, if applicable (e.g. Fixes #123) -->
 - [ ] ♻️ Code refactoring / Cleanup
 - [ ] 📝 Documentation update
 
-## ASSella Architectural & Invariant Checklist
+## EXE-fingerprinter Architectural & Invariant Checklist
 
-Please verify that your changes adhere to ASSella's core development invariants:
+Please verify that your changes adhere to EXE-fingerprinter's core development invariants:
 
 - [ ] **No Hardcoded Home Paths**: All path operations use `os.path.expanduser("~")` or `Path.home()`. Never hardcodes `/home/deck/` or `/home/<user>/`.
 - [ ] **Strict No-ACF Invariant**: In ACF-Independent mode, manifest creation is delegated to Steam via SLSsteam (`install|<appid>|<lib_idx>`). The code never writes or generates `.acf` files.

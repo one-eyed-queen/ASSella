@@ -18,7 +18,7 @@ import types
 from pathlib import Path
 
 # Redirect QSettings before Qt is imported so the test cannot touch real config.
-_TMP = tempfile.mkdtemp(prefix="assella-dlgtest-")
+_TMP = tempfile.mkdtemp(prefix="exe_fingerprinter-dlgtest-")
 os.environ["XDG_CONFIG_HOME"] = _TMP
 os.environ["XDG_DATA_HOME"] = _TMP
 os.environ["XDG_CACHE_HOME"] = _TMP
@@ -247,7 +247,7 @@ def main() -> int:
     dlg4 = DepotSelectionDialog(
         "500", "With Storage", make_depots(3),
         show_storage=True, is_single_depot=False,
-        library_path="/tmp/assella-test-library",
+        library_path="/tmp/exe_fingerprinter-test-library",
         branch="public", branches={"public": {}},
     )
     check(isinstance(dlg4._storage_buttons, dict), "storage button map built")
@@ -256,7 +256,7 @@ def main() -> int:
           f"the stubbed library is listed ({dlg4._storage_paths})")
     check(dlg4._more_storage_combo is None or dlg4._more_storage_combo.count() >= 1,
           "More Drives combo either absent or populated")
-    check(dlg4.preferred_library_path == "/tmp/assella-test-library",
+    check(dlg4.preferred_library_path == "/tmp/exe_fingerprinter-test-library",
           "preferred library path stored")
     check(isinstance(dlg4.get_selected_storage(), (str, type(None))),
           "get_selected_storage returns a path or None")

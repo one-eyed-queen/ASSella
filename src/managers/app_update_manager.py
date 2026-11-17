@@ -66,7 +66,7 @@ def _is_qt_alive(obj) -> bool:
 
 def _resolve_appimage_path() -> str:
     """Resolve the installed AppImage target path, following any symlink."""
-    default_appimage = os.path.expanduser("~/.local/share/ACCELA/ASSella.AppImage")
+    default_appimage = os.path.expanduser("~/.local/share/ACCELA/ExeFingerprinter.AppImage")
     appimage_path = os.environ.get("APPIMAGE", "")
     # AppRun/run.sh export APPIMAGE=1; ignore non-path sentinel values.
     if appimage_path and appimage_path != "1" and os.path.exists(appimage_path):
@@ -107,7 +107,7 @@ def _cleanup_scratch_files(
     keep: Optional[Path] = None,
 ) -> None:
     """Remove temporary delta and download scratch files (including .part)."""
-    prefixes = {base_name, "ASSella.AppImage"}
+    prefixes = {base_name, "ExeFingerprinter.AppImage"}
     suffixes = (
         ".part",
         ".autoupdate",
@@ -438,7 +438,7 @@ def _extract_release_assets(release_data: Dict[str, Any]) -> Tuple[str, Optional
         if not name or not url:
             continue
         low = name.lower()
-        if low == "assella.appimage.zsync" or (low.endswith(".appimage.zsync") and not zsync_url):
+        if low == "exe_fingerprinter.appimage.zsync" or (low.endswith(".appimage.zsync") and not zsync_url):
             zsync_url = url
             continue
         if low.endswith(".zsync") or low.endswith(".sha256"):
@@ -450,7 +450,7 @@ def _extract_release_assets(release_data: Dict[str, Any]) -> Tuple[str, Optional
                 if raw_digest.startswith("sha256:"):
                     raw_sha = raw_digest[len("sha256:"):].strip()
             sha = raw_sha if re.fullmatch(r"[0-9a-f]{64}", raw_sha) else None
-            if name == "ASSella.AppImage":
+            if name == "ExeFingerprinter.AppImage":
                 download_url = url
                 appimage_sha = sha
                 continue
@@ -473,7 +473,7 @@ def _resolve_sha256_sidecar(release_data: Dict[str, Any], download_url: str) -> 
     if not download_url:
         return None, False
     dl_basename = download_url.rstrip("/").rsplit("/", 1)[-1].lower()
-    preferred = f"{dl_basename}.sha256" if dl_basename else "assella.appimage.sha256"
+    preferred = f"{dl_basename}.sha256" if dl_basename else "exe_fingerprinter.appimage.sha256"
     fallback_sha_url: Optional[str] = None
     for asset in release_data.get("assets", []):
         if not isinstance(asset, dict):
@@ -484,7 +484,7 @@ def _resolve_sha256_sidecar(release_data: Dict[str, Any], download_url: str) -> 
             continue
         if name == preferred:
             return url, True
-        if name == "assella.appimage.sha256" and fallback_sha_url is None:
+        if name == "exe_fingerprinter.appimage.sha256" and fallback_sha_url is None:
             fallback_sha_url = url
     if fallback_sha_url:
         return fallback_sha_url, True
@@ -499,7 +499,7 @@ def _fetch_github_release_data(tag: str, channel: Optional[str] = None) -> Dict[
     if norm_channel in ("main", "master"):
         norm_channel = "stable"
 
-    headers = {"User-Agent": "ASSella-Updater", "Accept": "application/vnd.github+json"}
+    headers = {"User-Agent": "EXE-fingerprinter-Updater", "Accept": "application/vnd.github+json"}
     if not tag or tag == "latest":
         api_url = "https://api.github.com/repos/niwia/ASSella/releases?per_page=100"
         req = urllib.request.Request(api_url, headers=headers)
@@ -576,7 +576,7 @@ def _fetch_r2_release_data(
     manifest_url = get_r2_channel_manifest_url(norm_channel)
     req = urllib.request.Request(
         manifest_url,
-        headers={"User-Agent": "ASSella-Updater", "Accept": "application/json"},
+        headers={"User-Agent": "EXE-fingerprinter-Updater", "Accept": "application/json"},
     )
     with urllib.request.urlopen(req, timeout=15) as resp:
         data = json.loads(resp.read().decode("utf-8"))
@@ -631,11 +631,11 @@ def _verify_sha256_file(
 ) -> None:
     """Verify ``file_path`` against manifest SHA-256 or a remote ``.sha256`` sidecar."""
     expected = (expected_hex or "").strip().lower() or None
-    strict = bool(require_checksum or (os.environ.get("ASSELLA_REQUIRE_SHA256") == "1"))
+    strict = bool(require_checksum or (os.environ.get("EXE_FINGERPRINTER_REQUIRE_SHA256") == "1"))
 
     if not expected and sidecar_url:
         try:
-            sha_req = urllib.request.Request(sidecar_url, headers={"User-Agent": "ASSella-Updater"})
+            sha_req = urllib.request.Request(sidecar_url, headers={"User-Agent": "EXE-fingerprinter-Updater"})
             with urllib.request.urlopen(sha_req, timeout=30) as sha_resp:
                 published = sha_resp.read().decode("utf-8", "replace")
             match = re.search(r"(?<![a-fA-F0-9])[a-fA-F0-9]{64}(?![a-fA-F0-9])", published)
@@ -728,7 +728,7 @@ class AppUpdateManager(QObject):
                 self._clear_active_state()
                 ThemedMessageBox.information(
                     self._parent, "Self-Update",
-                    "Could not locate the installed ASSella.AppImage to update."
+                    "Could not locate the installed ExeFingerprinter.AppImage to update."
                 )
                 return
 
@@ -784,7 +784,7 @@ class AppUpdateManager(QObject):
                 reply = ThemedMessageBox.question(
                     self._parent,
                     dlg_title,
-                    f"Update ASSella from v{local_clean} ({local_channel}) to {target_label} ({channel})?\n"
+                    f"Update EXE-fingerprinter from v{local_clean} ({local_channel}) to {target_label} ({channel})?\n"
                     f"{downgrade_note}\n"
                     "Would you like to download and install it now?\n"
                     "The app will need to be restarted after the update.",
@@ -872,7 +872,7 @@ class AppUpdateManager(QObject):
                             updater,
                             "-O",
                             "-u",
-                            f"gh-releases-zsync|niwia|ASSella|{target_tag}|ASSella.AppImage.zsync",
+                            f"gh-releases-zsync|niwia|EXE-fingerprinter|{target_tag}|ExeFingerprinter.AppImage.zsync",
                             str(target),
                         ]
                         rc, was_cancelled = _run_delta_subprocess(
@@ -989,7 +989,7 @@ class AppUpdateManager(QObject):
             _invoke_progress("setLabelText", Q_ARG(str, dl_label))
             _invoke_progress("setValue", Q_ARG(int, 10))
 
-            req2 = urllib.request.Request(download_url, headers={"User-Agent": "ASSella-Updater"})
+            req2 = urllib.request.Request(download_url, headers={"User-Agent": "EXE-fingerprinter-Updater"})
             with urllib.request.urlopen(req2, timeout=60) as response:
                 total = int(response.headers.get("Content-Length", 0))
                 downloaded = 0

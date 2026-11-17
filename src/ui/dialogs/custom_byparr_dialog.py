@@ -1,7 +1,7 @@
 """
 custom_byparr_dialog.py - Configuration dialog for custom Cloudflare Turnstile bypasser.
 
-Allows users to point ASSella to their own self-hosted or remote Byparr / FlareSolverr
+Allows users to point EXE-fingerprinter to their own self-hosted or remote Byparr / FlareSolverr
 instance, optionally configure authorization tokens, and verify connectivity against SteamDB.
 """
 
@@ -303,7 +303,7 @@ class CustomByparrDialog(QDialog):
         if is_custom:
             self.settings.setValue("byparr_enabled", False)
             ByparrManager.stop()
-            logger.info("[ByparrConfig] Custom service active - local ASSella Byparr disabled.")
+            logger.info("[ByparrConfig] Custom service active - local EXE-fingerprinter Byparr disabled.")
 
         logger.info(f"[ByparrConfig] Saved byparr_url={url}, auth_set={bool(auth)}")
         self.accept()

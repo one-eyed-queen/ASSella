@@ -75,10 +75,10 @@ class FakeS3Client:
 
 def _write_fake_release_dir(directory: Path, tag: str) -> None:
     files = {
-        "ASSella.AppImage": b"fake-appimage-binary-bytes",
-        "ASSella.AppImage.zsync": b"zsync-control-file",
-        f"ASSella-{tag}-linux-source.tar.gz": b"fake-tar-gz",
-        f"ASSella-{tag}-linux-source.zip": b"fake-zip",
+        "ExeFingerprinter.AppImage": b"fake-appimage-binary-bytes",
+        "ExeFingerprinter.AppImage.zsync": b"zsync-control-file",
+        f"EXE-fingerprinter-{tag}-linux-source.tar.gz": b"fake-tar-gz",
+        f"EXE-fingerprinter-{tag}-linux-source.zip": b"fake-zip",
     }
     for name, data in files.items():
         (directory / name).write_bytes(data)
@@ -90,7 +90,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
     def setUp(self) -> None:
         self.settings = m2r.R2Settings(
             endpoint="https://acc.r2.cloudflarestorage.com",
-            bucket="assella-releases",
+            bucket="exe_fingerprinter-releases",
             access_key_id="ak",
             secret_access_key="sk",
             public_url="https://pub-test.r2.dev",
@@ -134,7 +134,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                     settings=self.settings,
                     channel="stable",
                     tag="v3.1.0-beta.1",
-                    release_name="ASSella beta",
+                    release_name="EXE-fingerprinter beta",
                     published_at="2026-11-11T00:00:00Z",
                     prerelease=False,
                     assets=assets,
@@ -147,28 +147,28 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 "prerelease": True,
                 "draft": False,
                 "published_at": "2026-11-11T10:00:00Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
             {
                 "tag_name": "v3.1.1",
                 "prerelease": False,
                 "draft": True,
                 "published_at": "2026-11-11T09:00:00Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
             {
                 "tag_name": "v3.0.5",
                 "prerelease": False,
                 "draft": False,
                 "published_at": "2026-10-28T09:00:00Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
             {
                 "tag_name": "v3.1.0",
                 "prerelease": False,
                 "draft": False,
                 "published_at": "2026-11-09T22:45:12Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
         ]
         selected = m2r.select_github_release(releases, channel="stable")
@@ -178,16 +178,16 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             _write_fake_release_dir(tmp_path, "v3.1.0")
-            (tmp_path / "ASSella.AppImage.sha256").write_text("0" * 64 + "  ASSella.AppImage\n", encoding="utf-8")
+            (tmp_path / "ExeFingerprinter.AppImage.sha256").write_text("0" * 64 + "  ExeFingerprinter.AppImage\n", encoding="utf-8")
             with self.assertRaises(RuntimeError):
                 m2r.collect_local_assets(tmp_path, "v3.1.0")
 
     def test_upload_manifest_order_and_stale_pruning(self) -> None:
         s3 = FakeS3Client()
         # Seed older stable release and an unrelated manifest in R2.
-        s3.objects["releases/stable/v3.0.5/ASSella.AppImage"] = b"old-appimage"
-        s3.objects["releases/stable/v3.0.5/ASSella-v3.0.5-linux-source.tar.gz"] = b"old-tar"
-        s3.objects["releases/beta/v3.0.9-beta.1/ASSella.AppImage"] = b"other-channel-untouched"
+        s3.objects["releases/stable/v3.0.5/ExeFingerprinter.AppImage"] = b"old-appimage"
+        s3.objects["releases/stable/v3.0.5/EXE-fingerprinter-v3.0.5-linux-source.tar.gz"] = b"old-tar"
+        s3.objects["releases/beta/v3.0.9-beta.1/ExeFingerprinter.AppImage"] = b"other-channel-untouched"
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -199,7 +199,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 settings=self.settings,
                 channel="stable",
                 tag="v3.1.0",
-                release_name="ASSella v3.1.0",
+                release_name="EXE-fingerprinter v3.1.0",
                 published_at="2026-11-09T22:45:12Z",
                 prerelease=False,
                 assets=assets,
@@ -218,17 +218,17 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
             self.assertTrue(all(i > manifest_idx for i in delete_indices))
 
             # Old stable tag deleted, new stable tag intact, other channels untouched.
-            self.assertNotIn("releases/stable/v3.0.5/ASSella.AppImage", s3.objects)
-            self.assertIn("releases/stable/v3.1.0/ASSella.AppImage", s3.objects)
-            self.assertIn("releases/stable/v3.1.0/ASSella-v3.1.0-linux-source.zip", s3.objects)
-            self.assertIn("releases/beta/v3.0.9-beta.1/ASSella.AppImage", s3.objects)
+            self.assertNotIn("releases/stable/v3.0.5/ExeFingerprinter.AppImage", s3.objects)
+            self.assertIn("releases/stable/v3.1.0/ExeFingerprinter.AppImage", s3.objects)
+            self.assertIn("releases/stable/v3.1.0/EXE-fingerprinter-v3.1.0-linux-source.zip", s3.objects)
+            self.assertIn("releases/beta/v3.0.9-beta.1/ExeFingerprinter.AppImage", s3.objects)
 
             manifest = json.loads(s3.objects["releases/channels/stable.json"].decode("utf-8"))
             self.assertEqual(manifest["tag_name"], "v3.1.0")
             self.assertEqual(len(manifest["assets"]), 8)
             self.assertEqual(
                 manifest["assets"][0]["browser_download_url"],
-                "https://pub-test.r2.dev/releases/stable/v3.1.0/ASSella.AppImage",
+                "https://pub-test.r2.dev/releases/stable/v3.1.0/ExecutableDownloader.AppImage",
             )
 
             # Running again with --skip-if-unchanged should no-op.
@@ -237,7 +237,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 settings=self.settings,
                 channel="stable",
                 tag="v3.1.0",
-                release_name="ASSella v3.1.0",
+                release_name="EXE-fingerprinter v3.1.0",
                 published_at="2026-11-09T22:45:12Z",
                 prerelease=False,
                 assets=assets,
@@ -303,7 +303,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 "draft": False,
                 "target_commitish": "beta",
                 "published_at": "2026-10-22T15:04:23Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
             {
                 "tag_name": "v2.9.9beta",
@@ -311,7 +311,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 "draft": False,
                 "target_commitish": "beta",
                 "published_at": "2026-11-11T15:19:00Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
             {
                 "tag_name": "v3.1.0",
@@ -319,7 +319,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 "draft": False,
                 "target_commitish": "main",
                 "published_at": "2026-11-09T22:45:12Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
         ]
         self.assertEqual(m2r.select_github_release(releases, channel="stable")["tag_name"], "v3.1.0")
@@ -327,7 +327,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
 
     def test_beta_channel_mirror_generates_beta_manifest(self) -> None:
         s3 = FakeS3Client()
-        s3.objects["releases/stable/v3.1.0/ASSella.AppImage"] = b"stable-untouched"
+        s3.objects["releases/stable/v3.1.0/ExeFingerprinter.AppImage"] = b"stable-untouched"
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             _write_fake_release_dir(tmp_path, "v2.9.9beta")
@@ -337,7 +337,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 settings=self.settings,
                 channel="beta",
                 tag="v2.9.9beta",
-                release_name="ASSella v2.9.9beta",
+                release_name="EXE-fingerprinter v2.9.9beta",
                 published_at="2026-11-11T15:00:00Z",
                 prerelease=True,
                 assets=assets,
@@ -347,8 +347,8 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
             )
             self.assertEqual(res["status"], "updated")
             self.assertIn("releases/channels/beta.json", s3.objects)
-            self.assertIn("releases/beta/v2.9.9beta/ASSella.AppImage", s3.objects)
-            self.assertIn("releases/stable/v3.1.0/ASSella.AppImage", s3.objects)
+            self.assertIn("releases/beta/v2.9.9beta/ExeFingerprinter.AppImage", s3.objects)
+            self.assertIn("releases/stable/v3.1.0/ExeFingerprinter.AppImage", s3.objects)
             manifest = json.loads(s3.objects["releases/channels/beta.json"].decode("utf-8"))
             self.assertEqual(manifest["channel"], "beta")
             self.assertTrue(manifest["prerelease"])
@@ -363,7 +363,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 "draft": False,
                 "target_commitish": "main",
                 "published_at": "2026-11-10T10:00:00Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
             {
                 "tag_name": "v3.9.9",
@@ -371,7 +371,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 "draft": False,
                 "target_commitish": "main",
                 "published_at": "2026-11-12T10:00:00Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
             {
                 "tag_name": "v3.0.5-beta.1",
@@ -379,7 +379,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 "draft": False,
                 "target_commitish": "beta",
                 "published_at": "2026-11-10T10:00:00Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
             {
                 "tag_name": "v2.9.9beta",
@@ -387,7 +387,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 "draft": False,
                 "target_commitish": "beta",
                 "published_at": "2026-11-11T15:00:00Z",
-                "assets": [{"name": "ASSella.AppImage"}],
+                "assets": [{"name": "ExeFingerprinter.AppImage"}],
             },
         ]
         self.assertEqual(m2r.select_github_release(releases, channel="stable")["tag_name"], "v4.0.0")
@@ -403,7 +403,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 settings=self.settings,
                 channel="stable",
                 tag="v4.0.0",
-                release_name="ASSella v4.0.0",
+                release_name="EXE-fingerprinter v4.0.0",
                 published_at="2026-11-10T10:00:00Z",
                 prerelease=False,
                 assets=m2r.collect_local_assets(tmp_path, "v4.0.0"),
@@ -418,7 +418,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                     settings=self.settings,
                     channel="stable",
                     tag="v3.9.9",
-                    release_name="ASSella v3.9.9",
+                    release_name="EXE-fingerprinter v3.9.9",
                     published_at="2026-11-12T10:00:00Z",
                     prerelease=False,
                     assets=m2r.collect_local_assets(tmp_path, "v3.9.9"),
@@ -432,7 +432,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 settings=self.settings,
                 channel="stable",
                 tag="v3.9.9",
-                release_name="ASSella v3.9.9",
+                release_name="EXE-fingerprinter v3.9.9",
                 published_at="2026-11-12T10:00:00Z",
                 prerelease=False,
                 assets=m2r.collect_local_assets(tmp_path, "v3.9.9"),
@@ -449,7 +449,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 settings=self.settings,
                 channel="beta",
                 tag="v3.0.5-beta.1",
-                release_name="ASSella v3.0.5-beta.1",
+                release_name="EXE-fingerprinter v3.0.5-beta.1",
                 published_at="2026-11-10T10:00:00Z",
                 prerelease=True,
                 assets=m2r.collect_local_assets(tmp_path, "v3.0.5-beta.1"),
@@ -462,7 +462,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 settings=self.settings,
                 channel="beta",
                 tag="v2.9.9beta",
-                release_name="ASSella v2.9.9beta",
+                release_name="EXE-fingerprinter v2.9.9beta",
                 published_at="2026-11-11T15:00:00Z",
                 prerelease=True,
                 assets=m2r.collect_local_assets(tmp_path, "v2.9.9beta"),
@@ -478,7 +478,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                     settings=self.settings,
                     channel="beta",
                     tag="v2.7.0beta",
-                    release_name="ASSella v2.7.0beta",
+                    release_name="EXE-fingerprinter v2.7.0beta",
                     published_at="2026-11-09T10:00:00Z",
                     prerelease=True,
                     assets=m2r.collect_local_assets(tmp_path, "v2.7.0beta"),
@@ -504,7 +504,7 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                     settings=self.settings,
                     channel="stable",
                     tag=tag,
-                    release_name=f"ASSella {tag}",
+                    release_name=f"EXE-fingerprinter {tag}",
                     published_at=ts,
                     prerelease=False,
                     assets=m2r.collect_local_assets(tmp_path, tag),
@@ -513,9 +513,9 @@ class MirrorReleaseToR2Tests(unittest.TestCase):
                 )
             manifest = json.loads(s3.objects["releases/channels/stable.json"].decode("utf-8"))
             self.assertEqual(manifest["retained_tags"], ["v3.1.1"])
-            self.assertIn("releases/stable/v3.1.2/ASSella.AppImage", s3.objects)
-            self.assertIn("releases/stable/v3.1.1/ASSella.AppImage", s3.objects)
-            self.assertNotIn("releases/stable/v3.1.0/ASSella.AppImage", s3.objects)
+            self.assertIn("releases/stable/v3.1.2/ExeFingerprinter.AppImage", s3.objects)
+            self.assertIn("releases/stable/v3.1.1/ExeFingerprinter.AppImage", s3.objects)
+            self.assertNotIn("releases/stable/v3.1.0/ExeFingerprinter.AppImage", s3.objects)
 
 
 if __name__ == "__main__":

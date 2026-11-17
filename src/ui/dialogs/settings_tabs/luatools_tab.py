@@ -163,7 +163,7 @@ def create_luatools_tab(dialog) -> QWidget:
     login_lay.addWidget(browser_title)
 
     browser_desc = QLabel(
-        "Opens your default browser to authorize via Discord. ASSella captures the login callback automatically."
+        "Opens your default browser to authorize via Discord. EXE-fingerprinter captures the login callback automatically."
     )
     browser_desc.setWordWrap(True)
     browser_desc.setStyleSheet("color: rgba(255, 255, 255, 0.6); font-size: 8.5pt;")

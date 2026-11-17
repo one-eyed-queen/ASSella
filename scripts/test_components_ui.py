@@ -115,7 +115,7 @@ def main() -> int:
 
     # Build our own archives so this test never depends on the gitignored
     # cloud/*.tar.gz build artefacts being present.
-    archive_dir = Path(tempfile.mkdtemp(prefix="assella_component_fixtures_"))
+    archive_dir = Path(tempfile.mkdtemp(prefix="exe_fingerprinter_component_fixtures_"))
     manifest = _build_fixtures(archive_dir)
     print(f"=== fixtures built in {archive_dir} ===")
     for key, entry in manifest["components"].items():
@@ -129,7 +129,7 @@ def main() -> int:
     # developer's real Goldberg/Steamless/SLScheevo from the working tree.
     # Redirect to a temp dir so the test cannot touch the repo.
     # ---------------------------------------------------------------------
-    sandbox = Path(tempfile.mkdtemp(prefix="assella_component_test_"))
+    sandbox = Path(tempfile.mkdtemp(prefix="exe_fingerprinter_component_test_"))
     real_deps = Paths.DEPS
     Paths.DEPS = sandbox / "deps"
     (sandbox / "deps").mkdir(parents=True, exist_ok=True)

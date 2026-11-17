@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test the gate that fails on dialog windows without ASSella's frame.
+"""Test the gate that fails on dialog windows without EXE-fingerprinter's frame.
 
 The detector is the whole gate, so it is driven here against throwaway source
 trees: a QDialog that never mentions the frame, one that sets

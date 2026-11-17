@@ -208,7 +208,7 @@ class At0mUpdateChecker(QObject):
                         }
 
         # 5. Smart Config Discovery: Games in AdditionalApps that have matching decryption keys
-        # (discovers games added outside ASSella, e.g. manual edits or external tools)
+        # (discovers games added outside EXE-fingerprinter, e.g. manual edits or external tools)
         try:
             cfg_path = get_user_config_path()
             if cfg_path and cfg_path.exists():
@@ -843,7 +843,7 @@ class At0mUpdateChecker(QObject):
         Syncs the decryption keys Hubcap holds for this game into SLSsteam.
 
         The user does not download anything here: Steam downloads the game,
-        ASSella only makes sure the keys SLSsteam needs are in place.
+        EXE-fingerprinter only makes sure the keys SLSsteam needs are in place.
 
         1. Downloads the fresh manifest ZIP and Lua from Hubcap.
         2. Extracts the decryption keys into keys.db.

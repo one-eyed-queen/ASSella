@@ -12,7 +12,7 @@ Verification test suite for:
      - Invariant: Base AppID NEVER in AdditionalApps or AdditionalDepots
   2. DLC Mode Memory Detection:
      - Detects AT0-M mode from plugin_library or config.yaml (DlcData, AdditionalApps)
-     - Detects ASSella mode from .depot file or dlc_only_mode
+     - Detects EXE-fingerprinter mode from .depot file or dlc_only_mode
      - Returns None for clean/unconfigured games
   3. Byparr Configuration & Custom Service:
      - ByparrManager.is_custom_service()
@@ -249,7 +249,7 @@ class TestAtomDlcAndByparr(unittest.TestCase):
             print("  [PASS] AtomDlcSelectionDialog structure, owned DLC override warning, and cascade verified")
 
     def test_04_dlc_mode_memory_detection(self):
-        """Verify _detect_configured_dlc_mode detects AT0-M vs ASSella vs unconfigured."""
+        """Verify _detect_configured_dlc_mode detects AT0-M vs EXE-fingerprinter vs unconfigured."""
         from ui.dialogs.library.actions import LibraryActionsMixin
 
         actions_obj = LibraryActionsMixin()
@@ -287,7 +287,7 @@ class TestAtomDlcAndByparr(unittest.TestCase):
                  patch("utils.yaml_config_manager.get_user_config_path", return_value=None), \
                  patch("utils.helpers.get_base_path", return_value=Path(tmp_dir)):
                 mode = actions_obj._detect_configured_dlc_mode(accela_appid)
-                self.assertEqual(mode, "assella")
+                self.assertEqual(mode, "exe_fingerprinter")
 
         # 4. ACCELA game with is_dlc_only_mode setting
         setting_appid = "6666666"
@@ -295,14 +295,14 @@ class TestAtomDlcAndByparr(unittest.TestCase):
              patch("utils.yaml_config_manager.get_user_config_path", return_value=None), \
              patch("utils.dlc_helpers.is_dlc_only_mode", return_value=True):
             mode = actions_obj._detect_configured_dlc_mode(setting_appid)
-            self.assertEqual(mode, "assella")
+            self.assertEqual(mode, "exe_fingerprinter")
 
-        # 5. ASSella config-only game. That path writes DlcData, which AT0-M
+        # 5. EXE-fingerprinter config-only game. That path writes DlcData, which AT0-M
         #    also writes, so the mode recorded at configure time must decide it.
-        class _RecordedAssellaSettings:
+        class _RecordedEXE_FINGERPRINTERSettings:
             def value(self, key, default=None, type=None):
                 if key.startswith("dlc_mode_source/"):
-                    return "assella"
+                    return "exe_fingerprinter"
                 return default
 
         config_only_appid = "5555555"
@@ -313,12 +313,12 @@ class TestAtomDlcAndByparr(unittest.TestCase):
 
             with patch("utils.plugin_games.load_plugin_library", return_value={}), \
                  patch("utils.helpers.get_base_path", return_value=Path(tmp_cfg_dir)), \
-                 patch("utils.settings.get_settings", return_value=_RecordedAssellaSettings()), \
+                 patch("utils.settings.get_settings", return_value=_RecordedEXE_FINGERPRINTERSettings()), \
                  patch("utils.yaml_config_manager.get_user_config_path", return_value=cfg), \
                  patch("utils.yaml_config_manager.get_dlc_data", return_value={config_only_appid: {"1234": "DLC"}}), \
                  patch("utils.dlc_helpers.is_dlc_only_mode", return_value=True):
                 mode = actions_obj._detect_configured_dlc_mode(config_only_appid)
-                self.assertEqual(mode, "assella", "recorded ASSella mode must beat DlcData")
+                self.assertEqual(mode, "exe_fingerprinter", "recorded EXE-fingerprinter mode must beat DlcData")
 
             # 6. Legacy AT0-M DlcData with no recorded mode stays native.
             with patch("utils.plugin_games.load_plugin_library", return_value={}), \
@@ -328,7 +328,7 @@ class TestAtomDlcAndByparr(unittest.TestCase):
                  patch("utils.yaml_config_manager.get_dlc_data", return_value={legacy_atom_appid: {"1234": "DLC"}}), \
                  patch("utils.dlc_helpers.is_dlc_only_mode", return_value=False):
                 mode = actions_obj._detect_configured_dlc_mode(legacy_atom_appid)
-                self.assertEqual(mode, "native", "DlcData without a recorded ASSella mode stays AT0-M")
+                self.assertEqual(mode, "native", "DlcData without a recorded EXE-fingerprinter mode stays AT0-M")
 
             # 7. Recorded AT0-M mode returns native even when is_dlc_only_mode is True.
             class _RecordedNativeSettings:
@@ -436,7 +436,7 @@ Lobster = {
         self.assertTrue(len(desc_labels) > 0, "Expected description text to mention the Windows-only package")
         desc_text = desc_labels[0].text()
         self.assertIn("select a compatibility tool (Proton)", desc_text)
-        self.assertIn("ASSella does not change this for you.", desc_text)
+        self.assertIn("EXE-fingerprinter does not change this for you.", desc_text)
         self.assertNotIn("will attempt to download", desc_text)
         self.assertNotIn("Force Proton", desc_text)
 

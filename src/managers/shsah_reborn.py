@@ -1,5 +1,5 @@
 """
-SHSAH Reborn - Steam Achievement Manager for ASSella.
+SHSAH Reborn - Steam Achievement Manager for EXE-fingerprinter.
 Handles reading and writing Steam UserGameStats binary files and schemas
 across both Flatpak and Native Steam installations.
 """
@@ -86,7 +86,7 @@ class SHSAHRebornManager:
 
     def __init__(self, steam_path: Optional[Path] = None):
         self._custom_steam_path = steam_path
-        self._icon_cache_dir = Path.home() / ".cache" / "assella" / "achievements"
+        self._icon_cache_dir = Path.home() / ".cache" / "exe_fingerprinter" / "achievements"
         self._icon_cache_dir.mkdir(parents=True, exist_ok=True)
         self._download_lock = threading.Lock()
         self._active_downloads: set = set()

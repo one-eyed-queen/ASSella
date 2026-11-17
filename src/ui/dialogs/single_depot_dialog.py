@@ -380,7 +380,7 @@ class SingleDepotSelectionDialog(QDialog):
         # Checkbox with custom SVG checkmark
         from utils.color_utils import get_best_foreground_color
         tick_color = "black" if get_best_foreground_color(self.accent_color, "#000000", "#FFFFFF") == "#000000" else "white"
-        tick_svg_path = os.path.join(tempfile.gettempdir(), f"assella_tick_{tick_color}.svg")
+        tick_svg_path = os.path.join(tempfile.gettempdir(), f"exe_fingerprinter_tick_{tick_color}.svg")
         if not os.path.exists(tick_svg_path):
             try:
                 with open(tick_svg_path, "w", encoding="utf-8") as f:
@@ -478,6 +478,16 @@ class SingleDepotSelectionDialog(QDialog):
             }}
         """)
         file_sel_layout.addWidget(self.select_files_button, 1)
+
+        self.exe_fingerprinter_button = QPushButton("EXE-fingerprinter…")
+        self.exe_fingerprinter_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.exe_fingerprinter_button.setFixedHeight(30)
+        self.exe_fingerprinter_button.clicked.connect(self._on_exe_fingerprinter_clicked)
+        self.exe_fingerprinter_button.setToolTip(
+            "Scan this depot for Windows executables (.exe) and download only those"
+        )
+        self.exe_fingerprinter_button.setStyleSheet(self.select_files_button.styleSheet())
+        file_sel_layout.addWidget(self.exe_fingerprinter_button, 1)
 
         main_layout.addLayout(file_sel_layout)
 
@@ -779,6 +789,78 @@ class SingleDepotSelectionDialog(QDialog):
         runner = ManifestDumpRunner(self, dump)
         runner.finished.connect(lambda ok, message: self._on_dump_finished(dump, ok, message))
         runner.start()
+
+    def _on_exe_fingerprinter_clicked(self):
+        if not self.depot_checkbox.isChecked():
+            ThemedMessageBox.warning(self, "Warning", "Please check the depot first.")
+            return
+
+        from PyQt6.QtWidgets import QApplication
+        from ui.dialogs.exe_scan_runner import ExeScanThread
+        from ui.dialogs.themed_progress_dialog import ThemedProgressDialog
+
+        depot_id = str(self.single_depot_id)
+
+        progress = ThemedProgressDialog(
+            f"Scanning depot {depot_id} for executables…", "Cancel", 0, 1, self
+        )
+        progress.setWindowTitle("EXE-fingerprinter")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.show()
+        QApplication.processEvents()
+
+        thread = ExeScanThread(self.app_id, [depot_id], self)
+        progress.canceled.connect(thread.cancel)
+
+        def _on_progress(message, index):
+            progress.setValue(max(progress.progress_bar.value(), index))
+            progress.setLabelText(message)
+            QApplication.processEvents()
+
+        def _on_finished(entries, errors):
+            progress.close()
+
+            if not entries:
+                detail = "\n".join(errors) if errors else f"Depot {depot_id} contains no .exe files."
+                ThemedMessageBox.information(
+                    self,
+                    "EXE-fingerprinter",
+                    f"No executables were found.\n\n{detail}",
+                )
+                return
+
+            # Exactly one executable: nothing to choose, ship it automatically.
+            if len(entries) == 1:
+                only = entries[0]
+                self.selected_files = {only["depot_id"]: [only["path"]]}
+                self._exe_fingerprinter_mode = True
+                self.exe_fingerprinter_button.setText(
+                    f"EXE-fingerprinter… (1 .exe selected)"
+                )
+                ThemedMessageBox.information(
+                    self,
+                    "EXE-fingerprinter",
+                    f"Found exactly one executable:\n\n{only['path']}\n\n"
+                    f"Press OK at the bottom to download it.",
+                )
+                return
+
+            from ui.dialogs.executable_chooser import ExecutableChooserDialog
+
+            chooser = ExecutableChooserDialog(entries, app_id=self.app_id, parent=self)
+            if chooser.exec():
+                self.selected_files = chooser.selected_files_by_depot()
+                self._exe_fingerprinter_mode = True
+                count = sum(len(paths) for paths in self.selected_files.values())
+                self.exe_fingerprinter_button.setText(
+                    f"EXE-fingerprinter… ({count} .exe selected)"
+                )
+
+        thread.progress.connect(_on_progress)
+        thread.finished_scan.connect(_on_finished)
+        self._exe_scan_thread = thread
+        thread.start()
 
     def _on_dump_finished(self, dump, ok, message):
         """Open the file-selection tree over a listing that was written."""

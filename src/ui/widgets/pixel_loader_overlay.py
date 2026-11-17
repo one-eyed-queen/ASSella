@@ -1,5 +1,5 @@
 """
-pixel_loader_overlay.py - ASSella modern pixel-grid loading overlay for long-running tasks.
+pixel_loader_overlay.py - EXE-fingerprinter modern pixel-grid loading overlay for long-running tasks.
 Directly ports the React design from loading-state.json to PyQt6:
 - 3x3 pixel grid with animated chevron wavefront (Drive variant, 650ms cycle)
 - Shimmering/pulsing status text

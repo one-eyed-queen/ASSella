@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'ASSella',
+  title: 'EXE-fingerprinter',
   description: 'Fast, modern Steam game and DLC management for SteamOS and Linux.',
   base: '/',
   cleanUrls: true,
@@ -12,7 +12,7 @@ export default defineConfig({
   ],
   themeConfig: {
     logo: '/logo.png',
-    siteTitle: 'ASSella',
+    siteTitle: 'EXE-fingerprinter',
     nav: [
       { text: 'Installation Guide', link: '/install' },
       { text: 'ARM64 (Preview)', link: '/arm64' },
@@ -33,7 +33,7 @@ export default defineConfig({
     ],
     sidebar: [
       {
-        text: 'ASSella',
+        text: 'EXE-fingerprinter',
         items: [
           { text: 'Installation Guide', link: '/install' },
           {
@@ -63,7 +63,7 @@ export default defineConfig({
               { text: 'Launcher Bypass', link: '/guides/launcher-bypass' }
             ]
           },
-          { text: 'Why ASSella?', link: '/compare' }
+          { text: 'Why EXE-fingerprinter?', link: '/compare' }
         ]
       },
       {
@@ -98,7 +98,7 @@ export default defineConfig({
       provider: 'local'
     },
     footer: {
-      message: 'Assella is a personal passion project, built on top of the Lain project. It was developed over several months by a swarm of AI agents, and tested by a small group of human volunteers.',
+      message: 'EXE-fingerprinter is a personal passion project, built on top of the Lain project. It was developed over several months by a swarm of AI agents, and tested by a small group of human volunteers.',
       copyright: 'AI agents involved: Google Gemini (3.8, 3.5, 2.5) · Anthropic Claude (Sonnet 5.5, 4.6) · DeepSeek 4.1 · Kimi 2.5 · MiniMax M3.1 · GLM 5.3 · Codex GPT 6 Luna'
     }
   }

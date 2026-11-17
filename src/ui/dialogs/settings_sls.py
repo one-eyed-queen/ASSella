@@ -130,7 +130,7 @@ def is_headcrab_installed() -> bool:
 
 
 def run_headcrab_and_quit(dialog) -> bool:
-    """Run Headcrab curl installer in terminal and gracefully quit ASSella."""
+    """Run Headcrab curl installer in terminal and gracefully quit EXE-fingerprinter."""
     cmd = ["bash", "-c", "curl -fsSL headcrab.pages.dev | bash; echo; echo '--- Done. Press Enter to close ---'; read _"]
     launched = dialog._launch_terminal_command(cmd, os.path.expanduser("~"))
     if launched:
@@ -142,7 +142,7 @@ def run_headcrab_and_quit(dialog) -> bool:
 
 
 def run_headcrab(dialog, callback=None) -> None:
-    """Prompt and run Headcrab installation script inside a terminal, quitting ASSella upon launch."""
+    """Prompt and run Headcrab installation script inside a terminal, quitting EXE-fingerprinter upon launch."""
     already = is_headcrab_installed()
     verb = "re-run" if already else "install"
     reply = ThemedMessageBox.question(
@@ -150,7 +150,7 @@ def run_headcrab(dialog, callback=None) -> None:
         "Run Headcrab",
         f"This will {verb} Headcrab via:\n"
         "  curl -fsSL headcrab.pages.dev | bash\n\n"
-        "A terminal window will open and ASSella will close so Headcrab can safely update SLSsteam without file conflicts.\n\n"
+        "A terminal window will open and EXE-fingerprinter will close so Headcrab can safely update SLSsteam without file conflicts.\n\n"
         "Proceed?",
         ThemedMessageBox.StandardButton.Yes | ThemedMessageBox.StandardButton.No,
         ThemedMessageBox.StandardButton.Yes,
@@ -206,7 +206,7 @@ def create_sls_tab(dialog) -> QWidget:
         os_name = "Armada OS" if is_armada_os() else "ARM64 Linux"
         arm_badge = QLabel(
             f"ℹ️ <b>{os_name} (ARM64)</b>: SLSsteam is an x86_64 library injector and is not available "
-            "on ARM64. ASSella is running in <b>Standalone Mode</b> (Direct Depot Downloads, Local Manifest Management, "
+            "on ARM64. EXE-fingerprinter is running in <b>Standalone Mode</b> (Direct Depot Downloads, Local Manifest Management, "
             "and Non-Steam Game launching)."
         )
         arm_badge.setStyleSheet(

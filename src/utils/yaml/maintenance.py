@@ -214,7 +214,7 @@ def ensure_netsock_binary(log_cb=None) -> bool:
         logger.info(msg)
 
         url = "https://github.com/yesyes0649/steamnetsock-patch/releases/download/latest/fix.so"
-        req = urllib.request.Request(url, headers={"User-Agent": "ASSella/2.6.5"})
+        req = urllib.request.Request(url, headers={"User-Agent": "EXE-fingerprinter/2.6.5"})
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = resp.read()
 
@@ -334,7 +334,7 @@ def remove_launch_option(config_path: Path, app_id: str) -> bool:
     )
 
 
-BYPASS_MARK = "#assella-bypass"
+BYPASS_MARK = "#exe_fingerprinter-bypass"
 
 
 def _bash_dq(text: str) -> str:

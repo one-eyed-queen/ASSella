@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# install-armada.sh — Native ARM64 / Armada OS Installer for ASSella
+# install-armada.sh — Native ARM64 / Armada OS Installer for EXE-fingerprinter
 # ==============================================================================
-# Installs ASSella in user-space on ARM64 Linux distributions (Armada OS, etc.)
+# Installs EXE-fingerprinter in user-space on ARM64 Linux distributions (Armada OS, etc.)
 # without requiring root privileges or modifying immutable ostree/bootc rootfs.
 # ==============================================================================
 
@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${BOLD}${BLUE}=== ASSella ARM64 / Armada OS Installer ===${NC}"
+echo -e "${BOLD}${BLUE}=== EXE-fingerprinter ARM64 / Armada OS Installer ===${NC}"
 
 # 1. Architecture Check
 ARCH=$(uname -m)
@@ -49,7 +49,7 @@ fi
 echo -e "${GREEN}✓ Core tools (python3, curl, git) present.${NC}"
 
 # 3. User Directories Setup
-INSTALL_DIR="${HOME}/.local/share/ASSella"
+INSTALL_DIR="${HOME}/.local/share/EXE-fingerprinter"
 BIN_DIR="${HOME}/.local/bin"
 DOTNET_DIR="${HOME}/.dotnet"
 APP_DIR="${HOME}/.local/share/applications"
@@ -58,7 +58,7 @@ mkdir -p "$INSTALL_DIR" "$BIN_DIR" "$APP_DIR"
 
 # 4. Install / Verify .NET 9 Runtime for linux-arm64
 echo -e "\n${BLUE}[2/5] Checking Microsoft .NET 9 Runtime (ARM64)...${NC}"
-if [[ -x "$DOTNET_DIR/dotnet" ]] && "$DOTNET_DIR/dotnet" --list-runtimes 2>/dev/null | grep -q "Microsoft.NETCore.App 9"; then
+if [[ -x "$DOTNET_DIR/dotnet" ]] && "$DOTNET_DIR/dotnet" --list-runtimes 2>/dev/null | grep -qE "Microsoft.NETCore.App (9|1[0-9])"; then
     echo -e "${GREEN}✓ .NET 9 runtime already installed in $DOTNET_DIR.${NC}"
 else
     echo "Downloading and installing official .NET 9 runtime for linux-arm64..."
@@ -70,8 +70,8 @@ else
     echo -e "${GREEN}✓ .NET 9 runtime (ARM64) installed successfully.${NC}"
 fi
 
-# 5. Clone / Sync ASSella Source Repository (arm64 branch)
-echo -e "\n${BLUE}[3/5] Setting up ASSella (arm64 branch)...${NC}"
+# 5. Clone / Sync EXE-fingerprinter Source Repository (arm64 branch)
+echo -e "\n${BLUE}[3/5] Setting up EXE-fingerprinter (arm64 branch)...${NC}"
 REPO_URL="https://github.com/niwia/ASSella.git"
 BRANCH="arm64"
 
@@ -87,11 +87,11 @@ else
         echo "Copying local repository files to $INSTALL_DIR..."
         cp -rf "$SCRIPT_DIR"/* "$INSTALL_DIR"/
     else
-        echo "Cloning ASSella from $REPO_URL ($BRANCH branch)..."
+        echo "Cloning EXE-fingerprinter from $REPO_URL ($BRANCH branch)..."
         git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$INSTALL_DIR"
     fi
 fi
-echo -e "${GREEN}✓ ASSella files ready at $INSTALL_DIR.${NC}"
+echo -e "${GREEN}✓ EXE-fingerprinter files ready at $INSTALL_DIR.${NC}"
 
 # 6. Python Virtual Environment & Dependencies
 echo -e "\n${BLUE}[4/5] Setting up Python virtual environment...${NC}"
@@ -109,14 +109,14 @@ echo -e "${GREEN}✓ Python virtual environment configured.${NC}"
 # 7. Create Launcher Script & Desktop Entry
 echo -e "\n${BLUE}[5/5] Creating launcher and desktop shortcut...${NC}"
 
-LAUNCHER="$BIN_DIR/assella"
+LAUNCHER="$BIN_DIR/exe_fingerprinter"
 cat << 'EOF' > "$LAUNCHER"
 #!/usr/bin/env bash
-# ASSella ARM64 Launcher
+# EXE-fingerprinter ARM64 Launcher
 export DOTNET_ROOT="${HOME}/.dotnet"
 export PATH="${HOME}/.dotnet:${HOME}/.local/bin:${PATH}"
 export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-INSTALL_DIR="${HOME}/.local/share/ASSella"
+INSTALL_DIR="${HOME}/.local/share/EXE-fingerprinter"
 
 cd "$INSTALL_DIR" || exit 1
 exec "$INSTALL_DIR/.venv/bin/python3" "$INSTALL_DIR/src/main.py" "$@"
@@ -125,12 +125,12 @@ chmod +x "$LAUNCHER"
 
 # Desktop Entry
 ICON_PATH="$INSTALL_DIR/src/res/logo/icon.png"
-DESKTOP_FILE="$APP_DIR/assella.desktop"
+DESKTOP_FILE="$APP_DIR/exe_fingerprinter.desktop"
 
-desktop_tmp=$(mktemp "${APP_DIR}/.assella.desktop.tmp.XXXXXX")
+desktop_tmp=$(mktemp "${APP_DIR}/.exe_fingerprinter.desktop.tmp.XXXXXX")
 cat << EOF > "$desktop_tmp"
 [Desktop Entry]
-Name=ASSella
+Name=EXE-fingerprinter
 GenericName=Game Depot Downloader
 Comment=Steam Depot Downloader & Management Tool (ARM64)
 Exec=$LAUNCHER
@@ -155,7 +155,7 @@ if ! echo "$PATH" | grep -q "$BIN_DIR"; then
 fi
 
 echo -e "\n${BOLD}${GREEN}=== Installation Complete! ===${NC}"
-echo -e "You can now launch ASSella using:"
-echo -e "  • ${BOLD}Application Launcher${NC}: Click ASSella under Games / Utilities"
-echo -e "  • ${BOLD}Terminal${NC}: Run '${BOLD}assella${NC}'"
-echo -e "  • ${BOLD}Steam Game Mode (Armada OS / GameScope)${NC}: Open Steam in Desktop mode -> 'Add a Non-Steam Game' -> Select ASSella"
+echo -e "You can now launch EXE-fingerprinter using:"
+echo -e "  • ${BOLD}Application Launcher${NC}: Click EXE-fingerprinter under Games / Utilities"
+echo -e "  • ${BOLD}Terminal${NC}: Run '${BOLD}exe_fingerprinter${NC}'"
+echo -e "  • ${BOLD}Steam Game Mode (Armada OS / GameScope)${NC}: Open Steam in Desktop mode -> 'Add a Non-Steam Game' -> Select EXE-fingerprinter"

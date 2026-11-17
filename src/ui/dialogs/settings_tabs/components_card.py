@@ -153,7 +153,7 @@ def create_components_card(dialog) -> QWidget:
     card, card_layout = dialog._create_card_frame("Optional Components")
 
     intro = QLabel(
-        "These components are downloaded on demand and are not bundled with ASSella. "
+        "These components are downloaded on demand and are not bundled with EXE-fingerprinter. "
         "Only download what you need."
     )
     intro.setWordWrap(True)
@@ -264,7 +264,7 @@ def _describe(dialog, key: str) -> tuple:
         return f"Installed and up to date ({size_txt}).", "Update", False
     if st.get("current") is None:
         return (
-            "Bundled with an older ASSella build; download to get the current version.",
+            "Bundled with an older EXE-fingerprinter build; download to get the current version.",
             "Download", True,
         )
     return f"Update available ({size_txt}).", "Update", True
@@ -435,7 +435,7 @@ def prompt_component_missing(dialog, key: str) -> None:
         dialog,
         f"{label} not installed",
         f"{label} is not downloaded yet.\n\n"
-        "It is no longer bundled with ASSella - you only need it for the "
+        "It is no longer bundled with EXE-fingerprinter - you only need it for the "
         "handful of games that require it.",
         [("Open Settings -> Tools", "open"), ("Not now", "later")],
         default="later",

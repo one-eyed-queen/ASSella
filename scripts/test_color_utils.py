@@ -63,7 +63,7 @@ def load_module(name, path):
 
 
 def main() -> int:
-    cu = load_module("assella_color_utils", SRC_DIR / "utils" / "color_utils.py")
+    cu = load_module("exe_fingerprinter_color_utils", SRC_DIR / "utils" / "color_utils.py")
 
     # ------------------------------------------------------ the WCAG primitives
     print("=== the WCAG primitives ===")
@@ -149,7 +149,7 @@ def main() -> int:
 
     app = QApplication.instance() or QApplication([])
     widgets = load_module(
-        "assella_game_details_widgets",
+        "exe_fingerprinter_game_details_widgets",
         SRC_DIR / "ui" / "dialogs" / "game_details" / "widgets.py",
     )
 

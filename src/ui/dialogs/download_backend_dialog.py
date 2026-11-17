@@ -2,7 +2,7 @@
 download_backend_dialog.py
 ==========================
 Compact, minimal dialog prompting the user to choose between downloading
-via Native Steam (at0-m) or ASSella Downloader.
+via Native Steam (at0-m) or EXE-fingerprinter Downloader.
 Features early plugin verification blocking and a 'Remember my choice' option.
 Clean, borderless cards with soft glow and accessible contrast.
 """
@@ -32,7 +32,7 @@ from utils.color_utils import get_best_foreground_color
 logger = logging.getLogger(__name__)
 
 BACKEND_CANCEL = 0
-BACKEND_ASSELLA = 1
+BACKEND_EXE_FINGERPRINTER = 1
 BACKEND_NATIVE_STEAM = 2
 
 
@@ -41,9 +41,9 @@ from ui.dialog_titlebar import DialogTitleBar
 
 class DownloadBackendDialog(QDialog):
     """
-    Compact dialog asking whether to download via Steam or ASSella.
+    Compact dialog asking whether to download via Steam or EXE-fingerprinter.
     Includes early plugin presence check with blocking for Steam option.
-    Clean borderless cards with custom ASSella title bar and full-width buttons.
+    Clean borderless cards with custom EXE-fingerprinter title bar and full-width buttons.
     """
 
     def __init__(
@@ -69,7 +69,7 @@ class DownloadBackendDialog(QDialog):
         self.settings = get_settings()
 
         self._plugins_available = self._compute_atom_available()
-        self._selected_backend = BACKEND_NATIVE_STEAM if self._plugins_available else BACKEND_ASSELLA
+        self._selected_backend = BACKEND_NATIVE_STEAM if self._plugins_available else BACKEND_EXE_FINGERPRINTER
 
         # Parse accent RGB for glowing backgrounds
         c = QColor(self.accent_color)
@@ -214,36 +214,36 @@ class DownloadBackendDialog(QDialog):
         self.steam_card.mousePressEvent = lambda e: self._select_backend(BACKEND_NATIVE_STEAM)
         cards_layout.addWidget(self.steam_card)
 
-        # 2. ASSella Card (Right)
-        self.assella_card = QFrame()
-        self.assella_card.setObjectName("assella_card")
-        self.assella_card.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.assella_card.setFixedHeight(120)
-        assella_vbox = QVBoxLayout(self.assella_card)
-        assella_vbox.setContentsMargins(12, 14, 12, 12)
-        assella_vbox.setSpacing(6)
-        assella_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # 2. EXE-fingerprinter Card (Right)
+        self.exe_fingerprinter_card = QFrame()
+        self.exe_fingerprinter_card.setObjectName("exe_fingerprinter_card")
+        self.exe_fingerprinter_card.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.exe_fingerprinter_card.setFixedHeight(120)
+        exe_fingerprinter_vbox = QVBoxLayout(self.exe_fingerprinter_card)
+        exe_fingerprinter_vbox.setContentsMargins(12, 14, 12, 12)
+        exe_fingerprinter_vbox.setSpacing(6)
+        exe_fingerprinter_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # ASSella Logo (prefer scalable SVG with PNG fallback)
-        self.assella_icon_lbl = QLabel()
-        self.assella_icon_lbl.setObjectName("assella_icon_lbl")
-        assella_pix = self._load_logo("icon.svg", size=46)
-        if assella_pix.isNull():
-            assella_pix = self._load_logo("accela.png", size=46)
-        if not assella_pix.isNull():
-            self.assella_icon_lbl.setPixmap(assella_pix)
-        assella_vbox.addWidget(self.assella_icon_lbl, alignment=Qt.AlignmentFlag.AlignCenter)
+        # EXE-fingerprinter Logo (prefer scalable SVG with PNG fallback)
+        self.exe_fingerprinter_icon_lbl = QLabel()
+        self.exe_fingerprinter_icon_lbl.setObjectName("exe_fingerprinter_icon_lbl")
+        exe_fingerprinter_pix = self._load_logo("icon.svg", size=46)
+        if exe_fingerprinter_pix.isNull():
+            exe_fingerprinter_pix = self._load_logo("accela.png", size=46)
+        if not exe_fingerprinter_pix.isNull():
+            self.exe_fingerprinter_icon_lbl.setPixmap(exe_fingerprinter_pix)
+        exe_fingerprinter_vbox.addWidget(self.exe_fingerprinter_icon_lbl, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        assella_name = QLabel("ASSella")
-        assella_name.setStyleSheet("font-size: 10pt; font-weight: bold; border: none; background: transparent;")
-        assella_vbox.addWidget(assella_name, alignment=Qt.AlignmentFlag.AlignCenter)
+        exe_fingerprinter_name = QLabel("EXE-fingerprinter")
+        exe_fingerprinter_name.setStyleSheet("font-size: 10pt; font-weight: bold; border: none; background: transparent;")
+        exe_fingerprinter_vbox.addWidget(exe_fingerprinter_name, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        assella_sub = QLabel("Built-in")
-        assella_sub.setStyleSheet("font-size: 7.5pt; color: rgba(255, 255, 255, 0.45); border: none; background: transparent;")
-        assella_vbox.addWidget(assella_sub, alignment=Qt.AlignmentFlag.AlignCenter)
+        exe_fingerprinter_sub = QLabel("Built-in")
+        exe_fingerprinter_sub.setStyleSheet("font-size: 7.5pt; color: rgba(255, 255, 255, 0.45); border: none; background: transparent;")
+        exe_fingerprinter_vbox.addWidget(exe_fingerprinter_sub, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.assella_card.mousePressEvent = lambda e: self._select_backend(BACKEND_ASSELLA)
-        cards_layout.addWidget(self.assella_card)
+        self.exe_fingerprinter_card.mousePressEvent = lambda e: self._select_backend(BACKEND_EXE_FINGERPRINTER)
+        cards_layout.addWidget(self.exe_fingerprinter_card)
 
         body_lay.addLayout(cards_layout)
 
@@ -480,11 +480,11 @@ class DownloadBackendDialog(QDialog):
             self.steam_card.setStyleSheet(unsel_style)
             self.steam_card.setEnabled(True)
 
-        # Update ASSella Card
-        if self._selected_backend == BACKEND_ASSELLA:
-            self.assella_card.setStyleSheet(sel_style)
+        # Update EXE-fingerprinter Card
+        if self._selected_backend == BACKEND_EXE_FINGERPRINTER:
+            self.exe_fingerprinter_card.setStyleSheet(sel_style)
         else:
-            self.assella_card.setStyleSheet(unsel_style)
+            self.exe_fingerprinter_card.setStyleSheet(unsel_style)
 
     def _open_settings_atom(self):
         """Open settings dialog directly to at0-m tab and recheck plugins on return."""
@@ -524,7 +524,7 @@ class DownloadBackendDialog(QDialog):
 
         self._apply_block_reason()
         self.steam_card.setCursor(Qt.CursorShape.PointingHandCursor if self._plugins_available else Qt.CursorShape.ForbiddenCursor)
-        if self._plugins_available and self._selected_backend != BACKEND_ASSELLA:
+        if self._plugins_available and self._selected_backend != BACKEND_EXE_FINGERPRINTER:
             self._selected_backend = BACKEND_NATIVE_STEAM
         if hasattr(self, "custom_plugin_warn_lbl"):
             self.custom_plugin_warn_lbl.setVisible(
@@ -535,7 +535,7 @@ class DownloadBackendDialog(QDialog):
     def _on_proceed(self):
         self._choice = self._selected_backend
         if self.should_remember():
-            val = "native" if self._choice == BACKEND_NATIVE_STEAM else "assella"
+            val = "native" if self._choice == BACKEND_NATIVE_STEAM else "exe_fingerprinter"
             if getattr(self, "mode", "download") == "dlc":
                 self.settings.setValue("at0m_default_dlc_action", val)
                 logger.info(f"[DownloadBackendDialog] Saved default DLC method: {val}")

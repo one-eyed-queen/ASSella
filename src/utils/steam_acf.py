@@ -24,7 +24,7 @@ Three things are deliberately NOT done here:
 StateFlags normalization IS done here because corrupted flags (e.g. 518 =
 UpdateRequired|FullyInstalled|UpdatePaused) prevent Steam from launching the
 game even when the files are present. This is a common symptom of games
-transferred from ASSella to AT0M where the ACF was partially written.
+transferred from EXE-fingerprinter to AT0M where the ACF was partially written.
 """
 
 import logging
@@ -68,7 +68,7 @@ def atomic_write_acf(acf_path: str, content: str) -> bool:
         return False
     try:
         stamp = int(time.time())
-        backup = path.with_suffix(path.suffix + f".assella-bak-{stamp}")
+        backup = path.with_suffix(path.suffix + f".exe_fingerprinter-bak-{stamp}")
         shutil.copy2(path, backup)
     except Exception as e:
         logger.warning(f"[SteamACF] Could not back up ACF {acf_path}: {e}")
@@ -114,7 +114,7 @@ def _detect_broken_acf(content: str) -> bool:
 
     A broken ACF has StateFlags=4 (FullyInstalled) but empty InstalledDepots
     and/or SizeOnDisk=0. This is a common symptom of games transferred from
-    ASSella to AT0M where the ACF was partially written before the depot
+    EXE-fingerprinter to AT0M where the ACF was partially written before the depot
     registration completed.
     """
     m_flags = re.search(r'"StateFlags"\s*"(\d+)"', content)
@@ -433,7 +433,7 @@ def ensure_acf_has_installed_depots(
 
     Depots Steam already knows about are kept as they are; only the missing ones
     are added. Also repairs corrupted StateFlags and empty InstalledDepots blocks
-    that are common after ASSella-to-AT0M transfers.
+    that are common after EXE-fingerprinter-to-AT0M transfers.
 
     Returns one of ACF_WRITTEN / ACF_DEFERRED / ACF_SKIPPED / ACF_FAILED.
     """

@@ -44,7 +44,7 @@ from utils.yaml.dlc import get_dlc_data
 from ui.dialogs.download_backend_dialog import (
     DownloadBackendDialog,
     BACKEND_NATIVE_STEAM,
-    BACKEND_ASSELLA,
+    BACKEND_EXE_FINGERPRINTER,
 )
 from ui.dialogs.dlc_selection_checklist_dialog import (
     HighDlcPromptDialog,
@@ -94,7 +94,7 @@ class TestDLCOnlyUX(unittest.TestCase):
 
     def test_01_dlc_action_settings_persistence(self):
         """Verify at0m_default_dlc_action values can be saved and read."""
-        for val in ("ask", "native", "assella"):
+        for val in ("ask", "native", "exe_fingerprinter"):
             self.settings.setValue("at0m_default_dlc_action", val)
             read_back = self.settings.value("at0m_default_dlc_action", type=str)
             self.assertEqual(read_back, val, f"Expected {val}, got {read_back}")

@@ -1,6 +1,6 @@
 """Settings -> Companions: Uran (Decky plugin) and Epsilon (browser companion), one tab each.
 
-Both companions work on their own and with ASSella, and keep their own
+Both companions work on their own and with EXE-fingerprinter, and keep their own
 settings; this page only reads and writes their files (utils/companions.py).
 When one is not installed its tab explains what it is and how to get it.
 
@@ -93,7 +93,7 @@ def _button(text: str, primary: bool = False, accent: str = "#a1c9fd") -> QPushB
 
 
 def _toggle(dialog, text: str, desc: str, checked: bool, on_change) -> QWidget:
-    # Not an ASSella setting: a holder without .settings keeps CheckboxSetting
+    # Not an EXE-fingerprinter setting: a holder without .settings keeps CheckboxSetting
     # from reading or writing QSettings.
     holder = SimpleNamespace(accent_color=dialog.accent_color)
     w = create_checkbox_setting(text, "_companion_unused", checked, holder, desc)
@@ -153,25 +153,25 @@ class _StatGrid(QWidget):
 
 
 def _key_row(dialog, lay, companion_key: str, write_key) -> None:
-    """Only shown when the companion's Hubcap key differs from ASSella's.
+    """Only shown when the companion's Hubcap key differs from EXE-fingerprinter's.
 
     Normally the key is shared automatically (newest wins, through
     katamari.conf.lua), so a matching key needs no row at all.
     """
-    assella_key = comp.assella_hubcap_key(dialog.settings)
-    if comp.key_state(companion_key, assella_key) != "own" or not assella_key:
+    exe_fingerprinter_key = comp.exe_fingerprinter_hubcap_key(dialog.settings)
+    if comp.key_state(companion_key, exe_fingerprinter_key) != "own" or not exe_fingerprinter_key:
         return
     lbl = _label()
-    _colored(lbl, "Hubcap key differs from ASSella's (turn on AT0-M Sync to share the newest one)", WARN)
-    btn = _button("Use ASSella's key")
+    _colored(lbl, "Hubcap key differs from EXE-fingerprinter's (turn on AT0-M Sync to share the newest one)", WARN)
+    btn = _button("Use EXE-fingerprinter's key")
 
     def _use():
         try:
             ts = int(str(dialog.settings.value("morrenus_api_key_timestamp", 0)) or 0)
         except (TypeError, ValueError):
             ts = 0
-        if write_key(assella_key, ts):
-            _colored(lbl, "Hubcap key: now the same as ASSella's", OK)
+        if write_key(exe_fingerprinter_key, ts):
+            _colored(lbl, "Hubcap key: now the same as EXE-fingerprinter's", OK)
             btn.hide()
 
     btn.clicked.connect(_use)
@@ -200,7 +200,7 @@ def _uran_page(dialog) -> QWidget:
     if not info["installed"]:
         card, cl = dialog._create_card_frame("Install Uran")
         cl.addWidget(_label(
-            "Uran is the Decky Loader companion for ASSella's AT0-M mode: search and add games, manage "
+            "Uran is the Decky Loader companion for EXE-fingerprinter's AT0-M mode: search and add games, manage "
             "your AT0-M library, DLCs and per-game fixes, and share your Hubcap key - all from Steam's "
             "Gaming Mode, no keyboard needed."))
         if not info["decky"]:
@@ -302,7 +302,7 @@ def _uran_page(dialog) -> QWidget:
 EPSILON_ABOUT = (
     "Epsilon is the browser companion for AT0-M. With the Photar userscript, Steam Store and SteamDB "
     "pages get an \"Add to at0-m\" button; Epsilon receives the click on your computer "
-    "(127.0.0.1:1952) and adds the game to SLSsteam, the same way ASSella does. It sleeps until "
+    "(127.0.0.1:1952) and adds the game to SLSsteam, the same way EXE-fingerprinter does. It sleeps until "
     "it is used, so it costs nothing while idle."
 )
 

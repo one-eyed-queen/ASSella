@@ -1,12 +1,12 @@
-# Contributing to ASSella
+# Contributing to EXE-fingerprinter
 
-Thank you for your interest in contributing to ASSella! This document outlines the branch structure, local environment setup, architectural invariants, and contribution standards—including our policy on AI-assisted development.
+Thank you for your interest in contributing to EXE-fingerprinter! This document outlines the branch structure, local environment setup, architectural invariants, and contribution standards—including our policy on AI-assisted development.
 
 ---
 
 ## 1. Branching Strategy & Workflow
 
-ASSella operates on a 4-branch model:
+EXE-fingerprinter operates on a 4-branch model:
 
 * **`canary` (Bleeding Edge)**: Active development for upcoming features, major refactorings, and experimental additions. **Most new PRs should target this branch.**
 * **`beta` (Staging & Preview)**: Stabilization branch for upcoming release candidates. Receives targeted bug fixes and polish.
@@ -28,7 +28,7 @@ ASSella operates on a 4-branch model:
 ```bash
 # 1. Clone the repository (check out the canary branch for new features)
 git clone -b canary https://github.com/niwia/ASSella.git
-cd ASSella
+cd EXE-fingerprinter
 
 # 2. Create and activate a Python virtual environment
 python3 -m venv .venv
@@ -37,7 +37,7 @@ source .venv/bin/activate
 # 3. Install development dependencies
 pip install -r requirements.txt
 
-# 4. Launch ASSella from source
+# 4. Launch EXE-fingerprinter from source
 python src/main.py
 ```
 
@@ -45,10 +45,10 @@ python src/main.py
 
 ## 3. Core Architectural Rules & Invariants
 
-ASSella is built for speed and reliability on the Steam Deck and desktop Linux. All contributions must respect these invariants:
+EXE-fingerprinter is built for speed and reliability on the Steam Deck and desktop Linux. All contributions must respect these invariants:
 
 ### A. Performance & UI Responsiveness
-- **Fast Startup**: ASSella launches its main window in under one second. Never perform disk scans, network requests, or subprocess calls on the Qt GUI thread.
+- **Fast Startup**: EXE-fingerprinter launches its main window in under one second. Never perform disk scans, network requests, or subprocess calls on the Qt GUI thread.
 - **Lazy Imports**: Heavy modules (e.g. `curl_cffi`, `bs4`, scrapers, API clients) must be imported inside worker functions where they are used, never at the top level of UI modules.
 - **Background Workers**: Run long-running tasks via `QThread`, `TaskRunner`, or background workers, posting results back via Qt signals or `utils.main_thread.post_to_main_thread`.
 
@@ -68,13 +68,13 @@ ASSella is built for speed and reliability on the Steam Deck and desktop Linux. 
 
 ## 4. AI-Assisted Contributions Policy
 
-ASSella has been developed in close collaboration with AI agents. We welcome AI-assisted contributions (using Gemini, Claude, Copilot, ChatGPT, etc.), subject to the following rules:
+EXE-fingerprinter has been developed in close collaboration with AI agents. We welcome AI-assisted contributions (using Gemini, Claude, Copilot, ChatGPT, etc.), subject to the following rules:
 
 1. **Human Accountability**:
    - You, the human contributor, are 100% responsible for the code you submit.
    - Never submit code you do not fully understand. You must be able to explain the architecture, reasoning, and edge-case handling in review.
 2. **Context & Invariant Alignment**:
-   - Before prompting an AI agent to edit ASSella, provide it with the repository rules in [`.agents/AGENTS.md`](file:///.agents/AGENTS.md).
+   - Before prompting an AI agent to edit EXE-fingerprinter, provide it with the repository rules in [`.agents/AGENTS.md`](file:///.agents/AGENTS.md).
    - AI tools frequently hallucinate non-existent Qt methods or attempt to generate `.acf` files; you must verify that the AI has followed the repository invariants.
 3. **Workspace Hygiene**:
    - Do **NOT** commit AI conversation logs, assistant instructions, transcripts (`.gemini/`, `.claude/`), or local scratch scripts to git.
@@ -99,4 +99,4 @@ ASSella has been developed in close collaboration with AI agents. We welcome AI-
    - Target the appropriate branch (`canary` or `beta`).
    - Fill out the [Pull Request Template](file:///.github/PULL_REQUEST_TEMPLATE.md) completely, verifying all invariant and AI-disclosure checkboxes.
 
-Thank you for helping make ASSella even better!
+Thank you for helping make EXE-fingerprinter even better!

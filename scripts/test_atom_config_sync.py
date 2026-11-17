@@ -164,7 +164,7 @@ def run_tests() -> bool:
     added_test_appids = []
 
     try:
-        print(f"{Color.BOLD}=== ASSella AT0-M & DecryptionKeys Invariants Test Suite ==={Color.RESET}")
+        print(f"{Color.BOLD}=== EXE-fingerprinter AT0-M & DecryptionKeys Invariants Test Suite ==={Color.RESET}")
         log_info(f"Config path: {cfg_path} (inode: {orig_inode})")
 
         # ---------------------------------------------------------------------

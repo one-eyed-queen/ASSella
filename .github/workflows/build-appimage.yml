@@ -135,43 +135,43 @@ jobs:
           mkdir -p AppDir/bin
           
           # 1. Desktop Entry & Icon
-          cat << 'EOF' > AppDir/assella.desktop
+          cat << 'EOF' > AppDir/exe_fingerprinter.desktop
           [Desktop Entry]
-          Name=ASSella
+          Name=EXE-fingerprinter
           Comment=Steam Game & Depot Management Suite
           Exec=AppRun %U
-          Icon=assella
+          Icon=exe_fingerprinter
           Terminal=false
           Type=Application
           Categories=Utility;Game;
           # Must match QApplication::applicationName() in src/main.py, which is
           # what the window manager matches against to pick the taskbar icon.
-          StartupWMClass=ASSella
+          StartupWMClass=EXE-fingerprinter
           EOF
           # Legacy alias: earlier builds shipped this name, and some launchers
           # and .desktop entries still reference it.
-          cp AppDir/assella.desktop AppDir/ACCELA.desktop
+          cp AppDir/exe_fingerprinter.desktop AppDir/ACCELA.desktop
           
           # Copy icons: bundle scalable SVG alongside PNG fallback (and legacy accela aliases) so
           # AppImage extractors, desktop entries and .DirIcon all resolve cleanly.
           if [ -f "src/res/logo/icon.svg" ]; then
-            cp "src/res/logo/icon.svg" AppDir/assella.svg
+            cp "src/res/logo/icon.svg" AppDir/exe_fingerprinter.svg
             cp "src/res/logo/icon.svg" AppDir/accela.svg
             mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
-            cp "src/res/logo/icon.svg" AppDir/usr/share/icons/hicolor/scalable/apps/assella.svg
+            cp "src/res/logo/icon.svg" AppDir/usr/share/icons/hicolor/scalable/apps/exe_fingerprinter.svg
           fi
           if [ -f "src/res/logo/icon.png" ]; then
-            cp "src/res/logo/icon.png" AppDir/assella.png
+            cp "src/res/logo/icon.png" AppDir/exe_fingerprinter.png
             cp "src/res/logo/icon.png" AppDir/.DirIcon
           elif [ -f "src/res/logo/accela.png" ]; then
-            cp "src/res/logo/accela.png" AppDir/assella.png
+            cp "src/res/logo/accela.png" AppDir/exe_fingerprinter.png
             cp "src/res/logo/accela.png" AppDir/.DirIcon
-          elif [ -f "assela_logo.png" ]; then
-            cp "assela_logo.png" AppDir/assella.png
-            cp "assela_logo.png" AppDir/.DirIcon
+          elif [ -f "exe_fingerprinter_logo.png" ]; then
+            cp "exe_fingerprinter_logo.png" AppDir/exe_fingerprinter.png
+            cp "exe_fingerprinter_logo.png" AppDir/.DirIcon
           fi
           # Legacy icon alias.
-          [ -f AppDir/assella.png ] && cp AppDir/assella.png AppDir/accela.png
+          [ -f AppDir/exe_fingerprinter.png ] && cp AppDir/exe_fingerprinter.png AppDir/accela.png
 
           # 2. AppRun Script
           cat << 'EOF' > AppDir/AppRun
@@ -347,11 +347,11 @@ jobs:
             *)      UPDATE_TAG="latest-pre" ;;
           esac
 
-          UPDATE_INFO="gh-releases-zsync|niwia|ASSella|${UPDATE_TAG}|ASSella.AppImage.zsync"
+          UPDATE_INFO="gh-releases-zsync|${{ github.repository_owner }}|${{ github.event.repository.name }}|${UPDATE_TAG}|ExeFingerprinter.AppImage.zsync"
 
           echo "Channel: $CHANNEL"
           echo "Generating AppImage with update string: $UPDATE_INFO"
-          ARCH=x86_64 appimagetool -n -u "$UPDATE_INFO" AppDir ASSella.AppImage
+          ARCH=x86_64 appimagetool -n -u "$UPDATE_INFO" AppDir ExeFingerprinter.AppImage
 
           # Regenerate the .zsync from the FINAL AppImage rather than trusting the
           # one appimagetool emitted mid-build. appimagetool writes its .zsync
@@ -362,20 +362,20 @@ jobs:
           # download (or its relative filename), NOT the AppImage update string.
           # Using UPDATE_INFO here would corrupt the control file with an invalid URL.
           echo "Regenerating zsync index from final AppImage..."
-          rm -f ASSella.AppImage.zsync
-          zsyncmake -u ASSella.AppImage -o ASSella.AppImage.zsync ASSella.AppImage
+          rm -f ExeFingerprinter.AppImage.zsync
+          zsyncmake -u ExeFingerprinter.AppImage -o ExeFingerprinter.AppImage.zsync ExeFingerprinter.AppImage
 
           # Generate SHA256 checksums last, so they always describe the shipped bytes.
-          sha256sum ASSella.AppImage > ASSella.AppImage.sha256
-          sha256sum ASSella.AppImage.zsync > ASSella.AppImage.zsync.sha256
+          sha256sum ExeFingerprinter.AppImage > ExeFingerprinter.AppImage.sha256
+          sha256sum ExeFingerprinter.AppImage.zsync > ExeFingerprinter.AppImage.zsync.sha256
 
       - name: Verify Release Artifact Integrity
         run: |
           set -euo pipefail
           echo "Cross-checking .zsync / .sha256 metadata against the actual AppImage..."
 
-          actual_size=$(stat -c%s ASSella.AppImage)
-          actual_sha1=$(sha1sum ASSella.AppImage | awk '{print $1}')
+          actual_size=$(stat -c%s ExeFingerprinter.AppImage)
+          actual_sha1=$(sha1sum ExeFingerprinter.AppImage | awk '{print $1}')
 
           # -a is REQUIRED, not cosmetic. A .zsync is a text header followed by a
           # binary block-checksum table, so GNU grep classifies the whole file as
@@ -389,15 +389,15 @@ jobs:
           # under `set -euo pipefail`, so if the header genuinely cannot be parsed
           # grep exits 1, pipefail propagates that, and `set -e` aborts the script
           # right here - silently, before the diagnostic below can explain it.
-          zsync_size=$(grep -a -i '^Length:' ASSella.AppImage.zsync | awk '{print $2}' | tr -d '\r' || true)
-          zsync_sha1=$(grep -a -i '^SHA-1:' ASSella.AppImage.zsync | awk '{print $2}' | tr -d '\r' || true)
+          zsync_size=$(grep -a -i '^Length:' ExeFingerprinter.AppImage.zsync | awk '{print $2}' | tr -d '\r' || true)
+          zsync_sha1=$(grep -a -i '^SHA-1:' ExeFingerprinter.AppImage.zsync | awk '{print $2}' | tr -d '\r' || true)
 
           fail=0
 
           # An unparseable header is a distinct failure from a mismatch. Without
           # this, "header missing" and "header present but wrong" look identical.
           if [ -z "$zsync_size" ] || [ -z "$zsync_sha1" ]; then
-            echo "::error::Could not parse Length/SHA-1 from ASSella.AppImage.zsync - treating this build as corrupt."
+            echo "::error::Could not parse Length/SHA-1 from ExeFingerprinter.AppImage.zsync - treating this build as corrupt."
             echo "::error::Parsed Length='${zsync_size}' SHA-1='${zsync_sha1}' (both must be non-empty)."
             fail=1
           fi
@@ -416,22 +416,22 @@ jobs:
             echo "OK  zsync SHA-1   = $actual_sha1"
           fi
 
-          if [ "$(awk '{print $1}' ASSella.AppImage.sha256)" != "$(sha256sum ASSella.AppImage | awk '{print $1}')" ]; then
-            echo "::error::ASSella.AppImage.sha256 does not match the AppImage"
+          if [ "$(awk '{print $1}' ExeFingerprinter.AppImage.sha256)" != "$(sha256sum ExeFingerprinter.AppImage | awk '{print $1}')" ]; then
+            echo "::error::ExeFingerprinter.AppImage.sha256 does not match the AppImage"
             fail=1
           else
             echo "OK  AppImage sha256 matches"
           fi
 
           # zsync must reference the delta target by the asset name actually published.
-          if ! grep -a -qi '^Filename:[[:space:]]*ASSella\.AppImage[[:space:]]*$' ASSella.AppImage.zsync; then
+          if ! grep -a -qi '^Filename:[[:space:]]*ExeFingerprinter\.AppImage[[:space:]]*$' ExeFingerprinter.AppImage.zsync; then
             echo "::error::zsync Filename header does not match published asset name"
             fail=1
           else
             echo "OK  zsync Filename header"
           fi
 
-          if ! grep -a -qi '^URL:[[:space:]]*ASSella\.AppImage[[:space:]]*$' ASSella.AppImage.zsync; then
+          if ! grep -a -qi '^URL:[[:space:]]*ExeFingerprinter\.AppImage[[:space:]]*$' ExeFingerprinter.AppImage.zsync; then
             echo "::error::zsync URL header does not match published asset name"
             fail=1
           else
@@ -454,7 +454,7 @@ jobs:
           set -euo pipefail
           echo "::group::Extract AppImage"
           rm -rf AppDir_extract
-          ./ASSella.AppImage --appimage-extract > /dev/null
+          ./ExeFingerprinter.AppImage --appimage-extract > /dev/null
           mv squashfs-root AppDir_extract
           echo "::endgroup::"
 
@@ -470,15 +470,15 @@ jobs:
           fi
           echo "OK  appimageupdatetool executes"
           test -x AppDir_extract/bin/run.sh || { echo "::error::run.sh missing"; exit 1; }
-          test -f AppDir_extract/assella.desktop || { echo "::error::assella.desktop missing"; exit 1; }
+          test -f AppDir_extract/exe_fingerprinter.desktop || { echo "::error::exe_fingerprinter.desktop missing"; exit 1; }
           test -f AppDir_extract/AppRun || { echo "::error::AppRun missing"; exit 1; }
           # The embedded update string drives delta updates. It lives in the
           # AppImage's ELF .upd_info section, not in the extracted squashfs
           # tree, so read it from the binary itself.
-          UPDATE_STR=$(grep -a -o 'gh-releases-zsync|[^[:cntrl:]]*' ASSella.AppImage | head -1 || true)
+          UPDATE_STR=$(grep -a -o 'gh-releases-zsync|[^[:cntrl:]]*' ExeFingerprinter.AppImage | head -1 || true)
           echo "Embedded update string: ${UPDATE_STR:-<none found>}"
           case "$UPDATE_STR" in
-            gh-releases-zsync\|niwia\|ASSella\|*) echo "OK  update string present" ;;
+            gh-releases-zsync\|${{ github.repository_owner }}\|${{ github.event.repository.name }}\|*) echo "OK  update string present" ;;
             *) echo "::error::Update string missing or malformed - delta updates would break"; exit 1 ;;
           esac
           echo "::endgroup::"
@@ -503,14 +503,14 @@ jobs:
 
           echo "::group::Pre-release suite against the extracted image"
           if [ -f AppDir_extract/bin/src/scripts/prerelease_check.py ]; then
-            QT_QPA_PLATFORM=offscreen ASSELLA_TESTER_NO_REEXEC=1 \
+            QT_QPA_PLATFORM=offscreen EXE_FINGERPRINTER_TESTER_NO_REEXEC=1 \
               AppDir_extract/bin/.venv/bin/python3 -u \
               AppDir_extract/bin/src/scripts/prerelease_check.py \
               --ci --src AppDir_extract/bin/src 2>&1 | tee /tmp/appimage_prerelease.log || true
             grep -E 'RESULTS:|STATUS:' /tmp/appimage_prerelease.log || true
           else
             echo "pre-release suite not bundled in AppImage; running repo copy against extracted src"
-            QT_QPA_PLATFORM=offscreen ASSELLA_TESTER_NO_REEXEC=1 \
+            QT_QPA_PLATFORM=offscreen EXE_FINGERPRINTER_TESTER_NO_REEXEC=1 \
               AppDir_extract/bin/.venv/bin/python3 -u scripts/prerelease_check.py \
               --ci --src AppDir_extract/bin/src 2>&1 | tee /tmp/appimage_prerelease.log || true
             grep -E 'RESULTS:|STATUS:' /tmp/appimage_prerelease.log || true
@@ -522,7 +522,7 @@ jobs:
         run: |
           set -e
           TAG="${{ steps.meta.outputs.tag }}"
-          PKG_NAME="ASSella-${TAG}-linux-source"
+          PKG_NAME="EXE-fingerprinter-${TAG}-linux-source"
           echo "Packaging source distribution: ${PKG_NAME}"
 
           rm -rf "${PKG_NAME}" "${PKG_NAME}.tar.gz" "${PKG_NAME}.zip" "${PKG_NAME}.tar.gz.sha256" "${PKG_NAME}.zip.sha256"
@@ -574,38 +574,38 @@ jobs:
           rm -rf "${PKG_NAME}"
 
           echo "Generated companion source archives:"
-          ls -lh ASSella-*-linux-source.*
+          ls -lh EXE-fingerprinter-*-linux-source.*
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ASSella-${{ steps.meta.outputs.channel }}-AppImage
+          name: EXE-fingerprinter-${{ steps.meta.outputs.channel }}-AppImage
           path: |
-            ASSella.AppImage
-            ASSella.AppImage.zsync
+            ExeFingerprinter.AppImage
+            ExeFingerprinter.AppImage.zsync
             *.sha256
-            ASSella-*-linux-source.tar.gz
-            ASSella-*-linux-source.zip
+            EXE-fingerprinter-*-linux-source.tar.gz
+            EXE-fingerprinter-*-linux-source.zip
 
       - name: Publish GitHub Release
         if: (startsWith(github.ref, 'refs/tags/') && steps.meta.outputs.publish == 'true') || (github.event_name == 'workflow_dispatch' && steps.meta.outputs.publish == 'true')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
-          name: "ASSella ${{ steps.meta.outputs.tag }}"
+          name: "EXE-fingerprinter ${{ steps.meta.outputs.tag }}"
           draft: ${{ steps.meta.outputs.draft == 'true' }}
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
           body_path: ${{ steps.meta.outputs.body_file }}
           generate_release_notes: false
           files: |
-            ASSella.AppImage
-            ASSella.AppImage.zsync
-            ASSella.AppImage.sha256
-            ASSella.AppImage.zsync.sha256
-            ASSella-${{ steps.meta.outputs.tag }}-linux-source.tar.gz
-            ASSella-${{ steps.meta.outputs.tag }}-linux-source.tar.gz.sha256
-            ASSella-${{ steps.meta.outputs.tag }}-linux-source.zip
-            ASSella-${{ steps.meta.outputs.tag }}-linux-source.zip.sha256
+            ExeFingerprinter.AppImage
+            ExeFingerprinter.AppImage.zsync
+            ExeFingerprinter.AppImage.sha256
+            ExeFingerprinter.AppImage.zsync.sha256
+            EXE-fingerprinter-${{ steps.meta.outputs.tag }}-linux-source.tar.gz
+            EXE-fingerprinter-${{ steps.meta.outputs.tag }}-linux-source.tar.gz.sha256
+            EXE-fingerprinter-${{ steps.meta.outputs.tag }}-linux-source.zip
+            EXE-fingerprinter-${{ steps.meta.outputs.tag }}-linux-source.zip.sha256
           # Never let a stale asset from a previous run survive alongside a fresh
           # AppImage — that is exactly how v2.7.0beta ended up with a .zsync that
           # described a different binary.
@@ -644,7 +644,7 @@ jobs:
             --channel "${{ steps.meta.outputs.channel }}" \
             --target-commitish "$TARGET_BRANCH" \
             --tag "${{ steps.meta.outputs.tag }}" \
-            --release-name "ASSella ${{ steps.meta.outputs.tag }}" \
+            --release-name "EXE-fingerprinter ${{ steps.meta.outputs.tag }}" \
             --dir .
 
       - name: Notify Discord of Release

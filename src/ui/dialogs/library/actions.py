@@ -535,7 +535,7 @@ class LibraryActionsMixin:
         if detected_mode:
             mode_choice = detected_mode
             logger.info(f"DLC configuration for {name} ({appid}) automatically routed to existing mode: {mode_choice}")
-        elif dlc_action in ("native", "assella"):
+        elif dlc_action in ("native", "exe_fingerprinter"):
             mode_choice = dlc_action
         else:
             mode_choice = "ask"
@@ -554,7 +554,7 @@ class LibraryActionsMixin:
             from ui.dialogs.download_backend_dialog import (
                 DownloadBackendDialog,
                 BACKEND_CANCEL,
-                BACKEND_ASSELLA,
+                BACKEND_EXE_FINGERPRINTER,
                 BACKEND_NATIVE_STEAM,
             )
             parent_widget = self if isinstance(self, QWidget) else getattr(self, "main_window", None)
@@ -571,7 +571,7 @@ class LibraryActionsMixin:
             choice = dlg.get_choice()
             if choice == BACKEND_CANCEL:
                 return
-            mode_choice = "native" if choice == BACKEND_NATIVE_STEAM else "assella"
+            mode_choice = "native" if choice == BACKEND_NATIVE_STEAM else "exe_fingerprinter"
 
         if mode_choice == "native":
             if not discovery.has_sized_depots:
@@ -595,7 +595,7 @@ class LibraryActionsMixin:
                         "Depot-less DLCs Detected",
                         f"<b>{name}</b> has <b>{dlc_count}</b> DLC(s), but none of them require downloading content files.\n\n"
                         "SLSsteam will automatically unlock most depot-less games.\n\n"
-                        f"Would you like ASSella to register these {dlc_count} DLC(s) into SLSsteam AdditionalApps?",
+                        f"Would you like EXE-fingerprinter to register these {dlc_count} DLC(s) into SLSsteam AdditionalApps?",
                         ThemedMessageBox.StandardButton.Yes | ThemedMessageBox.StandardButton.No,
                         ThemedMessageBox.StandardButton.Yes,
                     )
@@ -650,7 +650,7 @@ class LibraryActionsMixin:
                 self._fetch_game_manifest(game_data_dlc, is_verify=False)
                 return
 
-        # ASSella mode flow (the old way)
+        # EXE-fingerprinter mode flow (the old way)
         if not discovery.has_sized_depots:
             answer = ThemedMessageBox.warning(
                 self,
@@ -735,25 +735,25 @@ class LibraryActionsMixin:
             return False
 
     def _detect_configured_dlc_mode(self, appid: str, discovery: Any = None) -> Optional[str]:
-        """Detect whether a game's DLCs were already configured in AT0-M or ASSella mode.
+        """Detect whether a game's DLCs were already configured in AT0-M or EXE-fingerprinter mode.
 
         Returns:
             "native" for AT0-M mode,
-            "assella" for ACCELA / ASSella mode,
+            "exe_fingerprinter" for ACCELA / EXE-fingerprinter mode,
             or None if unconfigured.
         """
         appid_str = str(appid).strip()
         if not appid_str:
             return None
 
-        # 1. Check ASSella (ACCELA) mode via existing .depot file:
+        # 1. Check EXE-fingerprinter (ACCELA) mode via existing .depot file:
         # If a .depot file exists on disk with content, it was downloaded and managed
-        # by ASSella (AT0-M deletes .depot on handoff and never writes one).
+        # by EXE-fingerprinter (AT0-M deletes .depot on handoff and never writes one).
         try:
             from utils.helpers import get_base_path
             depot_file = Path(get_base_path()) / "depots" / f"{appid_str}.depot"
             if depot_file.exists() and depot_file.stat().st_size > 0:
-                return "assella"
+                return "exe_fingerprinter"
         except Exception as e:
             logger.debug(f"[DLCModeDetect] Error checking .depot file for {appid_str}: {e}")
 
@@ -768,17 +768,17 @@ class LibraryActionsMixin:
             logger.debug(f"[DLCModeDetect] Error checking plugin_library for {appid_str}: {e}")
 
         # 3. Check the mode recorded when the game's DLCs were configured.
-        #    ASSella's config-only path also writes DlcData, so DlcData alone
+        #    EXE-fingerprinter's config-only path also writes DlcData, so DlcData alone
         #    cannot tell the two modes apart; the recorded source can.
         try:
             from utils.settings import get_settings
             rec_mode = get_settings().value(f"dlc_mode_source/{appid_str}", "", type=str)
-            if rec_mode in ("assella", "native"):
+            if rec_mode in ("exe_fingerprinter", "native"):
                 return rec_mode
         except Exception as e:
             logger.debug(f"[DLCModeDetect] Error checking dlc_mode_source for {appid_str}: {e}")
 
-        # 4. Check SLSsteam DlcData (written by AT0-M and by ASSella config-only):
+        # 4. Check SLSsteam DlcData (written by AT0-M and by EXE-fingerprinter config-only):
         try:
             from utils.yaml_config_manager import get_user_config_path, get_dlc_data
             cfg_path = get_user_config_path()
@@ -788,11 +788,11 @@ class LibraryActionsMixin:
         except Exception as e:
             logger.debug(f"[DLCModeDetect] Error checking SLSsteam DlcData for {appid_str}: {e}")
 
-        # 5. Check ASSella DLC-only mode setting:
+        # 5. Check EXE-fingerprinter DLC-only mode setting:
         try:
             from utils.dlc_helpers import is_dlc_only_mode
             if is_dlc_only_mode(appid_str):
-                return "assella"
+                return "exe_fingerprinter"
         except Exception as e:
             logger.debug(f"[DLCModeDetect] Error checking is_dlc_only_mode for {appid_str}: {e}")
 
@@ -885,7 +885,7 @@ class LibraryActionsMixin:
         get_settings().setValue(f"dlc_only_mode/{appid}", True)
         # Record the mode so detection does not mistake the DlcData entry this
         # path writes for an AT0-M setup.
-        get_settings().setValue(f"dlc_mode_source/{appid}", "assella")
+        get_settings().setValue(f"dlc_mode_source/{appid}", "exe_fingerprinter")
         ThemedMessageBox.information(
             self,
             "DLC Mode Saved",
@@ -1008,9 +1008,9 @@ class LibraryActionsMixin:
                 skipped_games.append((g, "Already in AT0-M"))
                 continue
 
-            # 2. Pure unmanaged Steam game (not ASSella installed)
+            # 2. Pure unmanaged Steam game (not EXE-fingerprinter installed)
             if not g.get("is_accela_install"):
-                skipped_games.append((g, "Not ASSella Install"))
+                skipped_games.append((g, "Not EXE-fingerprinter Install"))
                 continue
 
             # 3. Strict Rule: DLC-Only Mode games must NEVER be moved
@@ -1100,7 +1100,7 @@ class LibraryActionsMixin:
                 failed_str = "\n".join(f"• {f['name']}: {f.get('reason', 'Failed')}" for f in failed[:8])
                 if len(failed) > 8:
                     failed_str += f"\n• ...and {len(failed) - 8} more."
-                parts.append(f"Not moved (still ASSella installs):\n{failed_str}")
+                parts.append(f"Not moved (still EXE-fingerprinter installs):\n{failed_str}")
             if n:
                 parts.append("Next: restart Steam. It verifies the existing files and adds the games to your library.")
             (ThemedMessageBox.warning if failed else ThemedMessageBox.information)(
@@ -1119,7 +1119,7 @@ class LibraryActionsMixin:
                     retained_str += f"\n• ...and {len(markers_retained) - 8} more."
                 ThemedMessageBox.warning(
                     self._dialog_parent(),
-                    "ASSella Markers Left In Place",
+                    "EXE-fingerprinter Markers Left In Place",
                     "Markers were retained where the migration did not finish safely, "
                     "so those games can be retried:\n\n"
                     f"{retained_str}",
@@ -1940,9 +1940,9 @@ class LibraryActionsMixin:
                 logger.error(f"Error restoring Goldberg backups for {appid}: {gb_err}")
                 errors.append(f"Goldberg restore: {gb_err}")
 
-        # 5. Remove .DepotDownloader, .assella and legacy marker folders (leave game files intact)
+        # 5. Remove .DepotDownloader, .exe_fingerprinter and legacy marker folders (leave game files intact)
         if install_path and os.path.isdir(install_path):
-            for marker_name in (".assella", ".ASSELLA", ".DepotDownloader", ".ACCELA", ".accela"):
+            for marker_name in (".exe_fingerprinter", ".EXE-FINGERPRINTER", ".DepotDownloader", ".ACCELA", ".accela"):
                 marker_path = os.path.join(install_path, marker_name)
                 if os.path.exists(marker_path):
                     try:
@@ -2062,7 +2062,7 @@ class LibraryActionsMixin:
                 else:
                     logger.warning(f"Could not set StateFlags on manifest file {acf}")
                 return
-        # First try: repair the ACF in-place if it exists and is broken (ASSella mode)
+        # First try: repair the ACF in-place if it exists and is broken (EXE-fingerprinter mode)
         elif acf_existed:
             try:
                 from utils.steam_acf import ensure_acf_has_installed_depots
@@ -2812,7 +2812,7 @@ class LibraryActionsMixin:
         action = ThemedMessageBox.choices(
             self,
             "Latest Manifests Unreachable",
-            "ASSella could not fetch the latest manifests for "
+            "EXE-fingerprinter could not fetch the latest manifests for "
             f"{len(failed)} depot(s) ({', '.join(failed_ids)}) "
             "from Steam CDN or Hubcap.\n\n"
             "You can verify against your local manifests instead, but files "
@@ -2913,7 +2913,7 @@ class LibraryActionsMixin:
             self,
             "Steam Servers Unreachable",
             "Could not reach Steam PICS or SteamCMD to check for manifest updates, "
-            "so ASSella cannot confirm your local manifests are the latest.\n\n"
+            "so EXE-fingerprinter cannot confirm your local manifests are the latest.\n\n"
             "You can retry, verify against your local manifests (files are "
             "checked against the cached version), or cancel.",
             [
@@ -3304,7 +3304,7 @@ class LibraryActionsMixin:
 
                 if should_warn:
                     msg = (
-                        f"ASSella detected that the manifest is older than the latest Steam version.\n\n"
+                        f"EXE-fingerprinter detected that the manifest is older than the latest Steam version.\n\n"
                         f"Reason: {warning_reason}\n\n"
                         "This usually means Hubcap has not yet ingested the latest Steam update.\n\n"
                         "Do you want to continue with this version anyway?"
@@ -3524,7 +3524,7 @@ class LibraryActionsMixin:
 
         self._dismiss_steam_loading_overlay()
 
-        # If AT0-M DLC mode was chosen or registered, do NOT submit to ASSella download queue
+        # If AT0-M DLC mode was chosen or registered, do NOT submit to EXE-fingerprinter download queue
         is_atom_dlc = bool(game_data.get("_is_atom_dlc"))
         if is_atom_dlc or ('depot_dialog' in locals() and getattr(depot_dialog, "_atom_registered", False)):
             logger.info("AT0-M DLC registration completed for AppID %s; skipping downloader job queue.", appid)

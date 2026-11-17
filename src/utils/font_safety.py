@@ -11,7 +11,7 @@ Two layers:
 1. ``glyph()`` / ``supports()``: pick a character the UI font itself has, so
    common symbols (the API key mask, status dots, arrows) never need a
    fallback font.
-2. A probe: a short-lived child process draws every symbol ASSella uses plus
+2. A probe: a short-lived child process draws every symbol EXE-fingerprinter uses plus
    a few non-Latin scripts with fallback enabled. If the child crashes, this
    system's fallback is broken and the app switches to "safe font mode"
    (``QFont.StyleStrategy.NoFontMerging``): missing characters show as empty
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 SETTING_RESULT = "font_fallback_probe"  # JSON: {"fp": str, "broken": bool}
 PROBE_TIMEOUT_S = 20
 
-# Symbols used in ASSella's UI, plus scripts that need a fallback font with
+# Symbols used in EXE-fingerprinter's UI, plus scripts that need a fallback font with
 # any Latin UI font (game names, translations).
 PROBE_TEXT = (
     "—•─→✓▾━…●⚠·–│✅✗✕➔⟳▲←☑▴↩“”×∞€£¥ℹ☐↻⬆★▼✖⚡⬇⚙┌┐└❌™®"
@@ -118,7 +118,7 @@ _PROBE_SCRIPT = r"""
 import sys
 from PyQt6.QtGui import QFont, QFontDatabase, QFontMetrics, QTextLayout
 from PyQt6.QtWidgets import QApplication
-app = QApplication(["assella-font-probe"])
+app = QApplication(["exe_fingerprinter-font-probe"])
 for path in sys.argv[3:]:
     QFontDatabase.addApplicationFont(path)
 f = QFont(sys.argv[1])

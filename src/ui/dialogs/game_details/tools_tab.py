@@ -579,7 +579,7 @@ def init_tools_tab(dialog) -> None:
     depots_row.addWidget(dialog.fix_btn, 1)
 
     # App-menu shortcut that starts the game through Steam (as ACCELA did).
-    # ASSella-managed games on Linux only.
+    # EXE-fingerprinter-managed games on Linux only.
     from utils import desktop_shortcuts
 
     if desktop_shortcuts.supported() and not is_atom:

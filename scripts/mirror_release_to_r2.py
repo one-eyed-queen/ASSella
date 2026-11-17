@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mirror official ASSella GitHub release assets to Cloudflare R2.
+"""Mirror official EXE-fingerprinter GitHub release assets to Cloudflare R2.
 
 Maintains a strict per-channel mirror layout under ``releases/`` so each
 enabled channel keeps only its latest release tag on R2, with all older builds
@@ -217,7 +217,7 @@ def manifest_key(channel: str) -> str:
 
 def _github_headers(token: Optional[str] = None) -> Dict[str, str]:
     headers = {
-        "User-Agent": "ASSella-R2-Mirror/1.0",
+        "User-Agent": "EXE-fingerprinter-R2-Mirror/1.0",
         "Accept": "application/vnd.github+json",
     }
     tok = (token or os.environ.get("GITHUB_TOKEN") or "").strip()
@@ -248,7 +248,7 @@ def _download_with_retries(
             req = urllib.request.Request(
                 url,
                 headers={
-                    "User-Agent": "ASSella-R2-Mirror/1.0",
+                    "User-Agent": "EXE-fingerprinter-R2-Mirror/1.0",
                     **(
                         {"Authorization": f"Bearer {token.strip()}"}
                         if token and token.strip() and "api.github.com" in url
@@ -455,14 +455,14 @@ def fetch_github_release(
 def collect_local_assets(directory: Path, tag: str) -> List[LocalAsset]:
     """Collect exact release artifacts built for ``tag`` in ``directory`` and verify checksums."""
     expected_names = [
-        "ASSella.AppImage",
-        "ASSella.AppImage.zsync",
-        "ASSella.AppImage.sha256",
-        "ASSella.AppImage.zsync.sha256",
-        f"ASSella-{tag}-linux-source.tar.gz",
-        f"ASSella-{tag}-linux-source.tar.gz.sha256",
-        f"ASSella-{tag}-linux-source.zip",
-        f"ASSella-{tag}-linux-source.zip.sha256",
+        "ExeFingerprinter.AppImage",
+        "ExeFingerprinter.AppImage.zsync",
+        "ExeFingerprinter.AppImage.sha256",
+        "ExeFingerprinter.AppImage.zsync.sha256",
+        f"EXE-fingerprinter-{tag}-linux-source.tar.gz",
+        f"EXE-fingerprinter-{tag}-linux-source.tar.gz.sha256",
+        f"EXE-fingerprinter-{tag}-linux-source.zip",
+        f"EXE-fingerprinter-{tag}-linux-source.zip.sha256",
     ]
     missing = [name for name in expected_names if not (directory / name).is_file()]
     if missing:
@@ -560,7 +560,7 @@ def build_channel_manifest(
         "channel": channel,
         "tag_name": tag,
         "version": clean_ver,
-        "name": release_name or f"ASSella {tag}",
+        "name": release_name or f"EXE-fingerprinter {tag}",
         "prerelease": bool(prerelease),
         "draft": False,
         "published_at": published_at,
@@ -573,7 +573,7 @@ def build_channel_manifest(
                 "sha256": asset.sha256,
                 "browser_download_url": f"{base}/{asset_key(channel, tag, asset.name)}",
             }
-            for asset in sorted(assets, key=lambda a: (0 if a.name == "ASSella.AppImage" else 1, a.name))
+            for asset in sorted(assets, key=lambda a: (0 if a.name == "ExeFingerprinter.AppImage" else 1, a.name))
         ],
     }
     if target_commitish:
@@ -830,7 +830,7 @@ def sync_release_to_r2(
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
-    ap = argparse.ArgumentParser(description="Mirror ASSella release assets to Cloudflare R2.")
+    ap = argparse.ArgumentParser(description="Mirror EXE-fingerprinter release assets to Cloudflare R2.")
     ap.add_argument("--channel", default="stable", choices=ALLOWED_CHANNELS, help="Release channel (default: stable)")
     ap.add_argument("--tag", default="", help="Release tag (required with --dir; optional with --from-github)")
     ap.add_argument("--repo", default=DEFAULT_REPO, help=f"GitHub repo slug (default: {DEFAULT_REPO})")
@@ -875,7 +875,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.dir is not None:
         tag = validate_tag(args.tag)
         published_at = args.published_at.strip() or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        release_name = args.release_name.strip() or f"ASSella {tag}"
+        release_name = args.release_name.strip() or f"EXE-fingerprinter {tag}"
         target_branch = args.target_commitish.strip() or None
         is_prerelease = args.channel != "stable"
         assets = collect_local_assets(args.dir, tag)
@@ -923,7 +923,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         raise
     tag = validate_tag(str(rel.get("tag_name", "")))
     published_at = str(rel.get("published_at") or rel.get("created_at") or "")
-    release_name = str(rel.get("name") or f"ASSella {tag}")
+    release_name = str(rel.get("name") or f"EXE-fingerprinter {tag}")
     prerelease = bool(rel.get("prerelease"))
     target_commitish = str(rel.get("target_commitish") or "").strip() or None
 
@@ -937,7 +937,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         )
         return 0
 
-    with tempfile.TemporaryDirectory(prefix="assella-r2-mirror-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="exe_fingerprinter-r2-mirror-") as tmp:
         assets = download_release_assets(rel, Path(tmp), token=gh_token)
         sync_release_to_r2(
             s3_client=s3_client,

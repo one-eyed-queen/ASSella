@@ -1,7 +1,7 @@
 """AT0-M games that are registered but not (fully) downloaded.
 
 AT0-M registers a game in two places when the user adds or starts a download:
-``plugin_library.json`` (ASSella's record: depots, keys, DLC, install dir) and
+``plugin_library.json`` (EXE-fingerprinter's record: depots, keys, DLC, install dir) and
 SLSsteam's ``config.yaml`` (AdditionalApps / DecryptionKeys, what Steam reads).
 The library scan only finds games with files on disk, so a game that was only
 added - or is still queued in Steam - was invisible and could not be removed.

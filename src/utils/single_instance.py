@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 def get_ipc_server_name() -> str:
     """Return a unique local server pipe name per operating system user."""
     uid = getattr(os, "getuid", lambda: "win")()
-    return f"assella_desktop_ipc_{uid}"
+    return f"exe_fingerprinter_desktop_ipc_{uid}"
 
 
 class SingleInstanceIPC(QObject):
     """Manages single-instance application IPC using Qt local sockets.
 
-    If an instance of ASSella is already running, routes command-line
+    If an instance of EXE-fingerprinter is already running, routes command-line
     arguments (e.g. --appid flags or dropped ZIP paths) to the active window
     and informs the secondary process to exit.
     """
@@ -37,7 +37,7 @@ class SingleInstanceIPC(QObject):
     def send_and_exit_if_running(
         cls, payload: Dict[str, Any], timeout_ms: int = 500
     ) -> bool:
-        """Attempt to connect to an existing running ASSella instance.
+        """Attempt to connect to an existing running EXE-fingerprinter instance.
 
         Returns True if connected and payload was sent (secondary process should exit),
         or False if no active instance was reachable.

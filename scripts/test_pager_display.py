@@ -35,7 +35,7 @@ def main() -> int:
 
     # The widget fetches a remote broadcast on construction and would overwrite
     # the label mid-assertion. Neutralise it before instantiating.
-    os.environ["ASSELLA_BROADCAST_URL"] = "file:///nonexistent/broadcast.json"
+    os.environ["EXE_FINGERPRINTER_BROADCAST_URL"] = "file:///nonexistent/broadcast.json"
 
     from ui.status_pager import StatusPagerWidget
     from utils.logger import (

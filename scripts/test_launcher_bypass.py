@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Functional and unit test for the Launcher Bypass feature in ASSella.
+"""Functional and unit test for the Launcher Bypass feature in EXE-fingerprinter.
 
 Tests:
 1. Shell command construction and regex extraction.

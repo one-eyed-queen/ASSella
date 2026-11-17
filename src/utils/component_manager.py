@@ -50,7 +50,7 @@ MANIFEST_FILENAME = "components_manifest.json"
 MANIFEST_URL = f"{R2_BASE_URL}/{MANIFEST_FILENAME}"
 
 DEFAULT_TIMEOUT = 30.0
-HTTP_USER_AGENT = "ASSella-ComponentManager/1.0"
+HTTP_USER_AGENT = "EXE-fingerprinter-ComponentManager/1.0"
 
 # Matches the escape hatch used for Hubcap TLS: verification is on by default.
 _state_lock = threading.Lock()
@@ -65,7 +65,7 @@ def _is_writable_dir(path: Path) -> bool:
         path.mkdir(parents=True, exist_ok=True)
     except OSError:
         return False
-    probe = path / f".assella_write_test_{os.getpid()}"
+    probe = path / f".exe_fingerprinter_write_test_{os.getpid()}"
     try:
         probe.write_bytes(b"")
         probe.unlink()
@@ -328,7 +328,7 @@ def download_component(
     expected = entry.get("sha256")
     install_dir = get_install_dir(key)
 
-    tmpdir = Path(tempfile.mkdtemp(prefix=f"assella_component_{key}_"))
+    tmpdir = Path(tempfile.mkdtemp(prefix=f"exe_fingerprinter_component_{key}_"))
     archive = tmpdir / entry["archive"]
     try:
         # --- download -----------------------------------------------------

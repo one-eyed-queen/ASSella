@@ -100,7 +100,7 @@ def _is_atom_game(dialog) -> bool:
 
 
 def _mode_logo_pixmap(is_atom: bool, size: int = 18, dpr: float = 1.0) -> QPixmap:
-    """Steam logo for AT0-M games, scalable ASSella SVG logo (with PNG fallback) for ASSella-managed ones."""
+    """Steam logo for AT0-M games, scalable EXE-fingerprinter SVG logo (with PNG fallback) for EXE-fingerprinter-managed ones."""
     from pathlib import Path
     from utils.color_utils import render_svg_pixmap
     from utils.helpers import get_base_path
@@ -130,7 +130,7 @@ def _mode_logo_pixmap(is_atom: bool, size: int = 18, dpr: float = 1.0) -> QPixma
 def get_installed_date(dialog) -> str:
     """When the installed build was installed.
 
-    ASSella installs: the newest depot manifest DepotDownloader wrote into
+    EXE-fingerprinter installs: the newest depot manifest DepotDownloader wrote into
     .DepotDownloader (the same files the update check reads). AT0-M: the
     Steam manifest's LastUpdated. Nothing found: empty (no guessing from
     folder dates, which change for unrelated reasons).
@@ -372,7 +372,7 @@ def apply_logo_header(dialog, pixmap: QPixmap) -> None:
     banner_layout.addWidget(dialog.logo_lbl, 0, Qt.AlignmentFlag.AlignVCenter)
 
     # 2. Metadata column stacked directly to the right:
-    # Line 1: assella/steam logo
+    # Line 1: exe_fingerprinter/steam logo
     # Line 2: appid
     # Line 3: size
     # Line 4: buildid  date
@@ -437,7 +437,7 @@ def init_hero_v2(dialog, root) -> None:
     if not px.isNull():
         dialog.mode_logo_lbl.setPixmap(px)
     dialog.mode_logo_lbl.setToolTip(
-        "AT0-M: installed and updated by the Steam client" if is_atom else "Managed by ASSella"
+        "AT0-M: installed and updated by the Steam client" if is_atom else "Managed by EXE-fingerprinter"
     )
 
     dialog.appid_lbl = QPushButton(str(dialog.appid))

@@ -23,16 +23,16 @@ Choose exactly what goes:
 
 | Option | What it does |
 | :--- | :--- |
-| **I bought the game** | Keeps the game files, saves and prefix. It only removes ASSella's SLSsteam integration (config entries, tokens, EOS proxy, Goldberg), so the game runs as a normal Steam purchase. Use this after buying a game you'd been playing. |
+| **I bought the game** | Keeps the game files, saves and prefix. It only removes EXE-fingerprinter's SLSsteam integration (config entries, tokens, EOS proxy, Goldberg), so the game runs as a normal Steam purchase. Use this after buying a game you'd been playing. |
 | **Remove Proton prefix (has Windows saves)** | Also deletes `compatdata/<appid>`: the game's Windows environment, including save games stored in *Documents* / *AppData*. |
 | **Remove local cloud saves** | Also deletes your local copy of the game's Steam Cloud saves in `userdata`. |
 
-Then **Confirm Uninstall**. ASSella lists exactly what will be deleted before anything happens.
+Then **Confirm Uninstall**. EXE-fingerprinter lists exactly what will be deleted before anything happens.
 
-## ASSella way vs AT0-M way
+## EXE-fingerprinter way vs AT0-M way
 
-- **ASSella games:** ASSella deletes the files itself.
-- **AT0-M games:** ASSella removes the files and the config entries. Steam then sees the game as uninstalled and doesn't download it again.
+- **EXE-fingerprinter games:** EXE-fingerprinter deletes the files itself.
+- **AT0-M games:** EXE-fingerprinter removes the files and the config entries. Steam then sees the game as uninstalled and doesn't download it again.
 
 ::: warning Saves
 Deleted saves can't be restored. If you might come back to a game, leave the prefix and cloud saves options unticked.

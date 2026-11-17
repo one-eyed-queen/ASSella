@@ -1,7 +1,7 @@
-"""SLSsteam's own settings in config.yaml (the scalar ones ASSella does not manage).
+"""SLSsteam's own settings in config.yaml (the scalar ones EXE-fingerprinter does not manage).
 
 config.yaml is the source of truth: values are read from the file every time,
-nothing is mirrored in ASSella's settings.
+nothing is mirrored in EXE-fingerprinter's settings.
 
 Writing follows the rest of the YAML package:
 
@@ -43,7 +43,7 @@ class SlsSetting:
     flags: Tuple[Tuple[int, str], ...] = field(default_factory=tuple)
 
 
-# What the Advanced tab shows. Keys ASSella manages elsewhere are left out on
+# What the Advanced tab shows. Keys EXE-fingerprinter manages elsewhere are left out on
 # purpose: AppIds, AdditionalApps, AdditionalDepots, DecryptionKeys, DlcData,
 # FakeAppIds, ManifestIds, LaunchOptions, Plugins, DenuvoGames, API, and the
 # logging keys (Tools -> Logging).

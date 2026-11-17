@@ -92,7 +92,7 @@ class VoicesManager:
         """Asynchronously check and sync the latest voices.json from GitHub."""
         def _worker():
             url = os.environ.get(
-                "ASSELLA_VOICES_URL",
+                "EXE_FINGERPRINTER_VOICES_URL",
                 f"{DEFAULT_GITHUB_VOICES_URL}?t={int(time.time())}",
             )
             try:
@@ -103,7 +103,7 @@ class VoicesManager:
                 else:
                     req = urllib.request.Request(
                         url,
-                        headers={"User-Agent": "ASSella-Client", "Cache-Control": "no-cache"},
+                        headers={"User-Agent": "EXE-fingerprinter-Client", "Cache-Control": "no-cache"},
                     )
                     with urllib.request.urlopen(req, timeout=8.0) as resp:
                         if resp.status == 200:

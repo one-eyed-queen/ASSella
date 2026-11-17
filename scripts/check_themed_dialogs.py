@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail when a dialog window asks the desktop to draw its decorations.
 
-Every window in ASSella wears the tool's own frame: ``install_themed_frame``
+Every window in EXE-fingerprinter wears the tool's own frame: ``install_themed_frame``
 (``ui.dialogs.themed_dialog``) puts the rounded container and the custom
 ``DialogTitleBar`` on a dialog, and a dialog that already builds its own frame
 sets ``Qt.WindowType.FramelessWindowHint`` itself. A dialog that does neither
@@ -32,7 +32,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ROOT = REPO_ROOT / "src"
 DEFAULT_BASELINE = REPO_ROOT / "scripts" / "themed_dialogs_baseline.json"
 
-# Markers that mean "this dialog draws ASSella's own frame".
+# Markers that mean "this dialog draws EXE-fingerprinter's own frame".
 FRAME_MARKERS = ("FramelessWindowHint", "install_themed_frame")
 THEMED_BASES = ("ThemedDialog",)
 
@@ -159,7 +159,7 @@ def main() -> int:
             now_detail = ", ".join(f"{k} x{v}" for k, v in sorted(now.items()))
             print(f"  {name}: {was_detail} -> {now_detail} (+{gained})")
         print("\nBuild the dialog with install_themed_frame from ui.dialogs.themed_dialog "
-              "(or set Qt.WindowType.FramelessWindowHint yourself) so the window belongs to ASSella.")
+              "(or set Qt.WindowType.FramelessWindowHint yourself) so the window belongs to EXE-fingerprinter.")
         return 1
 
     now_totals, was_totals = totals(current), totals(baseline)

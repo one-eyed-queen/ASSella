@@ -61,7 +61,7 @@ class BatchAtomMigrationConfirmDialog(ThemedDialog):
     def _build_content(self) -> None:
         # 1. Header explanation text
         desc_lbl = QLabel(
-            "Move selected games from ASSella-managed to <b>AT0-M (Steam Native)</b> mode.<br>"
+            "Move selected games from EXE-fingerprinter-managed to <b>AT0-M (Steam Native)</b> mode.<br>"
             "Local marker files (<code>.DepotDownloader</code>) will be removed, and required "
             "AppIDs, Depots, and DecryptionKeys will be registered into SLSsteam config."
         )

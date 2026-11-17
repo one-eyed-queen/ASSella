@@ -46,7 +46,7 @@ class NativeSteamActionDialog(QDialog):
     Minimal dialog prompting how to proceed with Steam installation:
       - Start steam download
       - Download later
-    Clean borderless cards with custom ASSella title bar and full-width buttons.
+    Clean borderless cards with custom EXE-fingerprinter title bar and full-width buttons.
     """
 
     def __init__(

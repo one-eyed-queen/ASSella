@@ -56,7 +56,7 @@ def main() -> int:
     import core.lua_tools_api as api
     import utils.settings as settings_module
 
-    tmp_dir = Path(tempfile.mkdtemp(prefix="assella_luatools_gate_"))
+    tmp_dir = Path(tempfile.mkdtemp(prefix="exe_fingerprinter_luatools_gate_"))
     session_file = tmp_dir / "session.json"
     read_paths: list[Path] = []
     network_calls: list[str] = []

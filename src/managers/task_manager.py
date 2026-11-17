@@ -621,7 +621,7 @@ class TaskManager(
                 self.main_window,
                 "No Steam Library Found",
                 "Steam has not initialized any library folders yet.\n\n"
-                "Please install at least one free game using the Steam client to generate your library folders, then restart ASSella to continue."
+                "Please install at least one free game using the Steam client to generate your library folders, then restart EXE-fingerprinter to continue."
             )
             return None
 
@@ -760,9 +760,9 @@ class TaskManager(
             or (self.current_job_metadata and self.current_job_metadata.get("is_rollback"))
         )
 
-        if explicit_backend == "assella" or is_rollback_requested:
+        if explicit_backend == "exe_fingerprinter" or is_rollback_requested:
             logger.info(
-                f"[TaskManager] Job explicitly requested ASSella Downloader "
+                f"[TaskManager] Job explicitly requested EXE-fingerprinter Downloader "
                 f"{'(Rollback/Downgrade)' if is_rollback_requested else ''} for '{game_title}'"
             )
             use_native_steam = False
@@ -800,7 +800,7 @@ class TaskManager(
                     try:
                         game_dir = get_game_directory(dest_path, self.game_data)
                         if game_dir and os.path.isdir(game_dir):
-                            for m in (".assella", ".ASSELLA", ".accela", ".depotdownloader", ".ACCELA", ".DepotDownloader"):
+                            for m in (".exe_fingerprinter", ".EXE-FINGERPRINTER", ".accela", ".depotdownloader", ".ACCELA", ".DepotDownloader"):
                                 if os.path.exists(os.path.join(game_dir, m)):
                                     is_accela_game = True
                                     break
@@ -817,20 +817,20 @@ class TaskManager(
             else:
                 logger.info(
                     f"[TaskManager] Update for pre-existing ACCELA game '{game_title}' — "
-                    "using ASSella Downloader backend"
+                    "using EXE-fingerprinter Downloader backend"
                 )
                 use_native_steam = False
         elif enable_at0m:
             if at0m_action == "native":
                 use_native_steam = True
                 action_mode = "handoff"
-            elif at0m_action == "assella":
+            elif at0m_action == "exe_fingerprinter":
                 use_native_steam = False
             else:  # "ask"
                 from ui.dialogs.download_backend_dialog import (
                     DownloadBackendDialog,
                     BACKEND_CANCEL,
-                    BACKEND_ASSELLA,
+                    BACKEND_EXE_FINGERPRINTER,
                     BACKEND_NATIVE_STEAM,
                 )
                 dlg = DownloadBackendDialog(
@@ -845,7 +845,7 @@ class TaskManager(
                     logger.info("[TaskManager] User cancelled download backend selection")
                     self.job_finished()
                     return
-                elif choice == BACKEND_ASSELLA:
+                elif choice == BACKEND_EXE_FINGERPRINTER:
                     use_native_steam = False
                 elif choice == BACKEND_NATIVE_STEAM:
                     use_native_steam = True
@@ -869,7 +869,7 @@ class TaskManager(
                 from ui.dialogs.platform_mismatch_dialog import (
                     PlatformMismatchDialog,
                     ACTION_PROCEED,
-                    ACTION_ASSELLA_DOWNLOAD,
+                    ACTION_EXE_FINGERPRINTER_DOWNLOAD,
                     ACTION_CANCEL,
                 )
                 is_mismatch, mismatch_details = check_native_steam_platform_mismatch(
@@ -888,7 +888,7 @@ class TaskManager(
                     if m_act == ACTION_PROCEED:
                         # Proceed normally without forcing Proton or restarting Steam
                         pass
-                    elif m_act == ACTION_ASSELLA_DOWNLOAD:
+                    elif m_act == ACTION_EXE_FINGERPRINTER_DOWNLOAD:
                         use_native_steam = False
                     else:  # ACTION_CANCEL
                         logger.info("[TaskManager] User cancelled download on platform mismatch")
@@ -906,7 +906,7 @@ class TaskManager(
                     self.main_window,
                     "No Steam Library Found",
                     "Steam has not initialized any library folders yet.\n\n"
-                    "Please install at least one free game using the Steam client to generate your library folders, then restart ASSella to continue."
+                    "Please install at least one free game using the Steam client to generate your library folders, then restart EXE-fingerprinter to continue."
                 )
                 logger.warning("[TaskManager] Aborting native Steam download: No Steam libraries found.")
                 self.job_finished()
@@ -1302,7 +1302,7 @@ class TaskManager(
             from ui.dialogs.platform_mismatch_dialog import (
                 PlatformMismatchDialog,
                 ACTION_PROCEED,
-                ACTION_ASSELLA_DOWNLOAD,
+                ACTION_EXE_FINGERPRINTER_DOWNLOAD,
                 ACTION_CANCEL,
             )
             if platform_checked:
@@ -1324,8 +1324,8 @@ class TaskManager(
                     if m_act == ACTION_PROCEED:
                         # Proceed normally without forcing Proton or restarting Steam
                         pass
-                    elif m_act == ACTION_ASSELLA_DOWNLOAD:
-                        logger.info(f"[TaskManager] User chose ASSella downloader for {app_id_str}")
+                    elif m_act == ACTION_EXE_FINGERPRINTER_DOWNLOAD:
+                        logger.info(f"[TaskManager] User chose EXE-fingerprinter downloader for {app_id_str}")
                         if self.main_window and hasattr(self.main_window, "open_download_dialog"):
                             self.main_window.open_download_dialog(app_id_str)
                         return
@@ -1344,7 +1344,7 @@ class TaskManager(
                 self.main_window,
                 "No Steam Library Found",
                 "Steam has not initialized any library folders yet.\n\n"
-                "Please install at least one free game using the Steam client to generate your library folders, then restart ASSella to continue."
+                "Please install at least one free game using the Steam client to generate your library folders, then restart EXE-fingerprinter to continue."
             )
             return
 

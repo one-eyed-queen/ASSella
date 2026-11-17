@@ -102,7 +102,7 @@ jobs:
       # dependency is a failure here, not a skip.
       - name: Smoke Import Gate
         run: |
-          ASSELLA_NO_REEXEC=1 QT_QPA_PLATFORM=offscreen \
+          EXE_FINGERPRINTER_NO_REEXEC=1 QT_QPA_PLATFORM=offscreen \
             python -u scripts/smoke_import_check.py
 
       # Fast type-checker gate specifically for unresolved imports inside src/.
@@ -139,13 +139,13 @@ jobs:
 
       # Native Qt dialogs paint themselves in the desktop's theme and carry the
       # desktop's decorations, so a window that uses one does not look like
-      # ASSella. The ones left are frozen; this fails on a new one, and the
+      # EXE-fingerprinter. The ones left are frozen; this fails on a new one, and the
       # baseline tightens as each file migrates to the themed replacements.
       - name: No New Native Dialogs
         run: |
           python scripts/check_native_dialogs.py
 
-      # A dialog that does not build ASSella's own frame wears the desktop's
+      # A dialog that does not build EXE-fingerprinter's own frame wears the desktop's
       # title bar instead, so two windows in one session do not look like the
       # same application. Every dialog in the tree now takes the themed frame;
       # this fails if a new one arrives without it.
@@ -155,7 +155,7 @@ jobs:
 
       # install.sh is the first thing a user runs and the only code that edits
       # their desktop entries, so its symlink handling gets a real shell test.
-      # The test reproduces the assella.desktop <-> accela.desktop loop that
+      # The test reproduces the exe_fingerprinter.desktop <-> accela.desktop loop that
       # broke updates on Steam Deck, and is hermetic (temp HOME, no network).
       - name: Installer Script Regression
         run: |

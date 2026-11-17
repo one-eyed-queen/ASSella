@@ -48,7 +48,7 @@ class LibraryTabBar(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
-        self.btn_accela = QPushButton("ASSella")
+        self.btn_accela = QPushButton("EXE-fingerprinter")
         self.btn_accela.setCheckable(True)
         self.btn_accela.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_accela.clicked.connect(lambda: self.set_current_tab(TAB_ACCELA))
@@ -152,7 +152,7 @@ class LibraryTabBar(QWidget):
         c_atom = self._counts[TAB_ATOM]
         c_steam = self._counts[TAB_STEAM]
 
-        self.btn_accela.setText(f"ASSella ({c_accela})" if c_accela > 0 else "ASSella")
+        self.btn_accela.setText(f"EXE-fingerprinter ({c_accela})" if c_accela > 0 else "EXE-fingerprinter")
         self.btn_atom.setText(f"AT0-M ({c_atom})" if c_atom > 0 else "AT0-M")
         if self._is_scanning.get(TAB_STEAM):
             self.btn_steam.setText("Steam (Beta) (Scanning...)")

@@ -8,7 +8,7 @@ if (( BASH_VERSINFO[0] < 4 )); then
 fi
 
 # ==============================================================================
-#                      ASSella Installer
+#                      EXE-fingerprinter Installer
 # ==============================================================================
 
 # Terminal Colors & Styling (respect NO_COLOR and non-interactive TTYs)
@@ -32,11 +32,11 @@ fi
 
 INSTALL_DESTINATION="$HOME/.local/share/ACCELA"
 DESKTOP_DIR="$HOME/.local/share/applications"
-PRIMARY_DESKTOP_ENTRY="$DESKTOP_DIR/assella.desktop"
+PRIMARY_DESKTOP_ENTRY="$DESKTOP_DIR/exe_fingerprinter.desktop"
 LEGACY_DESKTOP_ENTRY="$DESKTOP_DIR/accela.desktop"
 DESKTOP_ENTRY="$PRIMARY_DESKTOP_ENTRY"
 ICON_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
-PRIMARY_ICON_PATH="$ICON_DIR/assella.png"
+PRIMARY_ICON_PATH="$ICON_DIR/exe_fingerprinter.png"
 LEGACY_ICON_PATH="$ICON_DIR/accela.png"
 ICON_PATH="$PRIMARY_ICON_PATH"
 VERSION_FILE="$INSTALL_DESTINATION/version"
@@ -79,10 +79,10 @@ cleanup() {
     # (SIGKILL cannot be trapped). Guard the directories: an empty value would
     # turn the pattern into a glob at the filesystem root.
     if [ -n "${DESKTOP_DIR:-}" ]; then
-        rm -f "$DESKTOP_DIR/.assella.desktop.tmp."* 2>/dev/null || true
+        rm -f "$DESKTOP_DIR/.exe_fingerprinter.desktop.tmp."* 2>/dev/null || true
     fi
     if [ -n "${ICON_DIR:-}" ]; then
-        rm -f "$ICON_DIR/.assella.png.tmp."* 2>/dev/null || true
+        rm -f "$ICON_DIR/.exe_fingerprinter.png.tmp."* 2>/dev/null || true
     fi
 }
 trap cleanup EXIT INT TERM
@@ -114,20 +114,20 @@ write_desktop_entry() {
     mkdir -p "$DESKTOP_DIR"
     # Create the file beside the destination, then rename it.  This replaces a
     # destination symlink itself instead of following it (which previously
-    # allowed assella.desktop and accela.desktop to become a symlink loop).
-    desktop_tmp=$(mktemp "$DESKTOP_DIR/.assella.desktop.tmp.XXXXXX")
+    # allowed exe_fingerprinter.desktop and accela.desktop to become a symlink loop).
+    desktop_tmp=$(mktemp "$DESKTOP_DIR/.exe_fingerprinter.desktop.tmp.XXXXXX")
     DESKTOP_TMP="$desktop_tmp"
     cat >"$desktop_tmp" <<EOL
 [Desktop Entry]
 Version=2.0
-Name=ASSella
+Name=EXE-fingerprinter
 Comment=Steam Game & Depot Management Suite
 Exec=$exec_cmd
-Icon=assella
+Icon=exe_fingerprinter
 Terminal=false
 Type=Application
 Categories=Utility;Game;
-StartupWMClass=ASSella
+StartupWMClass=EXE-fingerprinter
 EOL
     chmod 0644 "$desktop_tmp"
     # Unlink any existing entry/symlink so older coreutils mv (e.g. <= 8.32 on Ubuntu 22.04)
@@ -140,7 +140,7 @@ EOL
     grep -q '^Exec=' "$PRIMARY_DESKTOP_ENTRY"
 
     # Clean up any legacy accela.desktop entry or symlink so application launchers
-    # do not display duplicate ASSella entries (issue #31).
+    # do not display duplicate EXE-fingerprinter entries (issue #31).
     rm -f "$LEGACY_DESKTOP_ENTRY"
 }
 
@@ -148,7 +148,7 @@ install_application_icon() {
     local icon_tmp
 
     mkdir -p "$ICON_DIR"
-    icon_tmp=$(mktemp "$ICON_DIR/.assella.png.tmp.XXXXXX")
+    icon_tmp=$(mktemp "$ICON_DIR/.exe_fingerprinter.png.tmp.XXXXXX")
     ICON_TMP="$icon_tmp"
     if curl -fsSL --retry 3 --retry-delay 2 -o "$icon_tmp" \
         "https://raw.githubusercontent.com/niwia/ASSella/main/src/res/logo/icon.png"; then
@@ -165,7 +165,7 @@ install_application_icon() {
     # Maintain legacy alias if the primary icon exists as a regular file
     if [ -f "$PRIMARY_ICON_PATH" ] && [ ! -L "$PRIMARY_ICON_PATH" ]; then
         rm -f "$LEGACY_ICON_PATH"
-        ln -s "assella.png" "$LEGACY_ICON_PATH"
+        ln -s "exe_fingerprinter.png" "$LEGACY_ICON_PATH"
     fi
 }
 
@@ -329,7 +329,7 @@ _is_installed_version() {
 _detect_branch_of_tag() {
     local lower_ver
     lower_ver=$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')
-    lower_ver=$(printf '%s' "$lower_ver" | sed -E 's/^[0-9]{8}\+[a-z0-9._-]+-//; s/^[0-9]{8}[_-]//')
+    lower_ver=$(printf '%s' "$lower_ver" | sed -E 's/^[0-9]{8}\+[a-z0-9._ -]+-//; s/^[0-9]{8}[_-]//')
     if [ -z "$lower_ver" ] || [ "$lower_ver" = "unknown" ] || [ "$lower_ver" = "not installed" ]; then
         echo ""
     elif printf '%s' "$lower_ver" | grep -qE '(^|[^a-z])(canary|testing|devtest|release[_-]?candidate)([^a-z]|$)'; then
@@ -373,7 +373,7 @@ check_and_warn_fuse() {
     local cmd="${PKG_FUSE_CMD[$family]:-}"
 
     echo -e "\n${YELLOW}${BOLD}[WARN] FUSE 2 (libfuse.so.2) is not detected!${NC}"
-    echo -e "ASSella AppImage requires fuse2 to run on your system."
+    echo -e "EXE-fingerprinter AppImage requires fuse2 to run on your system."
 
     if [ -n "$cmd" ]; then
         echo -e "If the AppImage does not launch, install fuse2 on ${BOLD}${DISTRO_NAME:-Generic Linux}${NC}:"
@@ -404,8 +404,8 @@ fetch_github_json() {
     local delay=2
     local auth_header=()
 
-    if [ -n "${ASSELLA_GH_TOKEN:-}" ]; then
-        auth_header=(-H "Authorization: Bearer $ASSELLA_GH_TOKEN")
+    if [ -n "${EXE_FINGERPRINTER_GH_TOKEN:-}" ]; then
+        auth_header=(-H "Authorization: Bearer $EXE_FINGERPRINTER_GH_TOKEN")
     elif [ -n "${GITHUB_TOKEN:-}" ]; then
         auth_header=(-H "Authorization: Bearer $GITHUB_TOKEN")
     fi
@@ -413,7 +413,7 @@ fetch_github_json() {
     while (( tries-- > 0 )); do
         local body
         if body=$(curl -fsSL -H "Accept: application/vnd.github+json" \
-                -H "User-Agent: ASSella-Installer" \
+                -H "User-Agent: EXE-fingerprinter-Installer" \
                 "${auth_header[@]}" \
                 --max-time 15 \
                 "$url" 2>/dev/null); then
@@ -496,7 +496,7 @@ try:
     if missing_sections:
         # Append in-place to preserve system inode
         with open(current_path, "a", encoding="utf-8") as f:
-            f.write("\n# Restored by ASSella (protected from Headcrab wipe):\n")
+            f.write("\n# Restored by EXE-fingerprinter (protected from Headcrab wipe):\n")
             for sec in missing_sections:
                 f.write(sec)
                 if not sec.endswith("\n"):
@@ -796,7 +796,7 @@ get_latest_github_version() {
 show_header() {
     clear 2>/dev/null || true
     echo -e "${CYAN}${BOLD}===================================================================${NC}"
-    echo -e "${GREEN}${BOLD}                         ASSella Installer                         ${NC}"
+    echo -e "${GREEN}${BOLD}                         EXE-fingerprinter Installer                         ${NC}"
     echo -e "${CYAN}${BOLD}===================================================================${NC}"
     echo -e "  ${BOLD}OS Detected:${NC}      ${DISTRO_NAME:-Generic Linux} ($(uname -m))"
     if [ "${IS_STEAM_DECK:-false}" = true ]; then
@@ -854,9 +854,9 @@ show_distro_guide() {
     if [ "$IS_NIXOS" = true ]; then
         echo -e "${CYAN}${BOLD}NixOS Installation Guide:${NC}"
         echo -e "NixOS does not use standard /lib64 glibc linkers out of the box."
-        echo -e "ASSella automatically generates a launcher using ${GREEN}steam-run${NC} or ${GREEN}appimage-run${NC}.\n"
+        echo -e "EXE-fingerprinter automatically generates a launcher using ${GREEN}steam-run${NC} or ${GREEN}appimage-run${NC}.\n"
         echo -e "  ${BOLD}Command to launch directly:${NC}"
-        echo -e "    ${GREEN}nix-shell -p steam-run --run 'steam-run ~/.local/share/ACCELA/ASSella.AppImage'${NC}\n"
+        echo -e "    ${GREEN}nix-shell -p steam-run --run 'steam-run ~/.local/share/ACCELA/ExeFingerprinter.AppImage'${NC}\n"
         echo -e "  ${BOLD}Global fix (Optional):${NC} Add ${GREEN}programs.nix-ld.enable = true;${NC} in /etc/nixos/configuration.nix"
     else
         local family
@@ -999,7 +999,7 @@ _attempt_download_and_verify() {
     elif command -v zsync &>/dev/null; then
         zsync_bin="zsync"
     fi
-    if [ "${ASSELLA_NO_ZSYNC:-0}" != "1" ] && [ -n "$zsync_bin" ] && [ -f "$INSTALL_DESTINATION/ASSella.AppImage" ]; then
+    if [ "${EXE_FINGERPRINTER_NO_ZSYNC:-0}" != "1" ] && [ -n "$zsync_bin" ] && [ -f "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" ]; then
         echo -e "${CYAN}[INFO] $zsync_bin delta update available — syncing changed blocks only.${NC}"
         local zsync_url="${LATEST_URL}.zsync"
         if curl -fsL --retry 3 --retry-delay 2 --max-time 30 -o "${DL_TMP}.zsync" "$zsync_url" 2>/dev/null; then
@@ -1008,7 +1008,7 @@ _attempt_download_and_verify() {
             if [ "$zsync_bin" = "zsync2" ]; then
                 zsync_cmd+=(-u "$LATEST_URL")
             fi
-            zsync_cmd+=(-i "$INSTALL_DESTINATION/ASSella.AppImage" -o "$DL_TMP" "$zsync_url")
+            zsync_cmd+=(-i "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" -o "$DL_TMP" "$zsync_url")
             if "${zsync_cmd[@]}" >"$zsync_log" 2>&1; then
                 [ -s "$zsync_log" ] && sed 's/^/    /' "$zsync_log"
                 used_zsync=true
@@ -1023,7 +1023,7 @@ _attempt_download_and_verify() {
             echo -e "${YELLOW}[INFO] No .zsync published for this release; using full download.${NC}"
         fi
         rm -f "${DL_TMP}.zsync"
-    elif [ "${ASSELLA_NO_ZSYNC:-0}" != "1" ] && [ -z "$zsync_bin" ]; then
+    elif [ "${EXE_FINGERPRINTER_NO_ZSYNC:-0}" != "1" ] && [ -z "$zsync_bin" ]; then
         echo -e "${YELLOW}[INFO] zsync / zsync2 not installed — using full download.${NC}"
     fi
 
@@ -1093,10 +1093,10 @@ _attempt_download_and_verify() {
             echo -e "${RED}  expected: $expected_sha${NC}"
             echo -e "${RED}  actual:   $actual_sha${NC}"
             local proceed="n"
-            if [ "${ASSELLA_REQUIRE_SHA256:-0}" != "1" ] && { [ "${SKIP_CHECKSUM:-false}" = true ] || [ "${ASSELLA_SKIP_CHECKSUM:-0}" = "1" ]; }; then
+            if [ "${EXE_FINGERPRINTER_REQUIRE_SHA256:-0}" != "1" ] && { [ "${SKIP_CHECKSUM:-false}" = true ] || [ "${EXE_FINGERPRINTER_SKIP_CHECKSUM:-0}" = "1" ]; }; then
                 echo -e "${YELLOW}[WARN] Checksum mismatch bypassed via flag/environment.${NC}"
                 proceed="y"
-            elif [ "${ASSELLA_REQUIRE_SHA256:-0}" != "1" ] && [ "$allow_interactive" = true ] && { [ -t 0 ] || [ -r /dev/tty ]; }; then
+            elif [ "${EXE_FINGERPRINTER_REQUIRE_SHA256:-0}" != "1" ] && [ "$allow_interactive" = true ] && { [ -t 0 ] || [ -r /dev/tty ]; }; then
                 proceed=$(prompt_user "Do you want to ignore the checksum mismatch and proceed anyway? [y/N]: " "n")
             fi
 
@@ -1109,7 +1109,7 @@ _attempt_download_and_verify() {
             ;;
         malformed|notool|fetch_error)
             echo -e "${RED}[ERROR] Cannot verify checksum ($sha_state).${NC}"
-            if [ "${ASSELLA_REQUIRE_SHA256:-0}" != "1" ] && { [ "${SKIP_CHECKSUM:-false}" = true ] || [ "${ASSELLA_SKIP_CHECKSUM:-0}" = "1" ]; }; then
+            if [ "${EXE_FINGERPRINTER_REQUIRE_SHA256:-0}" != "1" ] && { [ "${SKIP_CHECKSUM:-false}" = true ] || [ "${EXE_FINGERPRINTER_SKIP_CHECKSUM:-0}" = "1" ]; }; then
                 echo -e "${YELLOW}[WARN] Checksum verification bypassed via flag/environment ($sha_state).${NC}"
                 return 0
             fi
@@ -1118,8 +1118,8 @@ _attempt_download_and_verify() {
             ;;
         missing)
             echo -e "${YELLOW}[WARN] No published .sha256 for this release; integrity NOT verified.${NC}"
-            if [ "${ASSELLA_REQUIRE_SHA256:-0}" = "1" ]; then
-                echo -e "${RED}[ERROR] ASSELLA_REQUIRE_SHA256=1 set, refusing unverified download.${NC}"
+            if [ "${EXE_FINGERPRINTER_REQUIRE_SHA256:-0}" = "1" ]; then
+                echo -e "${RED}[ERROR] EXE_FINGERPRINTER_REQUIRE_SHA256=1 set, refusing unverified download.${NC}"
                 rm -f "$DL_TMP"
                 return 3
             fi
@@ -1129,7 +1129,7 @@ _attempt_download_and_verify() {
 }
 
 do_install() {
-    echo -e "\n${YELLOW}[INFO] Installing / Updating ASSella...${NC}"
+    echo -e "\n${YELLOW}[INFO] Installing / Updating EXE-fingerprinter...${NC}"
     mkdir -p "$INSTALL_DESTINATION"
 
     check_disk_space "$INSTALL_DESTINATION" || {
@@ -1161,14 +1161,14 @@ do_install() {
             echo -e "${YELLOW}[WARN] Switching channel ($local_ch -> $target_ch): installing $LATEST_VER over $LOCAL_VER.${NC}"
         fi
     fi
-    echo -e "${YELLOW}[INFO] Downloading ASSella.AppImage ($LATEST_VER)...${NC}"
+    echo -e "${YELLOW}[INFO] Downloading ExeFingerprinter.AppImage ($LATEST_VER)...${NC}"
 
-    TMP_DIR="$(mktemp -d -t assella-install-XXXXXX)" || {
+    TMP_DIR="$(mktemp -d -t exe_fingerprinter-install-XXXXXX)" || {
         echo -e "${RED}[ERROR] Could not create temporary download directory.${NC}"
         pause_if_interactive
         return 1
     }
-    local DL_TMP="$TMP_DIR/ASSella.AppImage"
+    local DL_TMP="$TMP_DIR/ExeFingerprinter.AppImage"
 
     local can_try_r2=false
     if [ "$UPDATE_SERVER" = "auto" ]; then
@@ -1187,7 +1187,7 @@ do_install() {
         echo -e "${YELLOW}[WARN] Primary download/verification failed; trying Cloudflare R2 mirror...${NC}"
         local requested_ver="$LATEST_VER"
         if _fallback_to_r2_release "$requested_ver"; then
-            echo -e "${YELLOW}[INFO] Downloading ASSella.AppImage ($LATEST_VER) from Cloudflare R2...${NC}"
+            echo -e "${YELLOW}[INFO] Downloading ExeFingerprinter.AppImage ($LATEST_VER) from Cloudflare R2...${NC}"
             dl_rc=0
             _attempt_download_and_verify "$DL_TMP" "true" || dl_rc=$?
         fi
@@ -1202,18 +1202,18 @@ do_install() {
     fi
 
     # Promote verified download into place safely with rollback
-    local backup_target="$INSTALL_DESTINATION/ASSella.AppImage.bak"
+    local backup_target="$INSTALL_DESTINATION/ExeFingerprinter.AppImage.bak"
     local had_previous=0
-    if [ -f "$INSTALL_DESTINATION/ASSella.AppImage" ]; then
+    if [ -f "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" ]; then
         had_previous=1
-        mv -f "$INSTALL_DESTINATION/ASSella.AppImage" "$backup_target"
+        mv -f "$INSTALL_DESTINATION/ExeFingerprinter.AppImage" "$backup_target"
     fi
 
-    if ! mv -f "$DL_TMP" "$INSTALL_DESTINATION/ASSella.AppImage"; then
+    if ! mv -f "$DL_TMP" "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"; then
         echo -e "${RED}[ERROR] Failed to move verified binary into place.${NC}"
         if [ "$had_previous" -eq 1 ] && [ -f "$backup_target" ]; then
-            echo -e "${YELLOW}[INFO] Restoring previous ASSella.AppImage from backup...${NC}"
-            mv -f "$backup_target" "$INSTALL_DESTINATION/ASSella.AppImage"
+            echo -e "${YELLOW}[INFO] Restoring previous ExeFingerprinter.AppImage from backup...${NC}"
+            mv -f "$backup_target" "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
         fi
         rm -f "$DL_TMP"
         pause_if_interactive
@@ -1221,7 +1221,7 @@ do_install() {
     fi
 
     rm -f "$backup_target"
-    chmod +x "$INSTALL_DESTINATION/ASSella.AppImage"
+    chmod +x "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
 
     # Backup previous non-symlink ACCELA.AppImage
     if [ -f "$INSTALL_DESTINATION/ACCELA.AppImage" ] && [ ! -L "$INSTALL_DESTINATION/ACCELA.AppImage" ]; then
@@ -1232,10 +1232,10 @@ do_install() {
     # Save local version file
     echo "$LATEST_VER" > "$VERSION_FILE"
 
-    # Compatibility symlink ACCELA.AppImage -> ASSella.AppImage
+    # Compatibility symlink ACCELA.AppImage -> ExeFingerprinter.AppImage
     rm -f "$INSTALL_DESTINATION/ACCELA.AppImage"
-    ln -s "ASSella.AppImage" "$INSTALL_DESTINATION/ACCELA.AppImage"
-    echo -e "${GREEN}[INFO] Created compatibility symlink ACCELA.AppImage -> ASSella.AppImage.${NC}"
+    ln -s "ExeFingerprinter.AppImage" "$INSTALL_DESTINATION/ACCELA.AppImage"
+    echo -e "${GREEN}[INFO] Created compatibility symlink ACCELA.AppImage -> ExeFingerprinter.AppImage.${NC}"
 
     # Handle NixOS Launcher Script
     local EXEC_COMMAND=""
@@ -1244,12 +1244,12 @@ do_install() {
         cat >"$NIXOS_LAUNCHER" <<'EOL'
 #!/usr/bin/env bash
 if command -v steam-run &>/dev/null; then
-    exec steam-run "$HOME/.local/share/ACCELA/ASSella.AppImage" "$@"
+    exec steam-run "$HOME/.local/share/ACCELA/ExeFingerprinter.AppImage" "$@"
 elif command -v appimage-run &>/dev/null; then
-    exec appimage-run "$HOME/.local/share/ACCELA/ASSella.AppImage" "$@"
+    exec appimage-run "$HOME/.local/share/ACCELA/ExeFingerprinter.AppImage" "$@"
 else
-    echo "NixOS detected! Please install steam-run or appimage-run to launch ASSella:"
-    echo "  nix-shell -p steam-run --run 'steam-run ~/.local/share/ACCELA/ASSella.AppImage'"
+    echo "NixOS detected! Please install steam-run or appimage-run to launch EXE-fingerprinter:"
+    echo "  nix-shell -p steam-run --run 'steam-run ~/.local/share/ACCELA/ExeFingerprinter.AppImage'"
     read -p "Press Enter to exit..."
 fi
 EOL
@@ -1288,7 +1288,7 @@ EOL
     fi
 
     echo -e "\n${GREEN}${BOLD}=========================================${NC}"
-    echo -e "${GREEN}${BOLD}[OK] ASSella has been installed & patched!${NC}"
+    echo -e "${GREEN}${BOLD}[OK] EXE-fingerprinter has been installed & patched!${NC}"
     echo -e "${GREEN}${BOLD}=========================================${NC}\n"
 
     get_local_version
@@ -1310,7 +1310,7 @@ do_restore_accela() {
     fi
 
     if [ -f "$PRIMARY_DESKTOP_ENTRY" ]; then
-        sed -i 's/^Name=ASSella$/Name=ACCELA/' "$PRIMARY_DESKTOP_ENTRY"
+        sed -i 's/^Name=EXE-fingerprinter$/Name=ACCELA/' "$PRIMARY_DESKTOP_ENTRY"
         echo -e "${GREEN}[INFO] Restored desktop entry name to ACCELA in $PRIMARY_DESKTOP_ENTRY.${NC}"
     fi
 
@@ -1319,12 +1319,12 @@ do_restore_accela() {
 }
 
 # ------------------------------------------------------------------------------
-#  7. Clean Uninstall ASSella
+#  7. Clean Uninstall EXE-fingerprinter
 # ------------------------------------------------------------------------------
 do_uninstall() {
-    echo -e "\n${RED}${BOLD}=== ASSella Clean Uninstaller ===${NC}\n"
+    echo -e "\n${RED}${BOLD}=== EXE-fingerprinter Clean Uninstaller ===${NC}\n"
     if [ "${INTERACTIVE:-false}" = true ]; then
-        read -p "Are you sure you want to uninstall ASSella? [y/N]: " confirm
+        read -p "Are you sure you want to uninstall EXE-fingerprinter? [y/N]: " confirm
         if [[ "$confirm" != "y" ]] && [[ "$confirm" != "Y" ]]; then
             echo "Uninstallation cancelled."
             return
@@ -1332,7 +1332,7 @@ do_uninstall() {
     fi
 
     echo -e "${YELLOW}[INFO] Removing binaries, symlinks, and desktop entries...${NC}"
-    rm -f "$INSTALL_DESTINATION/ASSella.AppImage"
+    rm -f "$INSTALL_DESTINATION/ExeFingerprinter.AppImage"
     rm -f "$INSTALL_DESTINATION/ACCELA.AppImage"
     rm -f "$INSTALL_DESTINATION/version"
     rm -f "$NIXOS_LAUNCHER"
@@ -1350,7 +1350,7 @@ do_uninstall() {
         update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
     fi
 
-    echo -e "\n${GREEN}[OK] ASSella has been uninstalled.${NC}"
+    echo -e "\n${GREEN}[OK] EXE-fingerprinter has been uninstalled.${NC}"
     pause_if_interactive
 }
 
@@ -1359,7 +1359,7 @@ do_uninstall() {
 # ------------------------------------------------------------------------------
 run_diagnostics() {
     show_header
-    echo -e "\n${YELLOW}${BOLD}=== ASSella Pre-Flight Diagnostics ===${NC}\n"
+    echo -e "\n${YELLOW}${BOLD}=== EXE-fingerprinter Pre-Flight Diagnostics ===${NC}\n"
 
     echo -n "  1. Python 3: "
     if command -v python3 &>/dev/null; then
@@ -1419,7 +1419,7 @@ run_diagnostics() {
 interactive_flow() {
     INTERACTIVE=true
     show_header
-    echo -e "${BOLD}${CYAN}Welcome to the ASSella Setup Wizard${NC}\n"
+    echo -e "${BOLD}${CYAN}Welcome to the EXE-fingerprinter Setup Wizard${NC}\n"
 
     # Step 1: Headcrab (SLSsteam)
     echo -e "${BOLD}--- [Step 1/2] Headcrab (SLSsteam) Setup ---${NC}"
@@ -1449,14 +1449,14 @@ interactive_flow() {
     check_and_warn_fuse
 
     echo ""
-    # Step 2: ASSella
-    echo -e "${BOLD}--- [Step 2/2] ASSella Application Setup ---${NC}"
+    # Step 2: EXE-fingerprinter
+    echo -e "${BOLD}--- [Step 2/2] EXE-fingerprinter Application Setup ---${NC}"
     get_local_version
     get_latest_github_version
     echo -e "  Currently Installed: ${YELLOW}$LOCAL_VER${NC}"
     echo -e "  Latest Available:    ${GREEN}$LATEST_VER${NC} (${CYAN}Channel: $TARGET_CHANNEL${NC})"
 
-    local install_prompt="Do you want to install / update ASSella? [Y/n]: "
+    local install_prompt="Do you want to install / update EXE-fingerprinter? [Y/n]: "
     local default_inst="y"
     local is_downgrade=false
     if [ -n "${LATEST_URL:-}" ] && [ "$LATEST_VER" != "Unknown" ] && _is_installed_version "${LOCAL_VER:-}" && ! _release_tag_ge "$LATEST_VER" "$LOCAL_VER"; then
@@ -1473,7 +1473,7 @@ interactive_flow() {
         do_install || true
         ALLOW_DOWNGRADE="$prev_allow_dg"
     else
-        echo -e "${YELLOW}[INFO] Skipping ASSella installation.${NC}"
+        echo -e "${YELLOW}[INFO] Skipping EXE-fingerprinter installation.${NC}"
     fi
 
     echo -e "\n${GREEN}${BOLD}Setup completed!${NC}\n"
@@ -1489,12 +1489,12 @@ interactive_menu() {
 
     while true; do
         show_header
-        echo -e "  ${BOLD}[1]${NC} Install / Update ASSella"
+        echo -e "  ${BOLD}[1]${NC} Install / Update EXE-fingerprinter"
         echo -e "  ${BOLD}[2]${NC} Run Headcrab (SLSsteam) Installer"
         echo -e "  ${BOLD}[3]${NC} Check for Updates & View Release Info"
         echo -e "  ${BOLD}[4]${NC} View Distro Requirements Guide"
         echo -e "  ${BOLD}[5]${NC} Restore Original ACCELA (Revert Backup)"
-        echo -e "  ${BOLD}[6]${NC} Uninstall ASSella (Clean Files & Shortcuts)"
+        echo -e "  ${BOLD}[6]${NC} Uninstall EXE-fingerprinter (Clean Files & Shortcuts)"
         echo -e "  ${BOLD}[7]${NC} Run Pre-Flight Diagnostics"
         echo -e "  ${BOLD}[8]${NC} Exit"
         echo -e "${CYAN}${BOLD}===================================================================${NC}"
@@ -1672,7 +1672,7 @@ main() {
             elif [ "$LOCAL_VER" != "$LATEST_VER" ]; then
                 do_install
             else
-                echo -e "${GREEN}ASSella is already up to date ($LOCAL_VER) on channel ($TARGET_CHANNEL).${NC}"
+                echo -e "${GREEN}EXE-fingerprinter is already up to date ($LOCAL_VER) on channel ($TARGET_CHANNEL).${NC}"
             fi
             ;;
         restore)
@@ -1682,7 +1682,7 @@ main() {
             do_uninstall
             ;;
         help)
-            echo "ASSella Installer & Management Suite (Stable)"
+            echo "EXE-fingerprinter Installer & Management Suite (Stable)"
             echo "Usage: ./install.sh [OPTIONS]"
             echo ""
             echo "Channel & Server Options:"
@@ -1691,15 +1691,15 @@ main() {
             echo "  --r2             Shortcut for --server r2"
             echo ""
             echo "Execution Options:"
-            echo "  (no args)        Interactive wizard (prompts for Headcrab & ASSella)"
-            echo "  --install, -i    Install or update ASSella directly"
-            echo "  --with-headcrab  Install Headcrab (SLSsteam) followed by ASSella"
+            echo "  (no args)        Interactive wizard (prompts for Headcrab & EXE-fingerprinter)"
+            echo "  --install, -i    Install or update EXE-fingerprinter directly"
+            echo "  --with-headcrab  Install Headcrab (SLSsteam) followed by EXE-fingerprinter"
             echo "  --headcrab       Run Headcrab (SLSsteam) installer only"
             echo "  --yes, -y        Non-interactive / assume yes"
             echo "  --menu, -m       Launch full maintenance menu"
             echo "  --update, -u     Check and update if a new release exists"
             echo "  --restore        Restore original ACCELA backup"
-            echo "  --uninstall      Uninstall ASSella"
+            echo "  --uninstall      Uninstall EXE-fingerprinter"
             echo "  --skip-checksum  Ignore checksum mismatch and proceed with installation"
             echo "  --allow-downgrade Allow installing an older stable release"
             echo "  --help, -h       Display this help message"

@@ -1,20 +1,20 @@
-# ASSella for ARM64 & Armada OS
+# EXE-fingerprinter for ARM64 & Armada OS
 
 ::: warning Early Testing Preview
 Native ARM64 support is currently in **early testing and active development**. Features may be experimental, incomplete, or behave unpredictably. Expect occasional manual troubleshooting as the ecosystem and tools mature.
 :::
 
 ::: danger Critical Prerequisite: SLSsteam ARM64 Release Preview Required
-To use ASSella's game management and native Steam integration on ARM64, you **must** be running an early **SLSsteam ARM64 release preview** build (the `aarm64` branch / preview builds providing `SLSsteam.so` for aarch64). 
+To use EXE-fingerprinter's game management and native Steam integration on ARM64, you **must** be running an early **SLSsteam ARM64 release preview** build (the `aarm64` branch / preview builds providing `SLSsteam.so` for aarch64). 
 
-Standard x86 SLSsteam binaries or older releases will **not** inject into native ARM64 Steam. Without an ARM64-compatible SLSsteam release preview, ASSella will safely fall back to Standalone Mode.
+Standard x86 SLSsteam binaries or older releases will **not** inject into native ARM64 Steam. Without an ARM64-compatible SLSsteam release preview, EXE-fingerprinter will safely fall back to Standalone Mode.
 :::
 
 ---
 
 ## Overview
 
-ASSella provides native 64-bit ARM (`aarch64`) builds designed specifically for modern ARM handheld devices running **Armada OS** (a Fedora `bootc` immutable gaming distribution) and other 64-bit ARM Linux environments.
+EXE-fingerprinter provides native 64-bit ARM (`aarch64`) builds designed specifically for modern ARM handheld devices running **Armada OS** (a Fedora `bootc` immutable gaming distribution) and other 64-bit ARM Linux environments.
 
 The ARM64 port delivers the same Material You interface, downloading workflows, and library management features available on x86, while adapting under the hood to the unique requirements of ARM handheld hardware and immutable system architectures.
 
@@ -24,7 +24,7 @@ The ARM64 port delivers the same Material You interface, downloading workflows, 
 
 ### 1. Bundled .NET 9 Runtime
 Armada OS utilizes an immutable root filesystem (`bootc`), meaning users cannot easily install packages into system directories.
-- ASSella bundles the native ARM64 **.NET 9** runtime internally.
+- EXE-fingerprinter bundles the native ARM64 **.NET 9** runtime internally.
 - Features requiring .NET work immediately without requiring host-level modifications, root privileges, or running manual install scripts into system paths.
 
 ### 2. Static FUSE3 Runtime Support
@@ -34,7 +34,7 @@ Modern Linux distributions and immutable operating systems no longer ship legacy
 
 ### 3. Gamescope & Wayland Native Windowing
 Armada OS boots directly into a Gamescope Wayland session in Game Mode and KDE Plasma in Desktop Mode.
-- ASSella includes native Wayland and XCB display platform plugins.
+- EXE-fingerprinter includes native Wayland and XCB display platform plugins.
 - Operates smoothly when launched as a Non-Steam Game inside Gamescope Game Mode without relying on an external Xwayland bridge.
 
 ### 4. Handheld Fractional Scaling & Screen Clamping
@@ -44,14 +44,14 @@ ARM64 handheld screens frequently use 720p or 800p displays paired with 125%–1
 
 ### 5. Native ARM64 Steam Detection
 Steam on ARM64 Linux resides in dedicated ARM runtime directories:
-- ASSella automatically resolves and hooks native ARM Steam at `~/.local/share/Steam/steamrtarm64`.
+- EXE-fingerprinter automatically resolves and hooks native ARM Steam at `~/.local/share/Steam/steamrtarm64`.
 - Manifest discovery and client version probing natively inspect ARM64 manifest structures.
 
 ---
 
 ## Requirements Checklist
 
-Before testing ASSella on ARM64, ensure your environment meets these requirements:
+Before testing EXE-fingerprinter on ARM64, ensure your environment meets these requirements:
 
 - [x] **64-bit ARM Handheld**: Powered by an ARM64 (aarch64) SoC.
 - [x] **Supported OS**: Armada OS or compatible ARM64 Linux distribution.
@@ -64,28 +64,28 @@ Before testing ASSella on ARM64, ensure your environment meets these requirement
 ## How to Run
 
 ### Step 1: Download the ARM64 AppImage Preview
-Obtain the latest preview binary (`ASSella-arm64.AppImage`) for your ARM64 device.
+Obtain the latest preview binary (`EXE-fingerprinter-arm64.AppImage`) for your ARM64 device.
 
 ### Step 2: Grant Execution Permissions
 Open your terminal in Desktop Mode and make the AppImage executable:
 
 ```bash
-chmod +x ASSella-arm64.AppImage
+chmod +x EXE-fingerprinter-arm64.AppImage
 ```
 
 ### Step 3: Launch in Desktop Mode
-You can launch ASSella directly from the terminal or file manager:
+You can launch EXE-fingerprinter directly from the terminal or file manager:
 
 ```bash
-./ASSella-arm64.AppImage
+./EXE-fingerprinter-arm64.AppImage
 ```
 
 ### Step 4: (Optional) Add to Steam for Game Mode
-To access ASSella directly from the handheld gaming UI:
+To access EXE-fingerprinter directly from the handheld gaming UI:
 1. Open Steam in Desktop Mode.
 2. Select **Games** $\rightarrow$ **Add a Non-Steam Game to My Library...**
-3. Browse and select `ASSella-arm64.AppImage`.
-4. Return to Gaming Mode / Gamescope and launch ASSella whenever needed.
+3. Browse and select `EXE-fingerprinter-arm64.AppImage`.
+4. Return to Gaming Mode / Gamescope and launch EXE-fingerprinter whenever needed.
 
 ---
 

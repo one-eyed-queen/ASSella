@@ -1,9 +1,9 @@
 """
-themed_file_dialog.py - ASSella's own file and folder picker.
+themed_file_dialog.py - EXE-fingerprinter's own file and folder picker.
 
 QFileDialog without DontUseNativeDialog hands the job to the desktop: on a
 Linux desktop that is a GTK or KDE window, so the picker carries the desktop's
-decorations and colours instead of ASSella's. This module keeps Qt's own
+decorations and colours instead of EXE-fingerprinter's. This module keeps Qt's own
 browser (navigation, places, filters, open/save modes) but hosts it inside a
 frameless, themed window with the same title bar every other dialog uses.
 
@@ -69,7 +69,7 @@ def suggested_name(directory: str) -> str:
 
 
 class ThemedFileDialog(QDialog):
-    """Frameless host for Qt's file browser, so the picker looks like ASSella."""
+    """Frameless host for Qt's file browser, so the picker looks like EXE-fingerprinter."""
 
     OPEN = "open"
     SAVE = "save"

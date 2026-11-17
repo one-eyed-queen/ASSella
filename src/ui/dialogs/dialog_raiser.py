@@ -87,7 +87,7 @@ def find_topmost_child_dialog(root_widget: Optional[QWidget]) -> Optional[QWidge
 
 
 def resolve_dialog_parent(fallback: Optional[QWidget] = None) -> Optional[QWidget]:
-    """Resolve the currently active ASSella window/dialog for parenting new modals."""
+    """Resolve the currently active EXE-fingerprinter window/dialog for parenting new modals."""
     app = QApplication.instance()
     if app is not None:
         modal = app.activeModalWidget()
@@ -122,7 +122,7 @@ def resolve_dialog_parent(fallback: Optional[QWidget] = None) -> Optional[QWidge
 
 
 def focus_dialog_on_show(dialog: QWidget) -> None:
-    """Raise a freshly shown dialog above ASSella windows without stealing external OS focus."""
+    """Raise a freshly shown dialog above EXE-fingerprinter windows without stealing external OS focus."""
     if dialog is None or sip.isdeleted(dialog) or not dialog.isVisible():
         return
     dialog.raise_()

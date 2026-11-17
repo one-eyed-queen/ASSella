@@ -1087,8 +1087,8 @@ class GameManager(QObject):
 
     @staticmethod
     def _get_accela_marker_path(game_path):
-        """Return the ACCELA/ASSella marker folder/file path for a game, if present."""
-        for marker_name in (".assella", ".ASSELLA", ".ACCELA", ".DepotDownloader", ".accela", ".depotdownloader"):
+        """Return the ACCELA/EXE-fingerprinter marker folder/file path for a game, if present."""
+        for marker_name in (".exe_fingerprinter", ".EXE-FINGERPRINTER", ".ACCELA", ".DepotDownloader", ".accela", ".depotdownloader"):
             marker_path = os.path.join(game_path, marker_name)
             if os.path.exists(marker_path):
                 return marker_path
@@ -1327,7 +1327,7 @@ class GameManager(QObject):
             meta_data = None
             if experimental_mode:
                 try:
-                    from utils.assella_metadata import load_accela_metadata
+                    from utils.exe_fingerprinter_metadata import load_accela_metadata
                     meta_data = load_accela_metadata(game_path)
                 except Exception as e:
                     logger.debug(f"Failed to load ACCELA metadata fallback for {game_name}: {e}")
@@ -1387,7 +1387,7 @@ class GameManager(QObject):
                 try:
                     from utils.dlc_helpers import is_dlc_only_mode
                     raw_dlc_only = bool(is_dlc_only_mode(appid))
-                    # Unowned installs carrying a physical .assella marker fall back to ASSella
+                    # Unowned installs carrying a physical .exe_fingerprinter marker fall back to EXE-fingerprinter
                     # without mutating persisted dlc_only_mode QSettings.
                     is_unowned_physical_accela = (
                         bool(marker_path)
@@ -1434,8 +1434,8 @@ class GameManager(QObject):
 
             # Core classification rules:
             # - In AdditionalApps + (AppKey or non-shared depot key in DecryptionKeys) -> AT0-M
-            # - In AdditionalApps without keys (and no active plugin record) -> ASSella
-            # - Physical .assella marker -> ASSella (subject to timestamp resolution if plugin_record also exists)
+            # - In AdditionalApps without keys (and no active plugin record) -> EXE-fingerprinter
+            # - Physical .exe_fingerprinter marker -> EXE-fingerprinter (subject to timestamp resolution if plugin_record also exists)
             if is_dlc_only:
                 is_accela_install = False
             elif marker_path:
@@ -1470,7 +1470,7 @@ class GameManager(QObject):
                         marker_ts = 0
 
                 if marker_ts >= plugin_ts:
-                    # Reinstalled via ASSella more recently -> ASSella wins, purge stale plugin record
+                    # Reinstalled via EXE-fingerprinter more recently -> EXE-fingerprinter wins, purge stale plugin record
                     logger.info(
                         f"[MethodResolution] Game '{game_name}' ({appid}) has newer ACCELA marker "
                         f"({marker_ts} >= {plugin_ts}); converting stale AT0-M record to ACCELA."
@@ -1526,7 +1526,7 @@ class GameManager(QObject):
             }
 
             # Detect DLC-only installations by checking ALL saved non-shared depots against base game depots.
-            # Guard against falsely flipping unowned installs with a physical .assella marker to Steam DLC-only.
+            # Guard against falsely flipping unowned installs with a physical .exe_fingerprinter marker to Steam DLC-only.
             is_unowned_marker_install = bool(
                 marker_path
                 and owned_appids is not None
@@ -2341,9 +2341,9 @@ class GameManager(QObject):
                 except Exception as e:
                     logger.debug(f"Error cleaning ACF file for {appid}: {e}")
 
-            # Clean up .assella and legacy marker folders/files if remove_sls is True
+            # Clean up .exe_fingerprinter and legacy marker folders/files if remove_sls is True
             if remove_sls and install_path and os.path.exists(install_path):
-                for m_name in (".assella", ".ASSELLA", ".DepotDownloader", ".accela", ".ACCELA"):
+                for m_name in (".exe_fingerprinter", ".EXE-FINGERPRINTER", ".DepotDownloader", ".accela", ".ACCELA"):
                     m_path = os.path.join(install_path, m_name)
                     if os.path.exists(m_path):
                         try:

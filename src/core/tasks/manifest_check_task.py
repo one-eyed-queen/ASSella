@@ -524,7 +524,7 @@ class ManifestCheckTask(QObject):
             return "up_to_date"
 
         # AT0-M / Vapor / Plugin games bypass: Steam manages file and manifest updates natively.
-        # ASSella only checks for the addition of new depots, which is handled exclusively by At0mUpdateChecker.
+        # EXE-fingerprinter only checks for the addition of new depots, which is handled exclusively by At0mUpdateChecker.
         from utils.game_modes import is_accela_managed, is_atom_managed
         is_accela = is_accela_managed(game_data)
         is_atom = (not is_accela) and (

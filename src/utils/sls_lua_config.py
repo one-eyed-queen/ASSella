@@ -226,11 +226,11 @@ def is_valid_hubcap_key(key: str) -> bool:
 
 
 def sync_hubcap_api_key(settings, conf_path: Optional[Path] = None) -> Tuple[bool, str]:
-    """Keep the Hubcap API key in ASSella and in katamari.conf.lua (hubcap section) the same.
+    """Keep the Hubcap API key in EXE-fingerprinter and in katamari.conf.lua (hubcap section) the same.
 
     The newer side wins, by timestamp:
-      - katamari.conf.lua newer (and its key valid): copy it into ASSella.
-      - ASSella newer (and its key valid): write it into katamari.conf.lua.
+      - katamari.conf.lua newer (and its key valid): copy it into EXE-fingerprinter.
+      - EXE-fingerprinter newer (and its key valid): write it into katamari.conf.lua.
     Returns (synced, message).
     """
     from managers.katamari_config_manager import KatamariConfigManager
@@ -257,14 +257,14 @@ def sync_hubcap_api_key(settings, conf_path: Optional[Path] = None) -> Tuple[boo
     if lua_sort > local_sort and is_valid_hubcap_key(lua_key):
         settings.setValue("morrenus_api_key", lua_key)
         settings.setValue("morrenus_api_key_timestamp", str(lua_ts))
-        logger.info(f"[SlsLuaConfig] Synced newer Hubcap API key from katamari.conf.lua (ts: {lua_ts}) to ASSella")
-        return True, "Synced API key from katamari.conf.lua to ASSella"
+        logger.info(f"[SlsLuaConfig] Synced newer Hubcap API key from katamari.conf.lua (ts: {lua_ts}) to EXE-fingerprinter")
+        return True, "Synced API key from katamari.conf.lua to EXE-fingerprinter"
 
     if (local_sort > lua_sort or (local_sort > 0 and lua_sort == 0)) and is_valid_hubcap_key(local_key):
         ok = KatamariConfigManager.set_hubcap_api_key(local_key, local_ts, path)
         if not ok:
             return False, "Could not write katamari.conf.lua"
-        logger.info(f"[SlsLuaConfig] Synced newer Hubcap API key from ASSella (ts: {local_ts}) to katamari.conf.lua")
-        return True, "Synced API key from ASSella to katamari.conf.lua"
+        logger.info(f"[SlsLuaConfig] Synced newer Hubcap API key from EXE-fingerprinter (ts: {local_ts}) to katamari.conf.lua")
+        return True, "Synced API key from EXE-fingerprinter to katamari.conf.lua"
 
     return False, "Already in sync"

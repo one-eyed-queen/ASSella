@@ -1182,18 +1182,35 @@ class DownloadDepotsTask(QObject):
             cmd_args.extend(["-loginid", str(login_id)])
 
             # 3. Selective files list support (-filelist)
+            #
+            # `selected_files_list` may either be a flat list applied to every
+            # selected depot (legacy), or a mapping {depot_id: [paths], ...}
+            # pairing executables with the depot they live in (Executable
+            # Downloader). For the mapping form, depots absent from the
+            # mapping are skipped entirely — the user asked to download only
+            # the .exe files, which may live in just one of the depots.
             selected_files = game_data.get("selected_files_list")
-            if selected_files:
+            if isinstance(selected_files, dict):
+                per_depot: Dict[str, List[str]] = {str(k): list(v or []) for k, v in selected_files.items()}
+                paths = per_depot.get(str(depot_id)) or per_depot.get(str(depot_id_str)) or []
+                if not paths:
+                    self.progress.emit(f"Depot {depot_id_str}: no selected executables — skipping.")
+                    skipped_depots.append(str(depot_id))
+                    continue
+                selected = paths
+            else:
+                selected = selected_files or []
+            if selected:
                 # Write filelist to temp file
                 fl_path = os.path.join(temp_dir, f"selective_filelist_{depot_id}.txt")
                 try:
                     with open(fl_path, "w", encoding="utf-8") as fl:
-                        for file_path in selected_files:
+                        for file_path in selected:
                             # Normalize paths to use forward slashes for DDM
                             fl.write(file_path.replace("\\", "/") + "\n")
                     self.temp_file_list = fl_path
                     cmd_args.extend(["-filelist", fl_path])
-                    self.progress.emit(f"Using selective filelist: {len(selected_files)} file(s) checked")
+                    self.progress.emit(f"Using selective filelist: {len(selected)} file(s) checked")
                 except OSError as e:
                     self.progress.emit(f"Warning: Failed to write selective filelist: {e}")
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail when a window is built from a native Qt dialog instead of the themed one.
 
-Every window in ASSella must be ASSella's own: the native dialogs below paint
+Every window in EXE-fingerprinter must be EXE-fingerprinter's own: the native dialogs below paint
 themselves in the desktop's GTK/KDE theme, with the desktop's window
 decorations, and in a dark-theme session they look like another application's
 window sitting on top of this one.
@@ -188,7 +188,7 @@ def main() -> int:
             now_detail = ", ".join(f"{k} x{v}" for k, v in sorted(now.items()))
             print(f"  {name}: {was_detail} -> {now_detail} (+{gained})")
         print("\nUse the themed dialog instead (ThemedMessageBox, ThemedProgressDialog, ...) "
-              "so the window belongs to ASSella.")
+              "so the window belongs to EXE-fingerprinter.")
         return 1
 
     now_totals, was_totals = totals(current), totals(baseline)

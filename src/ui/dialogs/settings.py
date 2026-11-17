@@ -494,7 +494,7 @@ class SettingsDialog(QDialog):
         """Register all settings pages. Each is built the first time it is opened,
         so opening Settings only pays for the page it lands on."""
         add = self.tab_widget.addLazyTab
-        add("ASSella", lambda: tabs.create_assela_tab(self))
+        add("EXE-fingerprinter", lambda: tabs.create_exe_fingerprinter_tab(self))
         add("Downloads", lambda: tabs.create_downloads_tab(self))
         add("Advanced", lambda: tabs.create_advanced_tab(self))
         add("Integrations", lambda: tabs.create_morrenus_tab(self))
@@ -669,8 +669,8 @@ class SettingsDialog(QDialog):
     def goldberg_warning_box(self, checkbox, warning: str) -> bool:
         return tabs.goldberg_warning_box(self, checkbox, warning)
 
-    def uninstall_assela(self) -> None:
-        tabs.uninstall_assela(self)
+    def uninstall_exe_fingerprinter(self) -> None:
+        tabs.uninstall_exe_fingerprinter(self)
 
     # ── Style / Appearance Delegations ────────────────────────────────────
     def choose_accent_color(self) -> None:

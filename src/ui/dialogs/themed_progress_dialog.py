@@ -1,5 +1,5 @@
 """
-themed_progress_dialog.py - ASSella's shared progress dialog.
+themed_progress_dialog.py - EXE-fingerprinter's shared progress dialog.
 
 A small floating card in the same style as the library's "Discovering DLCs"
 overlay (spinner, status, elapsed time, optional Cancel, thin bar when the
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class ThemedProgressDialog(QDialog):
     """
-    Frameless, theme-aware progress dialog matching ASSella's visual language.
+    Frameless, theme-aware progress dialog matching EXE-fingerprinter's visual language.
     Drop-in replacement for QProgressDialog.
     """
 

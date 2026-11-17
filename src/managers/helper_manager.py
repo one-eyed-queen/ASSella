@@ -1,5 +1,5 @@
 """
-Helper Manager for ASSella - Handles automated, background game downloads and updates.
+Helper Manager for EXE-fingerprinter - Handles automated, background game downloads and updates.
 """
 
 import os
@@ -209,7 +209,7 @@ def run_headless_helper(app_id: int, logger: logging.Logger):
 
 def run_headless_update_check(logger):
     """
-    Scans for ASSella-managed games and checks for updates headlessly, updating the update cache.
+    Scans for EXE-fingerprinter-managed games and checks for updates headlessly, updating the update cache.
     """
     logger.info("==================================================")
     logger.info("Starting headless update check...")
@@ -236,9 +236,9 @@ def run_headless_update_check(logger):
         g for g in game_manager.games
         if is_accela_managed(g) and not is_atom_managed(g)
     ]
-    logger.info(f"Found {len(accela_games)} ASSella-managed game(s).")
+    logger.info(f"Found {len(accela_games)} EXE-fingerprinter-managed game(s).")
     if not accela_games:
-        logger.info("No ASSella games found to check.")
+        logger.info("No EXE-fingerprinter games found to check.")
         sys.exit(0)
 
     # Filter to games with valid appids

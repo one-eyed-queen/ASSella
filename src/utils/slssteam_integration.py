@@ -2,7 +2,7 @@
 SLSsteam Integration Module
 
 Centralized handler for SLSsteam-based install/uninstall operations.
-When experimental_acf_independent is enabled, ASSella delegates all ACF
+When experimental_acf_independent is enabled, EXE-fingerprinter delegates all ACF
 manifest management to Steam natively via SLSsteam's API pipe.
 
 Flow for install/update:
@@ -18,7 +18,7 @@ Flow for uninstall:
 If Steam/SLSsteam is unavailable:
   - Config is still written → Steam will process on next launch
   - API calls fail silently → game shows as "installed" via metadata fallback
-  - ASSella's metadata.json serves as the source of truth for library scanning
+  - EXE-fingerprinter's metadata.json serves as the source of truth for library scanning
 
 Path resolution:
   All Steam/SLS paths (log file, steamapps dirs, config.yaml) are resolved
@@ -356,7 +356,7 @@ def check_slssteam_binary_is_latest(force_refresh: bool = False, cached_only: bo
     try:
         req = urllib.request.Request(
             "https://api.github.com/repos/AceSLS/SLSsteam/releases/latest",
-            headers={"User-Agent": "ASSella-SLS-Updater"},
+            headers={"User-Agent": "EXE-fingerprinter-SLS-Updater"},
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode("utf-8"))
@@ -612,7 +612,7 @@ def _silent_background_retry_pipe(
       • SLSsteam pipe disappears or filewatcher crashes.
       • Retries are exhausted.
 
-    In ACF-Independent mode, ASSella NEVER generates or writes a fallback ACF.
+    In ACF-Independent mode, EXE-fingerprinter NEVER generates or writes a fallback ACF.
     Manifest creation is delegated entirely to Steam natively.
     """
     if max_retries != 3:

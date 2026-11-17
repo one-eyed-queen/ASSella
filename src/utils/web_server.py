@@ -80,7 +80,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
         expected = getattr(self.server, "auth_token", "")
         if not expected:
             return False
-        provided = self.headers.get("X-ASSella-Token", "")
+        provided = self.headers.get("X-Executable-Downloader-Token", "")
         if not provided:
             # Allow ?token= for navigation (e.g. the LAN link opened in a browser).
             provided = parse_qs(urlparse(self.path).query).get("token", [""])[0]
@@ -207,7 +207,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
                 # Hand the session token to our own page so it can call the API.
                 token = getattr(self.server, "auth_token", "")
                 html_content = html_content.replace(
-                    "__ASSELLA_TOKEN__", token
+                    "__EXE_FINGERPRINTER_TOKEN__", token
                 )
                 self._set_headers("text/html", 200)
                 self.wfile.write(html_content.encode("utf-8"))
@@ -694,7 +694,7 @@ class WebServerManager:
                     appid = str(g.get("appid", ""))
                     if settings and settings.value(f"exclude_from_update_all/{appid}", False, type=bool):
                         continue
-                    # Steam-managed games are downloaded by Steam. ASSella only
+                    # Steam-managed games are downloaded by Steam. EXE-fingerprinter only
                     # syncs their decryption keys, which the web UI does not do.
                     if is_atom_managed(g):
                         logger.info(

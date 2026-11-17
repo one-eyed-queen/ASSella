@@ -310,7 +310,7 @@ def _make_local_indicator(in_local: bool, is_missing: bool = False) -> QWidget:
 
 
 def _make_table(columns: List[str], accent_color: str) -> QTableWidget:
-    """Create a styled table widget matching ASSella design conventions."""
+    """Create a styled table widget matching EXE-fingerprinter design conventions."""
     tbl = QTableWidget()
     tbl.setIconSize(QSize(18, 18))
     tbl.setColumnCount(len(columns))
@@ -1639,7 +1639,7 @@ def build_depots_panel(dialog, mode: str = "details", on_registered=None) -> QWi
                 id_item.setForeground(QColor("#777777"))
                 desc_item.setForeground(QColor("#777777"))
                 desc_item.setToolTip(
-                    "ASSella suspects this item is owned on Steam. Toggle only if you do not own it on Steam."
+                    "EXE-fingerprinter suspects this item is owned on Steam. Toggle only if you do not own it on Steam."
                 )
 
             if item.get("is_unreleased"):
@@ -1666,7 +1666,7 @@ def build_depots_panel(dialog, mode: str = "details", on_registered=None) -> QWi
             toggle = MiniSwitchToggle(checked=current_checked, read_only=(not is_unlocked))
             if is_owned_app:
                 toggle.setToolTip(
-                    "ASSella suspects this item is owned on Steam. Enabling requires confirmation."
+                    "EXE-fingerprinter suspects this item is owned on Steam. Enabling requires confirmation."
                 )
             app_toggles[aid] = toggle
 
@@ -1770,7 +1770,7 @@ def build_depots_panel(dialog, mode: str = "details", on_registered=None) -> QWi
                     missing_status="owned",
                     missing_tag="[Steam Owned]",
                     missing_tooltip=(
-                        f"ASSella suspects depot {did} belongs to content you own on Steam. "
+                        f"EXE-fingerprinter suspects depot {did} belongs to content you own on Steam. "
                         f"Toggle only if you do not own it on Steam."
                     ),
                 )
@@ -1828,7 +1828,7 @@ def build_depots_panel(dialog, mode: str = "details", on_registered=None) -> QWi
                 current_checked = desired_depots.get(did, is_live)
                 toggle = MiniSwitchToggle(checked=current_checked, read_only=(not is_unlocked))
                 if is_owned_row:
-                    toggle.setToolTip(item.get("missing_tooltip") or "ASSella suspects this depot is owned on Steam.")
+                    toggle.setToolTip(item.get("missing_tooltip") or "EXE-fingerprinter suspects this depot is owned on Steam.")
                 depot_toggles[did] = toggle
 
                 def _make_depot_toggle_cb(depot_id: str, is_sh: bool, owned_item: bool):
@@ -1982,7 +1982,7 @@ def build_depots_panel(dialog, mode: str = "details", on_registered=None) -> QWi
                     f_o.setItalic(True)
                     key_item.setFont(f_o)
                     owned_tip = (
-                        f"ASSella suspects {kid} belongs to content you own on Steam. "
+                        f"EXE-fingerprinter suspects {kid} belongs to content you own on Steam. "
                         f"Toggle only if you do not own it on Steam."
                     )
                     key_item.setToolTip(f"{owned_tip}\n{raw_key}" if raw_key else owned_tip)
@@ -1995,7 +1995,7 @@ def build_depots_panel(dialog, mode: str = "details", on_registered=None) -> QWi
                 current_checked = desired_keys.get(kid, is_cfg)
                 toggle = MiniSwitchToggle(checked=current_checked, read_only=(not is_unlocked))
                 if is_owned_key:
-                    toggle.setToolTip("ASSella suspects this key belongs to content you own on Steam.")
+                    toggle.setToolTip("EXE-fingerprinter suspects this key belongs to content you own on Steam.")
                 key_toggles[kid] = toggle
 
                 def _make_key_toggle_cb(key_id: str, owned_item: bool):

@@ -125,7 +125,7 @@ class LuaToolsAPI:
             return {"success": False, "error": "LuaTools feature is not unlocked.", "games": []}
         url = f"{API_BASE_URL}/api/denuvo/listings"
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "ASSella/3.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": "EXE-fingerprinter/3.0"})
             with urllib.request.urlopen(req, timeout=15) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return {"success": True, "games": data.get("games", []), "tags": data.get("tags", [])}
@@ -169,7 +169,7 @@ class LuaToolsAPI:
         # 3. Perform network request
         url = f"{API_BASE_URL}/api/denuvo/fixes?appid={appid_str}"
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "ASSella/3.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": "EXE-fingerprinter/3.0"})
             with urllib.request.urlopen(req, timeout=15) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 res = {
@@ -523,7 +523,7 @@ class LuaToolsAPI:
                     "<!doctype html><html><body style='font-family:system-ui,-apple-system,sans-serif;"
                     "text-align:center;padding:60px;background:#12121a;color:#fff'>"
                     "<h1 style='color:#3b82f6;'>Signed in to lua.tools!</h1>"
-                    "<p style='color:#9ca3af;'>You can close this tab and return to ASSella.</p>"
+                    "<p style='color:#9ca3af;'>You can close this tab and return to EXE-fingerprinter.</p>"
                     "<script>setTimeout(function(){ window.close(); }, 1200);</script>"
                     "</body></html>"
                 )
@@ -603,7 +603,7 @@ class LuaToolsAPI:
                 url,
                 headers={
                     "Authorization": f"Bearer {token}",
-                    "User-Agent": "ASSella/3.0",
+                    "User-Agent": "EXE-fingerprinter/3.0",
                 },
             )
             with urllib.request.urlopen(req, timeout=20) as resp:
@@ -676,7 +676,7 @@ class LuaToolsAPI:
         # from writing over each other.
         temp_target = target_file.with_suffix(f".{secrets.token_hex(4)}.part")
         try:
-            req = urllib.request.Request(download_url, headers={"User-Agent": "ASSella/3.0"})
+            req = urllib.request.Request(download_url, headers={"User-Agent": "EXE-fingerprinter/3.0"})
             with urllib.request.urlopen(req, timeout=30) as resp:
                 total_size = int(resp.headers.get("Content-Length", 0))
                 downloaded = 0

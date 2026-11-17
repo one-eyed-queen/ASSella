@@ -1,8 +1,8 @@
 """
 SLSBridge Module
 
-Provides bidirectional communication between ASSella and SLSsteam
-via the assella_bridge.lua plugin.
+Provides bidirectional communication between EXE-fingerprinter and SLSsteam
+via the exe_fingerprinter_bridge.lua plugin.
 """
 
 import json
@@ -16,8 +16,8 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-ASSELLA_IPC_SOCKET = "/tmp/assella_ipc.sock"
-ASSELLA_CMD_FILE = "/tmp/assella_cmd.json"
+EXE_FINGERPRINTER_IPC_SOCKET = "/tmp/exe_fingerprinter_ipc.sock"
+EXE_FINGERPRINTER_CMD_FILE = "/tmp/exe_fingerprinter_cmd.json"
 SLS_API_PIPE = "/tmp/SLSsteam.API"
 
 
@@ -39,7 +39,7 @@ class SLSBridge:
         cls._cleanup_socket()
         try:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock.bind(ASSELLA_IPC_SOCKET)
+            sock.bind(EXE_FINGERPRINTER_IPC_SOCKET)
             sock.listen(5)
             sock.settimeout(1.0)
             cls._server_socket = sock
@@ -47,7 +47,7 @@ class SLSBridge:
 
             cls._server_thread = threading.Thread(target=cls._listen_loop, daemon=True, name="SLSBridgeIPC")
             cls._server_thread.start()
-            logger.info(f"[SLSBridge] IPC server listening at {ASSELLA_IPC_SOCKET}")
+            logger.info(f"[SLSBridge] IPC server listening at {EXE_FINGERPRINTER_IPC_SOCKET}")
         except Exception as e:
             logger.warning(f"[SLSBridge] Failed to start IPC server: {e}")
 
@@ -66,8 +66,8 @@ class SLSBridge:
     @classmethod
     def _cleanup_socket(cls) -> None:
         try:
-            if os.path.exists(ASSELLA_IPC_SOCKET):
-                os.unlink(ASSELLA_IPC_SOCKET)
+            if os.path.exists(EXE_FINGERPRINTER_IPC_SOCKET):
+                os.unlink(EXE_FINGERPRINTER_IPC_SOCKET)
         except Exception:
             pass
 
@@ -129,7 +129,7 @@ class SLSBridge:
             payload.update(extra)
 
         try:
-            with open(ASSELLA_CMD_FILE, "w", encoding="utf-8") as f:
+            with open(EXE_FINGERPRINTER_CMD_FILE, "w", encoding="utf-8") as f:
                 json.dump(payload, f)
             return cls.notify_reload()
         except Exception as e:

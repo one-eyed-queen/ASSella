@@ -1,12 +1,12 @@
 {
-  "_comment": "ASSella Tested & Recommended Game Builds (Voices Catalog)",
+  "_comment": "EXE-fingerprinter Tested & Recommended Game Builds (Voices Catalog)",
   "_instructions": {
     "how_to_contribute": [
       "1. To add or update a game, submit a Pull Request to the 'beta' branch on GitHub (niwia/ASSella).",
       "2. Under 'games', add an entry keyed by the game's Steam AppID (found in the store URL: store.steampowered.com/app/<appid>).",
       "3. Set 'recommended_build_id' to the tested Steam build ID (found on SteamDB patchnotes or build history: steamdb.info/app/<appid>/patchnotes).",
       "4. Set 'reason' explaining why this build is recommended (e.g., 'Known stable build for current crack/bypass').",
-      "5. 'manifest_overrides' can contain depot_id -> manifest_id pairs. If left as {}, ASSella can auto-resolve them from SteamDB.",
+      "5. 'manifest_overrides' can contain depot_id -> manifest_id pairs. If left as {}, EXE-fingerprinter can auto-resolve them from SteamDB.",
       "6. 'aliases' should contain common shorthand or abbreviations (e.g. ['p3r', 'persona 3']) for search matching.",
       "7. If the game does not have an official Steam AppID yet, place it under 'named_games' keyed by its lowercase name."
     ],
@@ -25,7 +25,7 @@
     }
   },
   "version": 1,
-  "description": "ASSella Recommended & Tested Game Builds (Voices)",
+  "description": "EXE-fingerprinter Recommended & Tested Game Builds (Voices)",
   "updated_at": "2026-11-01",
   "games": {
     "2161700": {

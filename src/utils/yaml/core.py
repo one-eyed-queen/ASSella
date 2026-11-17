@@ -2,7 +2,7 @@
 
 Everything in this package ultimately reads through
 ``_read_config_content`` and commits through ``_atomic_write``. The
-section-parsing helpers implement ASSella's hand-rolled YAML editing -
+section-parsing helpers implement EXE-fingerprinter's hand-rolled YAML editing -
 pyyaml is not used for writes because comments and ordering inside
 config.yaml must survive a round trip.
 

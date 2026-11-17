@@ -29,12 +29,12 @@ Steam wants a depot
 ## Where they live
 
 - The plugins: `~/.config/SLSsteam/plugins/`
-- Their settings: `~/.config/SLSsteam/katamari.conf.lua`, written by ASSella (**Settings → at0-m → Advanced**). The Hubcap key is also shared there with Uran and Epsilon.
+- Their settings: `~/.config/SLSsteam/katamari.conf.lua`, written by EXE-fingerprinter (**Settings → at0-m → Advanced**). The Hubcap key is also shared there with Uran and Epsilon.
 
 ::: tip Uran and Epsilon
-[Uran](/uran) and [Epsilon](/epsilon) don't ship their own plugins. They use the ones ASSella installed. If an AT0-M game added from Uran or Epsilon won't download, check **Settings → at0-m → Manage plugins** in ASSella first.
+[Uran](/uran) and [Epsilon](/epsilon) don't ship their own plugins. They use the ones EXE-fingerprinter installed. If an AT0-M game added from Uran or Epsilon won't download, check **Settings → at0-m → Manage plugins** in EXE-fingerprinter first.
 :::
 
 ## Custom plugins
 
-Only use **I'm using custom plugins (Advanced)** if you run your own plugin set. ASSella then stops checking for or updating its plugins. Plugins that ASSella doesn't know about are listed under **Review**, because they can clash with SpaceBunny and Styx.
+Only use **I'm using custom plugins (Advanced)** if you run your own plugin set. EXE-fingerprinter then stops checking for or updating its plugins. Plugins that EXE-fingerprinter doesn't know about are listed under **Review**, because they can clash with SpaceBunny and Styx.

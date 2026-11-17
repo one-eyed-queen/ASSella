@@ -1,5 +1,5 @@
 """
-Custom animated switch toggle widget for ASSella.
+Custom animated switch toggle widget for EXE-fingerprinter.
 Provides a modern sideways toggle button with smooth animation and high contrast.
 """
 

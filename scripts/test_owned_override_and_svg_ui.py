@@ -6,8 +6,8 @@ Hermetic regression tests for:
      ContentDepotSelectionDialog, while keeping DLC-Only parent base AppID locked.
   2. GameManager._scan_library showing AdditionalApps entries even if present in owned_appids.
   3. BottomTitleBar GitHub SVG button next to version_label sharing accent_color + opening GitHub URL.
-  4. Scalable SVG ASSella logo rendering across BottomTitleBar, DownloadBackendDialog,
-     hero_header, and load_assella_app_icon().
+  4. Scalable SVG EXE-fingerprinter logo rendering across BottomTitleBar, DownloadBackendDialog,
+     hero_header, and load_exe_fingerprinter_app_icon().
 """
 
 import os
@@ -17,7 +17,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-_TMP = tempfile.mkdtemp(prefix="assella-owned-svg-")
+_TMP = tempfile.mkdtemp(prefix="exe_fingerprinter-owned-svg-")
 os.environ["HOME"] = _TMP
 os.environ["XDG_CONFIG_HOME"] = str(Path(_TMP) / ".config")
 os.environ["XDG_DATA_HOME"] = str(Path(_TMP) / ".local" / "share")
@@ -71,7 +71,7 @@ class TestOwnedOverrideAndSvgUi(unittest.TestCase):
             self.assertTrue(confirm_steam_owned_override())
             m_ok.assert_called_once()
             args, kwargs = m_ok.call_args
-            self.assertIn("ASSella suspects that you own this game or a part of it on Steam", args[2])
+            self.assertIn("EXE-fingerprinter suspects that you own this game or a part of it on Steam", args[2])
             self.assertEqual(args[3], [("Proceed", "proceed"), ("Cancel", "cancel")])
             self.assertEqual(kwargs.get("default"), "cancel")
             self.assertEqual(kwargs.get("severity"), "warning")
@@ -377,8 +377,8 @@ class TestOwnedOverrideAndSvgUi(unittest.TestCase):
             mock_open.assert_called_once_with(QUrl("https://github.com/niwia/ASSella"))
 
     def test_06_svg_logo_rollout(self):
-        """ASSella SVG icon helpers produce non-null icons/pixmaps across UI surfaces."""
-        from utils.color_utils import load_assella_app_icon, render_svg_pixmap
+        """EXE-fingerprinter SVG icon helpers produce non-null icons/pixmaps across UI surfaces."""
+        from utils.color_utils import load_exe_fingerprinter_app_icon, render_svg_pixmap
         from utils.paths import Paths
         from ui.dialogs.game_details.hero_header import _mode_logo_pixmap
         from ui.dialogs.download_backend_dialog import DownloadBackendDialog
@@ -389,15 +389,15 @@ class TestOwnedOverrideAndSvgUi(unittest.TestCase):
         self.assertFalse(px.isNull())
         self.assertEqual(px.width(), 92)
 
-        app_icon = load_assella_app_icon()
+        app_icon = load_exe_fingerprinter_app_icon()
         self.assertFalse(app_icon.isNull())
 
         mode_px = _mode_logo_pixmap(is_atom=False, size=18)
         self.assertFalse(mode_px.isNull())
 
         backend_dlg = DownloadBackendDialog(app_id="10", game_name="Test", accent_color="#C06C84")
-        self.assertIsNotNone(backend_dlg.assella_icon_lbl.pixmap())
-        self.assertFalse(backend_dlg.assella_icon_lbl.pixmap().isNull())
+        self.assertIsNotNone(backend_dlg.exe_fingerprinter_icon_lbl.pixmap())
+        self.assertFalse(backend_dlg.exe_fingerprinter_icon_lbl.pixmap().isNull())
 
     def test_07_credits_dialog_shows_pre_detected_update_and_handles_none_parent(self):
         """CreditsDialog opens cleanly with None parent and shows Install Update if update already detected."""

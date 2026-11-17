@@ -2,54 +2,54 @@
 
 <img width="100%" alt="Uran Decky Plugin Banner" src="https://github.com/user-attachments/assets/b664f362-4412-4bb6-9924-6121a6eecb10" style="border-radius: 8px; margin-bottom: 1.5rem;" />
 
-**Uran** is the official [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) companion plugin for [ASSella](https://github.com/niwia/ASSella) and [SLSsteam](https://github.com/AceSLS/SLSsteam).
+**Uran** is the official [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) companion plugin for [Executable Downloader](https://github.com/niwia/ASSella) and [SLSsteam](https://github.com/AceSLS/SLSsteam).
 
-It brings the full power of ASSella's **AT0-M** (native Steam download) mode directly into SteamOS Game Mode. Search games, inject depot keys, manage DLCs, and apply multiplayer patches right from your Steam Deck's Quick Access Menu or directly from the Steam Store page.
+It brings the full power of EXE-fingerprinter's **AT0-M** (native Steam download) mode directly into SteamOS Game Mode. Search games, inject depot keys, manage DLCs, and apply multiplayer patches right from your Steam Deck's Quick Access Menu or directly from the Steam Store page.
 
 ---
 
 ## Which Setup Describes You?
 
-::: tip Path 1: Already using ASSella Desktop?
-If you already installed and configured ASSella on your Steam Deck or Linux PC, **you are practically ready to go!**
+::: tip Path 1: Already using EXE-fingerprinter Desktop?
+If you already installed and configured EXE-fingerprinter on your Steam Deck or Linux PC, **you are practically ready to go!**
 - Uran automatically detects and reads your existing SLSsteam `config.yaml`.
-- Uran automatically shares your Hubcap API key with ASSella and the AT0-M plugins (newest key wins).
-- Injected games and library items stay perfectly in sync between ASSella and Uran (`plugin_library.json`).
+- Uran automatically shares your Hubcap API key with EXE-fingerprinter and the AT0-M plugins (newest key wins).
+- Injected games and library items stay perfectly in sync between EXE-fingerprinter and Uran (`plugin_library.json`).
 
 **Skip straight to [Installation via Decky Loader](#installation-via-decky-loader).**
 :::
 
 ::: info Path 2: Starting Fresh on Steam Deck?
-If you are starting on a clean Steam Deck without ASSella installed:
+If you are starting on a clean Steam Deck without EXE-fingerprinter installed:
 1. **Install Decky Loader**: If you haven't yet, install Decky Loader from [decky.xyz](https://decky.xyz/).
 2. **Install SLSsteam (Headcrab)**: SLSsteam is required to manage decryption keys and manifests. Follow our [Headcrab Setup Guide](/install#_3-reset-steam-to-vanilla) to install SLSsteam.
 3. **Get a Hubcap Manifest API Key**: Get your free API key at [hubcapmanifest.com](https://hubcapmanifest.com/) (see the [Hubcap Key Setup Guide](/install#_1-get-your-hubcap-manifest-api-key)).
 :::
 
 ::: info One Hubcap key for everything
-ASSella, Uran, Epsilon and the AT0-M plugins share one Hubcap API key. It lives in
+EXE-fingerprinter, Uran, Epsilon and the AT0-M plugins share one Hubcap API key. It lives in
 `~/.config/SLSsteam/katamari.conf.lua` (the `hubcap` section), which the plugins read.
 Whenever the key changes anywhere, the **newest one wins** and is copied to the others the
-next time each app looks at it. In ASSella this is the **AT0-M Sync** switch under
+next time each app looks at it. In EXE-fingerprinter this is the **AT0-M Sync** switch under
 **Settings → Integrations → Hubcap**.
 :::
 
 ---
 
-## Manage Uran from ASSella
+## Manage Uran from EXE-fingerprinter
 
-ASSella has a **Companions** page in **Settings** with a tab for Uran:
+EXE-fingerprinter has a **Companions** page in **Settings** with a tab for Uran:
 
 - **Not installed yet?** It tells you whether Decky Loader is present and links to this guide and the Uran releases.
 - **Installed:** shows the installed version, a **Check for updates** button and a link back to this guide.
-- **Settings:** the same options as in Uran (DLC fetching, Store button, notifications, Hubcap route). Changes are written straight to Uran's own settings file, so Uran and ASSella always agree.
+- **Settings:** the same options as in Uran (DLC fetching, Store button, notifications, Hubcap route). Changes are written straight to Uran's own settings file, so Uran and EXE-fingerprinter always agree.
 
-ASSella finds Uran wherever Decky Loader keeps its plugins (it reads Decky's own service file), so custom Decky locations work too.
+EXE-fingerprinter finds Uran wherever Decky Loader keeps its plugins (it reads Decky's own service file), so custom Decky locations work too.
 
 ---
 
 ::: tip Plugins
-Uran adds games the AT0-M way, so it relies on the same [plugins](/plugins) ASSella installs (SpaceBunny, Styx, Lobster, Lettuce). See [AT0-M](/at0m) for how the download works underneath.
+Uran adds games the AT0-M way, so it relies on the same [plugins](/plugins) EXE-fingerprinter installs (SpaceBunny, Styx, Lobster, Lettuce). See [AT0-M](/at0m) for how the download works underneath.
 :::
 
 ## Installation via Decky Loader
@@ -94,10 +94,10 @@ Entering a long API key with the Steam Deck's on-screen keyboard can be tedious.
 3. Make sure your phone is connected to the same Wi-Fi network as your Steam Deck, then scan the QR code with your phone camera.
 4. A secure, token-protected web page served directly by your Steam Deck will open in your mobile browser.
 5. Paste your Hubcap API key and tap **Save Key**.
-6. Uran automatically validates the key against Hubcap, writes it to the shared ASSella config, and closes the mobile page.
+6. Uran automatically validates the key against Hubcap, writes it to the shared EXE-fingerprinter config, and closes the mobile page.
 
-::: info Already an ASSella user?
-If your Hubcap key is already configured in ASSella, Uran reads it automatically. You will see your username, remaining daily quota, and key expiration date immediately displayed in the Settings tab.
+::: info Already an EXE-fingerprinter user?
+If your Hubcap key is already configured in EXE-fingerprinter, Uran reads it automatically. You will see your username, remaining daily quota, and key expiration date immediately displayed in the Settings tab.
 :::
 
 ### 2. ISP Bypass & Route Configuration
@@ -244,6 +244,6 @@ No! Uran writes changes atomically to `config.yaml` and immediately transmits a 
 
 ## Updates
 
-Uran keeps track of new GitHub releases. Go to **Settings &rarr; Check for Updates** in Uran, or **Settings &rarr; Companions &rarr; Uran &rarr; Check for updates** in ASSella, to compare your installed version against the latest release.
+Uran keeps track of new GitHub releases. Go to **Settings &rarr; Check for Updates** in Uran, or **Settings &rarr; Companions &rarr; Uran &rarr; Check for updates** in EXE-fingerprinter, to compare your installed version against the latest release.
 
 When an update is available, you can update it directly through Decky Loader's plugin management or download the new `Uran.zip` release.

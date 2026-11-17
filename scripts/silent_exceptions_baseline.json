@@ -271,7 +271,7 @@
     "broad": 0,
     "narrow": 1
   },
-  "ui/dialogs/settings_tabs/assela_tab.py": {
+  "ui/dialogs/settings_tabs/exe_fingerprinter_tab.py": {
     "broad": 1,
     "narrow": 0
   },
@@ -319,7 +319,7 @@
     "broad": 1,
     "narrow": 0
   },
-  "utils/assella_metadata.py": {
+  "utils/exe_fingerprinter_metadata.py": {
     "broad": 0,
     "narrow": 1
   },

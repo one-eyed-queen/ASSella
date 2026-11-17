@@ -6,13 +6,13 @@ but only Windows depots and keys are available in the package source.
 
 It is purely informational: it tells the user that the package only ships
 Windows depots, so they must select a compatibility tool (Proton) for the
-game in Steam before playing. ASSella deliberately does NOT edit Steam's
+game in Steam before playing. EXE-fingerprinter deliberately does NOT edit Steam's
 config.vdf or restart Steam here.
 
 Gives the user three clear choices:
   1. Proceed: acknowledge the notice and continue with the handoff. Nothing
-     is configured by ASSella; the user picks the compatibility tool in Steam.
-  2. Download via ASSella: switches to ASSella's built-in DepotDownloader
+     is configured by EXE-fingerprinter; the user picks the compatibility tool in Steam.
+  2. Download via EXE-fingerprinter: switches to EXE-fingerprinter's built-in DepotDownloader
      to download Windows depots directly without modifying Steam.
   3. Cancel: abort the operation.
 
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 ACTION_CANCEL = 0
 ACTION_PROCEED = 1
-ACTION_ASSELLA_DOWNLOAD = 2
+ACTION_EXE_FINGERPRINTER_DOWNLOAD = 2
 
 
 class PlatformMismatchDialog(QDialog):
@@ -132,7 +132,7 @@ class PlatformMismatchDialog(QDialog):
             "cannot play them until you select a compatibility tool (Proton) for it.\n\n"
             "After the install, open the game's Properties in Steam, go to Compatibility, "
             "and enable the option to force a specific Steam Play compatibility tool. "
-            "ASSella does not change this for you."
+            "EXE-fingerprinter does not change this for you."
         )
         desc_lbl.setWordWrap(True)
         desc_lbl.setStyleSheet(
@@ -218,11 +218,11 @@ class PlatformMismatchDialog(QDialog):
         self.btn_proceed.clicked.connect(self._on_proceed)
         btn_lay.addWidget(self.btn_proceed)
 
-        # Option B: Download via ASSella
-        self.btn_assella = QPushButton("Download via ASSella")
-        self.btn_assella.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_assella.setFixedHeight(36)
-        self.btn_assella.setStyleSheet("""
+        # Option B: Download via EXE-fingerprinter
+        self.btn_exe_fingerprinter = QPushButton("Download via EXE-fingerprinter")
+        self.btn_exe_fingerprinter.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_exe_fingerprinter.setFixedHeight(36)
+        self.btn_exe_fingerprinter.setStyleSheet("""
             QPushButton {{
                 background-color: rgba(255, 255, 255, 0.08);
                 color: rgba(255, 255, 255, 0.95);
@@ -240,8 +240,8 @@ class PlatformMismatchDialog(QDialog):
                 background-color: rgba(255, 255, 255, 0.06);
             }}
         """)
-        self.btn_assella.clicked.connect(self._on_assella)
-        btn_lay.addWidget(self.btn_assella)
+        self.btn_exe_fingerprinter.clicked.connect(self._on_exe_fingerprinter)
+        btn_lay.addWidget(self.btn_exe_fingerprinter)
 
         # Option C: Cancel
         self.btn_cancel = QPushButton("Cancel")
@@ -275,8 +275,8 @@ class PlatformMismatchDialog(QDialog):
         self._action = ACTION_PROCEED
         self.accept()
 
-    def _on_assella(self):
-        self._action = ACTION_ASSELLA_DOWNLOAD
+    def _on_exe_fingerprinter(self):
+        self._action = ACTION_EXE_FINGERPRINTER_DOWNLOAD
         self.accept()
 
     def get_action(self) -> int:

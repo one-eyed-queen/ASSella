@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 SCHEMA_GRABBER_USER_ENV = "SCHEMA_GRABBER_USERNAME"
 SCHEMA_GRABBER_PASS_ENV = "SCHEMA_GRABBER_PASSWORD"
 
-_ENV_PROBE_MARKER = "__assella_env_probe__"
+_ENV_PROBE_MARKER = "__exe_fingerprinter_env_probe__"
 
 
 def _schema_grabber_supports_env() -> bool:

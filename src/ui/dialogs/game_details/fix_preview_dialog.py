@@ -815,7 +815,7 @@ class FixPreviewDialog(QDialog):
             self,
             "Discard Fix Record?",
             f"Are you sure you want to discard the record and backups for '{self.fix_title}'?\n\n"
-            "This will remove the fix from ASSella's installed fixes list WITHOUT modifying any game files on disk.",
+            "This will remove the fix from EXE-fingerprinter's installed fixes list WITHOUT modifying any game files on disk.",
             ThemedMessageBox.StandardButton.Yes | ThemedMessageBox.StandardButton.No,
             ThemedMessageBox.StandardButton.No,
         )

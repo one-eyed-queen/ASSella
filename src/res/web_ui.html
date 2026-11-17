@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASSella Remote Control</title>
+    <title>EXE-fingerprinter Remote Control</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -848,7 +848,7 @@
 
             <div id="empty-state" class="empty-state" style="display: none; margin-top: 16px;">
                 <div class="empty-state-title">No games found</div>
-                <div class="empty-state-desc">Make sure Steam libraries are scanned and ASSella is running correctly.</div>
+                <div class="empty-state-desc">Make sure Steam libraries are scanned and EXE-fingerprinter is running correctly.</div>
             </div>
         </div>
 
@@ -929,7 +929,7 @@
     <script>
         // Injected by the server when this page is served. Requests without it
         // are rejected with 401.
-        const ASSELLA_TOKEN = '__ASSELLA_TOKEN__';
+        const EXE_FINGERPRINTER_TOKEN = '__EXE_FINGERPRINTER_TOKEN__';
 
         // Escapes text for safe interpolation into innerHTML / attributes.
         function esc(value) {
@@ -959,7 +959,7 @@
         // Same-origin wrapper that attaches the session token.
         async function apiFetch(url, options = {}) {
             const opts = Object.assign({}, options);
-            opts.headers = Object.assign({ 'X-ASSella-Token': ASSELLA_TOKEN }, opts.headers || {});
+            opts.headers = Object.assign({ 'X-Executable-Downloader-Token': EXE_FINGERPRINTER_TOKEN }, opts.headers || {});
             return fetch(url, opts);
         }
 
